@@ -1,0 +1,32 @@
+# Abhängigkeiten & Builds
+node_modules/
+.next/
+out/
+build/
+coverage/
+*.tsbuildinfo
+next-env.d.ts
+
+# Tests
+test-results/
+playwright-report/
+blob-report/
+
+# Secrets – NIE committen (öffentliches Repo!)
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Lokale Finanzdaten – niemals ins Repo
+/private/
+*.real.pdf
+*.real.csv
+
+# Vercel / Editor / OS
+.vercel/
+.DS_Store
+.idea/
+.vscode/*
+!.vscode/extensions.json

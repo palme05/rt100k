@@ -1,0 +1,27 @@
+# gitleaks-Konfiguration: Standardregeln plus rt100k-spezifische Muster.
+# Läuft als Pre-Commit-Hook (lefthook.yml) und in der CI (.github/workflows/ci.yml).
+
+[extend]
+useDefault = true
+
+[[rules]]
+id = "postgres-connection-string"
+description = "Postgres-Verbindungszeichenfolge mit Passwort"
+regex = '''postgres(?:ql)?://[^:\s/]+:[^@\s*]{6,}@[^\s]+'''
+keywords = ["postgres://", "postgresql://"]
+
+[[rules]]
+id = "iban"
+description = "IBAN (keine echten Finanzdaten im Repo!)"
+regex = '''\b(?:AT|DE|CH|LI|LU|NL|BE|FR|IT|ES|IE)\d{2}(?:[ ]?[0-9A-Z]{4}){3,7}(?:[ ]?[0-9A-Z]{1,4})?\b'''
+keywords = ["AT", "DE", "CH", "LI", "LU", "NL", "BE", "FR", "IT", "ES", "IE"]
+
+[allowlist]
+description = "Platzhalter und Beispieldaten"
+regexes = [
+  '''AT00 ?0000 ?0000 ?0000 ?0000''',
+  '''DE00 ?0000 ?0000 ?0000 ?0000 ?00''',
+]
+paths = [
+  '''pnpm-lock\.yaml''',
+]

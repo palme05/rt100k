@@ -1,0 +1,17 @@
+# Git-Hooks (installiert automatisch bei `pnpm install`).
+# gitleaks muss lokal installiert sein: https://github.com/gitleaks/gitleaks#installing
+pre-commit:
+  parallel: true
+  jobs:
+    - name: gitleaks
+      run: gitleaks git --staged --redact --no-banner --config .gitleaks.toml
+    - name: eslint
+      glob: '*.{ts,tsx,mjs}'
+      run: pnpm exec eslint --max-warnings=0 {staged_files}
+
+pre-push:
+  jobs:
+    - name: typecheck
+      run: pnpm typecheck
+    - name: test
+      run: pnpm test
