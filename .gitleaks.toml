@@ -21,6 +21,9 @@ description = "Platzhalter und Beispieldaten"
 regexes = [
   '''AT00 ?0000 ?0000 ?0000 ?0000''',
   '''DE00 ?0000 ?0000 ?0000 ?0000 ?00''',
+  # Wegwerf-Zugänge zu lokalen Test-Datenbanken (CI-Service, Entwicklerrechner) –
+  # nie Produktion. Verbindungen zu Neon o. Ä. werden weiterhin erkannt.
+  '''postgres(?:ql)?://[^:@\s/]+:[^@\s/]+@(?:127\.0\.0\.1|localhost)(?::\d+)?/''',
 ]
 paths = [
   '''pnpm-lock\.yaml''',

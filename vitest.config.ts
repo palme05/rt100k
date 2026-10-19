@@ -7,6 +7,7 @@ export default defineConfig({
   },
   test: {
     include: ['src/**/*.test.ts', 'src/**/*.test.tsx'],
+    exclude: ['src/**/*.db.test.ts', 'node_modules/**'],
     environment: 'node',
   },
 })
