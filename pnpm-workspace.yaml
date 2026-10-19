@@ -1,0 +1,10 @@
+# Supply-Chain-Schutz: Paketversionen erst installieren, wenn sie mindestens
+# 7 Tage alt sind (kompromittierte Releases werden meist schneller entdeckt).
+minimumReleaseAge: 10080
+
+# Install-Skripte nur für explizit freigegebene Pakete ausführen.
+onlyBuiltDependencies:
+  - esbuild
+  - sharp
+  - unrs-resolver
+  - lefthook
