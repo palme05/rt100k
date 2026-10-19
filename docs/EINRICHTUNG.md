@@ -66,8 +66,10 @@ Neue Werte erzeugst du mit deinem Passwortmanager: zufällig, **48 Zeichen, nur 
 
 1. **Datenbank-Passwort, Produktion:** https://console.neon.tech → Projekt `rt100k` → **SQL Editor**, Branch `main`, Datenbank `rt100k`:
    `ALTER ROLE rt100k_app PASSWORD '<neuer Wert>';`
-2. https://vercel.com/palme00/rt100k/settings/environment-variables öffnen. Bei `DATABASE_URL` (Production) auf **Edit**, den Teil zwischen `rt100k_app:` und `@` durch den neuen Wert ersetzen.
-3. **Datenbank-Passwort, Preview:** Schritt 1 mit Branch `preview` und einem *anderen* neuen Wert wiederholen, dann `DATABASE_URL` (Preview) in Vercel genauso anpassen.
+2. https://vercel.com/palme00/rt100k/settings/environment-variables öffnen. Bei `DATABASE_URL` (Production) **⋯** → **Edit**. Der alte Wert ist als „Sensitive“ nicht mehr lesbar, deshalb den ganzen Wert neu eintragen:
+   `postgresql://rt100k_app:<neuer Wert>@<Pooler-Host>/rt100k?sslmode=verify-full&channel_binding=require`
+   Den Pooler-Host zeigt Neon unter **Connect** (Branch `main`, **Connection pooling** an): der Teil nach dem `@` bis vor dem `/`, er endet auf `-pooler.c-7.eu-central-1.aws.neon.tech`. → **Save**.
+3. **Datenbank-Passwort, Preview:** Schritt 1 mit Branch `preview` und einem *anderen* neuen Wert wiederholen, dann `DATABASE_URL` (Preview) genauso neu eintragen, mit dem Pooler-Host von Branch `preview`.
 4. `BETTER_AUTH_SECRET` bei Production durch einen neuen Wert ersetzen, bei Preview durch einen weiteren.
 5. `CRON_SECRET` (nur Production) durch einen neuen Wert ersetzen.
 6. Vercel → **Deployments** → beim obersten Production-Deployment **⋯** → **Redeploy**.
