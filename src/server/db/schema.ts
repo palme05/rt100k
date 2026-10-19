@@ -154,6 +154,17 @@ export const rateLimit = pgTable('rate_limit', {
   lastRequest: bigint('last_request', { mode: 'number' }).notNull(),
 })
 
+/**
+ * Fehlversuche beim Passwort-Login je E-Mail (als SHA-256, auch für unbekannte
+ * Adressen – sonst verriete die Sperre, welche Konten existieren).
+ */
+export const loginFailure = pgTable('login_failure', {
+  emailHash: text('email_hash').primaryKey(),
+  count: integer('count').notNull().default(0),
+  windowStart: timestamp('window_start', { withTimezone: true }).notNull().defaultNow(),
+  lockedUntil: timestamp('locked_until', { withTimezone: true }),
+})
+
 // ── Einladungen & Audit ─────────────────────────────────────────────────────
 
 /** Registrierung nur per Einladung: Token nur als SHA-256 gespeichert, einmalig, ablaufend, widerrufbar. */
