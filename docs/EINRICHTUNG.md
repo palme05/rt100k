@@ -16,6 +16,7 @@ Vorab geprüft: Die gesamte Git-Historie aller Branches enthält keine Secrets u
 1. **Settings** → links unter „Security“ auf **Advanced Security** klicken.
 2. Diese Punkte auf **Enable** stellen (was schon aktiv ist, so lassen):
    - **Private vulnerability reporting** – damit Sicherheitslücken vertraulich gemeldet werden können
+   - **Dependency graph** – Voraussetzung für Dependabot und den Check „Dependency Review“
    - **Dependabot alerts**
    - **Dependabot security updates**
    - **Secret Protection** bzw. **Secret scanning** und darunter **Push protection** – blockiert Pushes, die Passwörter oder Schlüssel enthalten
