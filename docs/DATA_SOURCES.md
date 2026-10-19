@@ -4,12 +4,23 @@ Stand: **19.10.2026**. Alle Quellen müssen **kostenlos ohne Kreditkarte** nutzb
 
 > Die Angaben beruhen auf Websuche (Anbieterseiten waren aus der Build-Umgebung nicht direkt abrufbar). Limits und Nutzungsbedingungen ändern sich. **Vor der Implementierung in Phase 2 je Quelle Live-Test und aktuelle ToS prüfen** und das Ergebnis hier nachtragen.
 
+## Entscheidung (19.10.2026)
+
+Tom braucht **aktuelle Kurse** (nicht nur Tagesschluss). Deshalb wird **Yahoo Finance** die Primärquelle für Aktien und ETFs (EU und US). Tom kennt und akzeptiert das Risiko: Es gibt keine offizielle API, die Nutzungsbedingungen sind unklar, und die Endpunkte können sich ohne Vorwarnung ändern.
+
+Schutzmaßnahmen, damit das Risiko klein bleibt:
+- Abruf **nur serverseitig**, nie aus dem Browser; nur für gehaltene oder beobachtete Instrumente.
+- **60-Sekunden-Cache** pro Instrument, Bündelung mehrerer Symbole in einem Request, harte Obergrenze pro Stunde.
+- Private, nicht-kommerzielle Nutzung durch wenige Personen (Familie).
+- **Fallback-Kette** ab Tag 1: Ausfall von Yahoo bricht nichts, die App zeigt „Kurs von 14:32, verzögert“ aus Finnhub (US) bzw. dem letzten Schlusskurs.
+- Provider-Abstraktion: Yahoo lässt sich ohne Umbau durch eine andere Quelle ersetzen.
+
 ## Übersicht
 
 | Zweck | Quelle | Kosten / Key | Limits (Free) | Nutzungsbedingungen | EU-Abdeckung | Verzögerung | Einsatz in rt100k |
 |---|---|---|---|---|---|---|---|
 | Wechselkurse | **EZB** Referenzkurse (`data-api.ecb.europa.eu`, `eurofxref`) | frei, kein Key | keine bekannten | Weiterverwendung mit Quellenangabe erlaubt | 30 Währungen | täglich ca. 16:00 MEZ | **Primär** (1×/Tag im Snapshot) |
-| Aktien/ETF-Kurse EU + US | **Yahoo Finance** (inoffizielle Endpunkte `query1…/v8/finance/chart`) | frei, kein Key | inoffiziell, Drosselung (429) bei Last; Crumb/Cookie nötig | **keine offizielle API**; laut Projekten wie yfinance „nur persönliche Nutzung“, ToS-Konformität unklar | sehr gut (`.DE` Xetra, `.VI` Wien, `.F`, `.AS` …) | ca. 15 Min | ⚠️ **Rückfrage bei Tom nötig** (Brief: ToS-Risiko) |
+| Aktien/ETF-Kurse EU + US | **Yahoo Finance** (inoffizielle Endpunkte `query1…/v8/finance/chart`) | frei, kein Key | inoffiziell, Drosselung (429) bei Last; Crumb/Cookie nötig | **keine offizielle API**; laut Projekten wie yfinance „nur persönliche Nutzung“, ToS-Konformität unklar | sehr gut (`.DE` Xetra, `.VI` Wien, `.F`, `.AS` …) | ca. 15 Min, teils Echtzeit | **Primär** für Aktien/ETFs (Entscheidung oben) |
 | Aktien-Kurse US | **Finnhub** Free | kostenlos mit Key | ≈ 60 Calls/Min | nur persönliche Nutzung | EU auf Free stark eingeschränkt | US nahezu Echtzeit | Fallback für US-Titel |
 | Aktien/ETF-Kurse | **Twelve Data** Basic | kostenlos mit Key | 800 Calls/Tag, 8/Min | Free-Lizenz laut Drittquellen „internal, non-display“ ⚠️ | viele EU-Börsen nur bezahlt | ? | ⚠️ vermutlich ungeeignet (Anzeige an Familie = Display) |
 | Aktien-Kurse | **Alpha Vantage** Free | kostenlos mit Key | **25 Calls/Tag**, 5/Min, „compact“ | nur persönliche Nutzung | teilweise (`.DEX`) | Tagesdaten | Notfall-Fallback für Tagesschlusskurse |
@@ -28,19 +39,19 @@ QuoteService
  ├─ Cache (60 s In-Memory/Vercel Data Cache, Live-Kurse NIE in der DB)
  ├─ Rate-Limit-Guard je Provider (Token-Bucket, Budget pro Tag)
  └─ Fallback-Kette je Asset-Klasse
-     Aktien/ETF EU:  [Yahoo*] → Alpha Vantage (Tagesschluss) → letzter DB-Schlusskurs
-     Aktien US:      Finnhub → [Yahoo*] → letzter DB-Schlusskurs
+     Aktien/ETF EU:  Yahoo → Alpha Vantage (Tagesschluss) → letzter DB-Schlusskurs
+     Aktien US:      Yahoo → Finnhub → letzter DB-Schlusskurs
      Krypto:         CoinGecko → letzter DB-Schlusskurs
      Edelmetalle:    gold-api.com → MetalpriceAPI → letzter DB-Schlusskurs
      FX:             EZB (täglich) → letzter DB-Kurs
 ```
-`*` nur nach Freigabe durch Tom. Jede Antwort trägt `{ price, currency, asOf, source, delayed: boolean }`, die UI zeigt Zeitstempel und Quelle.
+Jede Antwort trägt `{ price, currency, asOf, source, delayed: boolean }`, die UI zeigt Zeitstempel und Quelle.
 
 In der DB landen nur **Tagesschlusskurse** gehaltener oder beobachteter Instrumente (täglicher Vercel-Cron).
 
 ## Offene Punkte
 
-1. **Yahoo Finance:** einzige kostenlose Quelle mit guter Abdeckung von Xetra/Wiener Börse und ISIN-Fonds, aber inoffiziell und ToS-unklar. → Entscheidung durch Tom vor Phase 2 (Alternative: EU-Werte nur mit Tagesschluss über Alpha Vantage, 25 Calls/Tag).
+1. ~~Yahoo Finance~~ – entschieden am 19.10.2026: Primärquelle mit Schutzmaßnahmen (siehe oben).
 2. **Twelve Data:** Lizenz der Free-Stufe („non-display“) vor Nutzung im Wortlaut prüfen.
 3. **OeKB:** Nutzungsregeln im Wortlaut lesen bzw. bei der OeKB anfragen, ob ein automatisierter Abruf zulässig ist.
 4. **gold-api.com:** Platin-Abdeckung und Bedingungen prüfen.

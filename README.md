@@ -28,14 +28,9 @@ pnpm build && pnpm exec playwright test   # E2E gegen den Produktions-Build
 
 Secrets gehören **nie** ins Repo – Vorlage: [`.env.example`](.env.example), echte Werte als Vercel-Env-Vars bzw. in `.env.local`.
 
-## Einmalige Einrichtung (manuell, im GitHub-UI)
+## Einmalige Einrichtung
 
-Diese Schritte konnte die Automatisierung nicht selbst erledigen:
-
-1. **Settings → General → Danger Zone → Change visibility → Public** (erst nach Prüfung, dass die Historie sauber ist; CI-Job „Secret-Scan“ muss grün sein).
-2. **Settings → Advanced Security:** Secret Scanning + **Push Protection**, Dependabot Alerts + Security Updates, **Private Vulnerability Reporting** aktivieren.
-3. **Settings → Rules → Rulesets:** Branch-Schutz für `main` – PR erforderlich, Status-Checks „Secret-Scan (gitleaks)“, „Lint · Typecheck · Test · Build“, „CodeQL“ müssen grün sein, keine Force-Pushes.
-4. **Vercel → Project → Settings → Deployment Protection → Protection Bypass for Automation** erzeugen und als GitHub-Secret `VERCEL_AUTOMATION_BYPASS_SECRET` hinterlegen (für den ZAP-Scan).
+Repo-Einstellungen (Sichtbarkeit, Sicherheitsfunktionen, Branch-Schutz, ZAP-Secret) setzt der Besitzer im Browser: Schritt-für-Schritt in [`docs/EINRICHTUNG.md`](docs/EINRICHTUNG.md).
 
 ## Dokumentation
 
@@ -47,6 +42,7 @@ Diese Schritte konnte die Automatisierung nicht selbst erledigen:
 | [`docs/DATA_SOURCES.md`](docs/DATA_SOURCES.md) | Kurs- und Steuerdatenquellen |
 | [`docs/SECURITY.md`](docs/SECURITY.md) | Bedrohungsmodell, Checkliste, Notfallplan |
 | [`docs/IDEAS.md`](docs/IDEAS.md) | Ideen außerhalb des Scopes |
+| [`docs/EINRICHTUNG.md`](docs/EINRICHTUNG.md) | Einmalige Einrichtung im GitHub- und Vercel-UI |
 
 ## Lizenz
 

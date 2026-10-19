@@ -104,6 +104,6 @@ Regeln: Live-Kurse nie in der DB · Schlusskurse nur für gehaltene/beobachtete 
 
 ## Offene Architekturfragen (vor Phase 2 mit Tom klären)
 
-1. **Kursquelle für EU-Werte** (Yahoo inoffiziell vs. nur Tagesschluss) – siehe `docs/DATA_SOURCES.md`.
+1. ~~Kursquelle für EU-Werte~~ – entschieden: Yahoo Finance mit Fallback-Kette (`docs/DATA_SOURCES.md`).
 2. **E-Mail-Versand** (Login-Benachrichtigung neues Gerät, Einladungen, Konto-Wiederherstellung): kostenlose Optionen sind z. B. ein SMTP-Zugang eines bestehenden Postfachs (App-Passwort) oder ein Free-Tier-Mailanbieter ohne Kreditkarte; Letzterer braucht meist eine eigene Domain.
 3. **Passwortlos?** Vorschlag: Passkey als Standard, Passwort + TOTP als Rückfallweg, Backup-Codes. Admin zwingend mit 2FA.
