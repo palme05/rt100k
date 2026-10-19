@@ -1,5 +1,5 @@
 import 'server-only'
-import { desc, eq } from 'drizzle-orm'
+import { and, desc, eq, gt, sql } from 'drizzle-orm'
 import { getDb, withUser } from '../db/client'
 import { auditEvent } from '../db/schema'
 import type { Actor } from './actor'
@@ -120,4 +120,17 @@ export async function listAuditEvents(actor: Actor, limit = 50): Promise<AuditEv
     userAgent: r.userAgent,
     byOther: r.actorId !== null && r.actorId !== actor.id,
   }))
+}
+
+/** Letzte Anmeldung von einem neuen Gerät innerhalb von 14 Tagen (für den Hinweis in der App). */
+export async function recentNewDeviceLogin(actor: Actor): Promise<AuditEventDto | null> {
+  const [row] = await withUser(actor.id, (tx) =>
+    tx
+      .select({ id: auditEvent.id, type: auditEvent.type, createdAt: auditEvent.createdAt, ip: auditEvent.ip, userAgent: auditEvent.userAgent, actorId: auditEvent.actorId })
+      .from(auditEvent)
+      .where(and(eq(auditEvent.userId, actor.id), eq(auditEvent.type, 'login_new_device'), gt(auditEvent.createdAt, sql`now() - interval '14 days'`)))
+      .orderBy(desc(auditEvent.createdAt))
+      .limit(1),
+  )
+  return row ? { id: row.id, type: 'login_new_device', createdAt: row.createdAt.toISOString(), ip: row.ip, userAgent: row.userAgent, byOther: false } : null
 }
