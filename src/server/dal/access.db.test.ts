@@ -2,7 +2,7 @@ import { sql } from 'drizzle-orm'
 import { beforeAll, describe, expect, it } from 'vitest'
 import { createUser, vwce } from '@/test/fixtures'
 import { getDb, withUser } from '../db/client'
-import { auditEvent, booking, instrument, portfolio, roadSettings } from '../db/schema'
+import { auditEvent, booking, instrument, portfolio, roadSettings, session } from '../db/schema'
 import type { Actor } from './actor'
 import { listAuditEvents, recordAudit } from './audit'
 import { createBooking, deleteBooking, listAllLedgerBookings, listBookings } from './bookings'
@@ -10,6 +10,7 @@ import { NotFoundError } from './errors'
 import { getInstrument } from './instruments'
 import { createPortfolio, deletePortfolio, getPortfolio, listPortfolios, updatePortfolio } from './portfolios'
 import { getRoadSettings, saveRoadSettings, DEFAULT_ROAD_SETTINGS } from './road'
+import { revokeSession } from './sessions'
 import { listDailyTotals, writeSnapshots } from './snapshots'
 
 /**
@@ -91,6 +92,12 @@ describe('Data-Access-Schicht: fremde Daten', () => {
     expect(await listPortfolios(admin)).toEqual([])
     await expect(getPortfolio(admin, alicePortfolio)).rejects.toBeInstanceOf(NotFoundError)
     expect(await listAllLedgerBookings(admin)).toEqual([])
+  })
+
+  it('Bob kann Alices Sitzungen nicht beenden', async () => {
+    await getDb().insert(session).values({ id: 'alice-session-0001', token: 'alice-token-0001', userId: alice.id, expiresAt: new Date(Date.now() + 3_600_000) })
+    await expect(revokeSession(bob, 'alice-session-0001')).rejects.toBeInstanceOf(NotFoundError)
+    expect(await getDb().select({ id: session.id }).from(session).where(sql`id = 'alice-session-0001'`)).toHaveLength(1)
   })
 
   it('Ungültige IDs verhalten sich wie unbekannte', async () => {

@@ -1,7 +1,7 @@
 import 'server-only'
 import { asc, eq, sql } from 'drizzle-orm'
 import { getDb } from '../db/client'
-import { passkey, session, user } from '../db/schema'
+import { user } from '../db/schema'
 import { isAdmin, type Actor } from './actor'
 import { ForbiddenError } from './errors'
 
@@ -27,8 +27,9 @@ export async function listUsers(actor: Actor): Promise<UserAdminDto[]> {
       role: user.role,
       createdAt: user.createdAt,
       twoFactorEnabled: user.twoFactorEnabled,
-      passkeys: sql<number>`(select count(*)::int from ${passkey} where ${passkey.userId} = ${user.id})`,
-      lastActiveAt: sql<Date | null>`(select max(${session.updatedAt}) from ${session} where ${session.userId} = ${user.id})`,
+      // Explizite Aliase: in korrelierten Unterabfragen qualifiziert Drizzle Spalten nicht
+      passkeys: sql<number>`(select count(*)::int from passkey p where p.user_id = "user"."id")`,
+      lastActiveAt: sql<string | null>`(select max(s.updated_at)::text from session s where s.user_id = "user"."id")`,
     })
     .from(user)
     .orderBy(asc(user.createdAt))
@@ -52,4 +53,11 @@ export async function setUserRole(userId: string, role: 'member' | 'admin'): Pro
 export async function listUserIdsForCron(): Promise<{ id: string; role: 'member' | 'admin' }[]> {
   const rows = await getDb().select({ id: user.id, role: user.role }).from(user)
   return rows.map((r) => ({ id: r.id, role: r.role === 'admin' ? 'admin' : 'member' }))
+}
+
+/** Größe der Datenbank in Byte (Free-Tier-Budget 1 GB, sichtbar im Admin-Bereich). */
+export async function databaseSizeBytes(actor: Actor): Promise<number> {
+  if (!isAdmin(actor)) throw new ForbiddenError('Nur für Admins.')
+  const result = await getDb().execute<{ size: string }>(sql`select pg_database_size(current_database())::text as size`)
+  return Number(result.rows[0]?.size ?? 0)
 }

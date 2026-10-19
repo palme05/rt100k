@@ -6,6 +6,7 @@ import type { Actor } from '../dal/actor'
 import { getAuth } from './auth'
 
 export interface CurrentUser extends Actor {
+  sessionId: string
   name: string
   email: string
   twoFactorEnabled: boolean
@@ -15,9 +16,10 @@ export interface CurrentUser extends Actor {
 export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
   const result = await getAuth().api.getSession({ headers: await headers() })
   if (!result) return null
-  const { user } = result
+  const { user, session } = result
   return {
     id: user.id,
+    sessionId: session.id,
     role: user.role === 'admin' ? 'admin' : 'member',
     name: user.name,
     email: user.email,

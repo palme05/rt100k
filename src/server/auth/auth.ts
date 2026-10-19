@@ -139,10 +139,19 @@ function createAuth() {
           if (email && !isAPIError(ctx.context.returned)) await clearFailures(email)
         }
 
-        // Erfolgreiche, vollständige Anmeldung (2FA erledigt bzw. Passkey)
+        // Erfolgreiche, vollständige Anmeldung (2FA erledigt bzw. Passkey). Beim
+        // Einrichten von 2FA gibt Better Auth ebenfalls eine neue Session aus –
+        // das ist keine Anmeldung (vorher bestand schon eine Session).
         const created = ctx.context.newSession
+        const hadSession = Boolean(ctx.context.session)
         const loginPaths = ['/sign-in/email', '/two-factor/verify-totp', '/two-factor/verify-backup-code', '/passkey/verify-authentication']
-        if (created && loginPaths.includes(ctx.path) && !(ctx.path === '/sign-in/email' && created.user.twoFactorEnabled)) {
+        const isLogin =
+          created !== null &&
+          created !== undefined &&
+          loginPaths.includes(ctx.path) &&
+          !(ctx.path === '/sign-in/email' && created.user.twoFactorEnabled) &&
+          !(ctx.path.startsWith('/two-factor/') && hadSession)
+        if (isLogin && created) {
           await recordAudit({ userId: created.user.id, actorId: created.user.id, type: 'login', ip, userAgent, detail: { method: ctx.path.startsWith('/passkey') ? 'passkey' : 'passwort' } })
           // Neues Gerät: diese Browser/OS-Kombination gab es bisher in keiner Session
           const device = summarizeUserAgent(userAgent)
@@ -165,7 +174,7 @@ function createAuth() {
         if (ctx.path === '/change-password' && ctx.context.session && !isAPIError(ctx.context.returned)) {
           await recordAudit({ userId: ctx.context.session.user.id, actorId: ctx.context.session.user.id, type: 'password_changed', ip, userAgent })
         }
-        if (ctx.path === '/two-factor/verify-totp' && ctx.context.session && !isAPIError(ctx.context.returned) && !created) {
+        if (ctx.path === '/two-factor/verify-totp' && ctx.context.session && !isAPIError(ctx.context.returned)) {
           // Bestätigung beim Einrichten (kein Login)
           await recordAudit({ userId: ctx.context.session.user.id, actorId: ctx.context.session.user.id, type: 'two_factor_enabled', ip, userAgent })
         }

@@ -78,3 +78,19 @@ describe('Einladungen', () => {
     expect(await claimInvitation('')).toBeNull()
   })
 })
+
+describe('Nutzerliste für Admins', () => {
+  it('zeigt Passkeys und letzte Aktivität je Nutzer, aber keine Vermögensdaten', async () => {
+    const { listUsers } = await import('./users')
+    const { session, passkey } = await import('../db/schema')
+    await getDb().insert(session).values({ id: 'sess-liste-0001', token: 'tok-liste-0001', userId: member.id, expiresAt: new Date(Date.now() + 3_600_000) })
+    await getDb().insert(passkey).values({ id: 'pk-liste-0001', publicKey: 'x', userId: member.id, credentialID: 'cred-liste-0001', counter: 0, deviceType: 'singleDevice', backedUp: false })
+    const users = await listUsers(admin)
+    const row = users.find((u) => u.id === member.id)!
+    expect(row.passkeys).toBe(1)
+    expect(row.lastActiveAt).not.toBeNull()
+    expect(users.find((u) => u.id === admin.id)!.passkeys).toBe(0)
+    expect(Object.keys(row).sort()).toEqual(['createdAt', 'email', 'id', 'lastActiveAt', 'name', 'passkeys', 'role', 'twoFactorEnabled'])
+    await expect(listUsers(member)).rejects.toBeInstanceOf(ForbiddenError)
+  })
+})

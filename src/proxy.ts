@@ -1,3 +1,4 @@
+import { getSessionCookie } from 'better-auth/cookies'
 import { NextResponse, type NextRequest } from 'next/server'
 import { buildContentSecurityPolicy, generateNonce } from '@/lib/security/csp'
 
@@ -7,6 +8,12 @@ import { buildContentSecurityPolicy, generateNonce } from '@/lib/security/csp'
  * Statische Security-Header (HSTS usw.) stehen in next.config.ts.
  */
 export function proxy(request: NextRequest) {
+  // Ohne Session-Cookie gar nicht erst in die App (nur eine schnelle Vorprüfung –
+  // die echte Prüfung macht jede Seite und Server Action mit requireUser()).
+  if (request.nextUrl.pathname.startsWith('/app') && !getSessionCookie(request)) {
+    return NextResponse.redirect(new URL('/anmelden', request.url))
+  }
+
   const nonce = generateNonce()
   const csp = buildContentSecurityPolicy(nonce, { isDev: process.env.NODE_ENV === 'development' })
 
