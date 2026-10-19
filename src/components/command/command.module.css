@@ -1,0 +1,70 @@
+/* Command Palette: helle Karte über abgedunkeltem Hintergrund. */
+
+.backdrop {
+  position: fixed;
+  inset: 0;
+  background: var(--scrim);
+  display: grid;
+  place-items: start center;
+  padding: 14vh var(--space-4) 0;
+  z-index: 50;
+}
+
+.dialog {
+  width: min(34rem, 100%);
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-pop);
+  overflow: hidden;
+  color: var(--ink);
+}
+
+.input {
+  width: 100%;
+  font: inherit;
+  font-size: 1rem;
+  padding: var(--space-4) 1.1rem;
+  border: none;
+  border-bottom: 1px solid var(--rule);
+  background: transparent;
+  color: var(--ink);
+}
+
+.input:focus {
+  outline: none;
+}
+
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0.4rem;
+  max-height: 50vh;
+  overflow-y: auto;
+}
+
+.item {
+  display: grid;
+  grid-template-columns: 4.5rem 1fr auto;
+  gap: var(--space-3);
+  align-items: baseline;
+  padding: 0.55rem 0.7rem;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  font-size: var(--text-base);
+}
+
+.item[aria-selected='true'] {
+  background: var(--wash);
+}
+
+.group,
+.hint {
+  font-size: var(--text-xs);
+  color: var(--ink-3);
+}
+
+.empty {
+  padding: var(--space-3);
+  color: var(--ink-3);
+}

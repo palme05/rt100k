@@ -385,11 +385,6 @@ export const FORECAST_DEFAULTS = {
 export const MILESTONES = [10_000, 25_000, 50_000, 75_000, 100_000] as const
 export const NEXT_GOALS = [250_000, 500_000, 1_000_000] as const
 
-/** Monat, in dem der Verlauf eine Schwelle erstmals erreicht hat. */
-export function reachedMonth(threshold: number): string | null {
-  return HISTORY.find((p) => p.value >= threshold)?.month ?? null
-}
-
 // ── Depot-Ansichten ──────────────────────────────────────────────────────────
 
 /** Verlauf eines Depots (aus dem Gesamtverlauf abgeleitet – nur für die Prototypen). */

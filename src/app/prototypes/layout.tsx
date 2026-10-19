@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { PrivacyProvider } from '@/prototypes/shared/privacy'
+import { PrivacyProvider } from '@/components/privacy/privacy'
 
 export const metadata: Metadata = {
   title: { default: 'Prototypen', template: '%s · rt100k Prototyp' },

@@ -1,0 +1,72 @@
+/* Datentabelle: Zahlen rechtsbündig, erste Spalte links, Haarlinien zwischen Zeilen. */
+
+.scroll {
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+}
+
+.table th {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--ink-3);
+  text-align: right;
+  padding: 0 0.6rem 0.6rem;
+  border-bottom: 1px solid var(--rule-strong);
+  white-space: nowrap;
+}
+
+.table td {
+  text-align: right;
+  padding: 0.8rem 0.6rem;
+  border-bottom: 1px solid var(--rule);
+  vertical-align: top;
+}
+
+.table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.table th:first-child,
+.table td:first-child {
+  text-align: left;
+  padding-left: 0;
+}
+
+.table th:last-child,
+.table td:last-child {
+  padding-right: 0;
+}
+
+.table td small {
+  display: block;
+  color: var(--ink-3);
+  font-size: var(--text-sm);
+}
+
+.table tbody tr:has(a):hover td {
+  background: var(--wash);
+}
+
+.name {
+  display: block;
+  font-weight: var(--weight-medium);
+}
+
+.link {
+  display: block;
+}
+
+.middle td {
+  vertical-align: middle;
+}
+
+@media (max-width: 720px) {
+  .hideSm {
+    display: none;
+  }
+}
