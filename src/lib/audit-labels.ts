@@ -1,0 +1,22 @@
+/** Anzeigetexte für das Audit-Log. */
+export const AUDIT_LABELS: Record<string, string> = {
+  login: 'Anmeldung',
+  login_failed: 'Fehlgeschlagene Anmeldung',
+  login_new_device: 'Anmeldung von einem neuen Gerät',
+  logout: 'Abmeldung',
+  sessions_revoked: 'Sitzungen beendet',
+  password_changed: 'Passwort geändert',
+  two_factor_enabled: 'Zwei-Faktor-Anmeldung eingeschaltet',
+  two_factor_disabled: 'Zwei-Faktor-Anmeldung ausgeschaltet',
+  passkey_added: 'Passkey hinzugefügt',
+  passkey_removed: 'Passkey entfernt',
+  account_created: 'Konto angelegt',
+  invitation_created: 'Einladung erstellt',
+  invitation_revoked: 'Einladung widerrufen',
+  portfolio_deleted: 'Depot gelöscht',
+  export: 'Daten exportiert',
+}
+
+export function auditLabel(type: string): string {
+  return AUDIT_LABELS[type] ?? type
+}

@@ -1,0 +1,14 @@
+/* QR-Code: immer dunkel auf hell, damit jede Kamera ihn liest. */
+.svg {
+  display: block;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-md);
+}
+
+.bg {
+  fill: var(--surface);
+}
+
+.fg {
+  fill: var(--ink);
+}

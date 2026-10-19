@@ -46,7 +46,7 @@ export function RouteLine({ total, milestones }: { total: number; milestones: re
                   {label(m.value)}
                 </text>
               ) : null}
-              {showText && !(narrow && done) ? (
+              {showText && !(narrow && done) && Math.abs(cx - here) > 36 ? (
                 <text className={styles.date} x={cx} y={LINE_Y + 24} textAnchor={anchor} dx={goal ? 6 : 0}>
                   {date}
                 </text>

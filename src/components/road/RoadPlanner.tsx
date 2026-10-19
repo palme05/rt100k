@@ -1,6 +1,6 @@
 'use client'
 
-import { useId, useMemo } from 'react'
+import { useId, useMemo, useState, useTransition } from 'react'
 import { eurCompact, eurWhole, monthLabel, share } from '@/lib/display'
 import { GOAL, reachedMonth } from '@/lib/road'
 import { Legend, LineChart } from '../charts/charts'
@@ -16,8 +16,19 @@ const FORECAST_MONTHS = 50
  * Planer „Road to 100k“: Ankunftszeiten, Prognosekorridor mit Annahmen
  * zum Verstellen und alle Stationen. Rechnet vollständig im Browser.
  */
-export function RoadPlanner({ data, fromMonth }: { data: RoadPlannerData; fromMonth: string }) {
+export function RoadPlanner({
+  data,
+  fromMonth,
+  onSave,
+}: {
+  data: RoadPlannerData
+  fromMonth: string
+  /** Annahmen als Standard speichern (Server Action) */
+  onSave?: (settings: RoadSettings) => Promise<void>
+}) {
   const { settings, setSettings, reset, stale, simulation, nowMonth } = useRoadForecast(data)
+  const [saving, startSaving] = useTransition()
+  const [saved, setSaved] = useState(false)
   const { hidden } = usePrivacy()
   const ids = useId()
   const money = (v: number) => (hidden ? `${MASK} €` : eurWhole(v))
@@ -103,7 +114,7 @@ export function RoadPlanner({ data, fromMonth }: { data: RoadPlannerData; fromMo
             nowLabel="Heute"
             height={340}
             yTickCount={5}
-            thresholdLabelSide="left"
+            thresholdLabelSide={nowIndex < 6 ? "right" : "left"}
           />
         </Section>
 
@@ -166,9 +177,31 @@ export function RoadPlanner({ data, fromMonth }: { data: RoadPlannerData; fromMo
                 </span>
               </label>
             ) : null}
-            <button type="button" className={`${button.button} ${styles.reset}`} onClick={reset}>
-              Zurücksetzen
-            </button>
+            <div className={styles.buttons}>
+              {onSave ? (
+                <button
+                  type="button"
+                  className={button.button}
+                  disabled={saving}
+                  onClick={() =>
+                    startSaving(async () => {
+                      await onSave(settings)
+                      setSaved(true)
+                    })
+                  }
+                >
+                  Als Standard speichern
+                </button>
+              ) : null}
+              <button type="button" className={button.button} onClick={reset}>
+                Zurücksetzen
+              </button>
+              {saved && !saving ? (
+                <span className={styles.hint} role="status">
+                  Gespeichert
+                </span>
+              ) : null}
+            </div>
           </div>
         </Section>
       </div>
