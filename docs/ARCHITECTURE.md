@@ -1,6 +1,6 @@
 # Architektur
 
-Stand: Phase 0 (19.10.2026). Grundsatz: **0 € Kosten, Sicherheit vor Features.** Jede Architekturentscheidung muss in die Free Tiers unten passen.
+Stand: Phase 1 (19.10.2026). Grundsatz: **0 € Kosten, Sicherheit vor Features.** Jede Architekturentscheidung muss in die Free Tiers unten passen.
 
 ## Überblick
 
@@ -31,14 +31,14 @@ GitHub Actions (öffentliches Repo, kostenlos)
 |---|---|---|
 | A1 | **Next.js 16** (App Router), **TypeScript 6 strict** (inkl. `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`) | Brief. TS 7 (nativer Compiler) wird von typescript-eslint noch nicht unterstützt. |
 | A2 | **pnpm** mit `minimumReleaseAge: 7 Tage` und `onlyBuiltDependencies` | Supply-Chain: frisch kompromittierte Pakete werden meist innerhalb von Tagen entdeckt; Install-Skripte nur für freigegebene Pakete. |
-| A3 | **Kein Tailwind**, CSS Modules + CSS-Variablen als Design-Tokens | Brief erlaubt beides; weniger Abhängigkeiten, die drei Prototyp-Richtungen brauchen ohnehin völlig eigene Tokens. |
+| A3 | **Kein Tailwind**, CSS Modules + CSS-Variablen als Design-Tokens (`src/styles/tokens.css`) | Brief erlaubt beides; weniger Abhängigkeiten. Designsystem „Strecke“ (Richtung A, gewählt am 19.10.2026): `docs/DESIGN.md`. |
 | A4 | **Alle Seiten dynamisch gerendert** | Voraussetzung für CSP-Nonces. Kosten: jede Seitenansicht ist ein Function-Aufruf; bei Familiennutzung vernachlässigbar (siehe Budget). |
 | A5 | **Better Auth selbst gehostet** (MIT) statt *Neon Managed Better Auth* | Neon Auth unterstützt laut Doku (Stand 10/2026) nur die Plugins Admin, Email OTP, JWT, Magic Link, Organization, Open API, Phone Number – **keine Passkeys und kein TOTP-2FA**. Die Brief-Ausweichlösung greift: Better Auth mit `@better-auth/passkey` und `twoFactor` (TOTP + Backup-Codes), Tabellen in der eigenen Neon-DB, integriertes Rate-Limiting mit DB-Speicher. |
 | A6 | **Drizzle ORM** + versionierte SQL-Migrations, Treiber `@neondatabase/serverless` | Brief. |
 | A7 | **Geld als Integer-Cent** (`src/lib/money.ts`), Stückzahlen als skalierte Ganzzahlen/Decimal (Phase 2) | Brief. ESLint verbietet `parseFloat`. |
-| A8 | **Fonts selbst gehostet** über `@fontsource`-Pakete (npm, OFL): Instrument Sans (A), IBM Plex Sans/Mono (B), Newsreader + Source Sans 3 (C) | Keine Requests an Google (DSGVO), CSP bleibt bei `font-src 'self'`. Nach der Designwahl bleiben nur die Schriften der gewählten Richtung. |
-| A9 | **Eigene SVG-Charts** (`src/prototypes/shared/charts.tsx`): Crosshair, Tastatur, Tabellenansicht, Privatsphäre-Modus; für Kurscharts mit Intraday-Daten später ggf. TradingView lightweight-charts (Apache-2.0) | Volle gestalterische Kontrolle, keine Bundle-Kosten, CSP-konform (keine Inline-Styles). |
-| A10 | **Prognose- und Kennzahlen-Logik als reine Funktionen** (`src/lib/forecast.ts`, `returns.ts`, `markets.ts`) mit Unit-Tests | Wird ab Phase 2 direkt weiterverwendet; Monte-Carlo mit festem Seed, damit Server und Browser identisch rechnen. |
+| A8 | **Schrift selbst gehostet:** Instrument Sans Variable über `@fontsource-variable/instrument-sans` (npm, OFL) | Keine Requests an Google (DSGVO), CSP bleibt bei `font-src 'self'`. Die Schriften der Richtungen B und C sind entfernt. |
+| A9 | **Eigene SVG-Charts** (`src/components/charts/charts.tsx`): Crosshair, Tastatur, Tabellenansicht, Privatsphäre-Modus; für Kurscharts mit Intraday-Daten später ggf. TradingView lightweight-charts (Apache-2.0) | Volle gestalterische Kontrolle, keine Bundle-Kosten, CSP-konform (keine Inline-Styles). |
+| A10 | **Prognose- und Kennzahlen-Logik als reine Funktionen** (`src/lib/forecast.ts`, `road.ts`, `returns.ts`, `markets.ts`) mit Unit-Tests | Wird ab Phase 2 direkt weiterverwendet; Monte-Carlo mit festem Seed, damit Server und Browser identisch rechnen. |
 
 ## Free-Tier-Grenzen (geprüft am 19.10.2026)
 

@@ -2,7 +2,7 @@
 
 Selbst gehosteter, quelloffener Vermögenstracker für Familie und Freunde: Depots, Krypto, Cash und Sachwerte an einem Ort, mit Performance-Analyse, österreichischem Steuer-Cockpit und dem Herzstück **Road to 100k** (Meilensteine, Prognosekegel, Zinseszins-Kipppunkt). Ohne Abo, ohne Broker-Logins, auf Free Tiers.
 
-> **Status:** Phase 0 (Setup) abgeschlossen, Phase 1 (Design-Prototypen) in Arbeit. Noch nicht für echte Daten geeignet.
+> **Status:** Phase 1 (Design) abgeschlossen: Designsystem „Strecke“ mit Referenzseiten. Als Nächstes Phase 2 (Anmeldung, Datenbank, Dashboard). Noch nicht für echte Daten geeignet.
 
 ## Grundsätze
 
@@ -39,6 +39,7 @@ Repo-Einstellungen (Sichtbarkeit, Sicherheitsfunktionen, Branch-Schutz, ZAP-Secr
 | [`docs/BRIEF.md`](docs/BRIEF.md) | Auftrag, Regeln, Phasen |
 | [`docs/FEATURES.md`](docs/FEATURES.md) | Feature-Matrix Parqet / getquin / Finanzfluss → rt100k |
 | [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | Architektur, Entscheidungen, Free-Tier-Budget |
+| [`docs/DESIGN.md`](docs/DESIGN.md) | Designsystem: Tokens, Komponenten, Diagramm-Regeln |
 | [`docs/DATA_SOURCES.md`](docs/DATA_SOURCES.md) | Kurs- und Steuerdatenquellen |
 | [`docs/SECURITY.md`](docs/SECURITY.md) | Bedrohungsmodell, Checkliste, Notfallplan |
 | [`docs/IDEAS.md`](docs/IDEAS.md) | Ideen außerhalb des Scopes |
