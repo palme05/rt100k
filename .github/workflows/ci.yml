@@ -39,6 +39,21 @@ jobs:
   check:
     name: Lint · Typecheck · Test · Build
     runs-on: ubuntu-latest
+    services:
+      # Wegwerf-Datenbank nur für diesen Lauf (gleiche Hauptversion wie Neon), per Digest gepinnt
+      postgres:
+        image: postgres:18-alpine@sha256:77f585114c32fbca283dc835b0596f4e52b51b4c6662d7810b2f4084f60a1873
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL_TEST_ADMIN: postgres://postgres:postgres@localhost:5432/postgres
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -54,12 +69,14 @@ jobs:
       - run: pnpm lint
       - run: pnpm typecheck
       - run: pnpm test
+      - name: Datenbanktests (RLS, Zugriffskontrolle, Auth)
+        run: pnpm test:db
       - run: pnpm build
       # Hinweis: .next/ wird bewusst NICHT als Artefakt hochgeladen (enthält Preview-Keys,
       # Artefakte öffentlicher Repos sind öffentlich).
       - name: Playwright-Browser installieren
         run: pnpm exec playwright install --with-deps chromium
-      - name: E2E (Security-Header, CSP)
+      - name: E2E (Anmeldung, 2FA, Depots, Zugriff, Security-Header, CSP)
         run: pnpm exec playwright test
 
   dependency-review:
