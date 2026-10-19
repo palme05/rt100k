@@ -48,10 +48,14 @@ Im Cloud-Container: `PW_CHROMIUM_PATH=/opt/pw-browsers/chromium pnpm exec playwr
 
 ## Struktur
 
-- `src/lib/` – reine Logik mit Tests (Geld, Format, Prognose, Kennzahlen, Börsenzeiten, CSP)
-- `src/prototypes/` – Phase-1-Prototypen (`a`, `b`, `c`), Mock-Daten und geteilte Diagramme; wird nach der Designwahl zur Komponentenbibliothek bzw. entfernt
-- `src/app/prototypes/` – Routen der Prototypen (`/prototypes/a|b|c`, je Übersicht, `depot/[id]`, `road`)
-- `e2e/` – Playwright: Security-Header/CSP, alle Prototyp-Seiten (Fehler, CSP, Überlauf), Privatsphäre-Modus, Palette
+- `src/lib/` – reine Logik mit Tests (Geld, Format, Monate, Prognose, Road to 100k, Kennzahlen, Börsenzeiten, CSP)
+- `src/styles/tokens.css` – Design-Tokens (einzige Quelle für Farben, Schrift, Abstände)
+- `src/components/` – Komponentenbibliothek „Strecke“: `shell`, `ui`, `charts`, `road`, `privacy`, `command`, `markets`, `hooks`. Regeln in [`docs/DESIGN.md`](docs/DESIGN.md)
+- `src/prototypes/` – Mock-Daten und Navigation der Referenzseiten (fallen in Phase 2 weg)
+- `src/app/prototypes/` – Referenzseiten `/prototypes/a` (Übersicht, `depot/[id]`, `road`)
+- `e2e/` – Playwright: Security-Header/CSP, Referenzseiten (Fehler, CSP, Überlauf), Privatsphäre-Modus, Palette, Tastenkürzel, Diagramm-Tastatur, Planer
+
+**UI-Regeln:** Seiten nur aus `src/components/` zusammensetzen. Keine Hex-Werte außerhalb von `tokens.css`. Beträge immer über `Amount`/`AmountSplit` (Privatsphäre-Modus).
 
 ## Infrastruktur
 
