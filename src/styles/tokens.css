@@ -1,0 +1,65 @@
+/* ═══ rt100k Design-Tokens („Strecke“) ═══════════════════════════════════
+   Einzige Quelle für Farben, Schrift, Abstände. Komponenten verwenden nur
+   diese Variablen, nie Hex-Werte. Bewusst nur hell; Begründung und Regeln
+   in docs/DESIGN.md. */
+
+:root {
+  /* Flächen & Tinte */
+  --bg: #fbfbf9;
+  --surface: #ffffff;
+  --wash: #f2f2ee;
+  --ink: #16181b;
+  --ink-2: #4f535a;
+  --ink-3: #6c7077;
+  --rule: #e6e6e1;
+  --rule-strong: #cfcfc9;
+
+  /* Akzent: Route, Vermögenslinie, Fokus – sparsam, nie für Text */
+  --accent: #e2620b;
+  --accent-wash: rgb(226 98 11 / 9%);
+  --accent-band: rgb(226 98 11 / 13%);
+
+  /* Zweitfarbe: Einzahlungen, Erträge, Anteils-Balken */
+  --second: #2f5f8f;
+  --second-wash: #c9d6e4;
+
+  /* Bedeutung: nur Gewinn/Verlust, immer mit Vorzeichen bzw. Pfeil */
+  --pos: #1b7745;
+  --neg: #c1372f;
+
+  /* Schrift */
+  --font: 'Instrument Sans Variable', 'Helvetica Neue', Arial, sans-serif;
+  --text-2xs: 0.6875rem;
+  --text-xs: 0.75rem;
+  --text-sm: 0.8125rem;
+  --text-md: 0.875rem;
+  --text-base: 0.9375rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.25rem;
+  --text-2xl: clamp(1.75rem, 4vw, 2.5rem);
+  --text-hero: clamp(2.75rem, 7vw, 4rem);
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+
+  /* Abstände & Formen */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-10: 2.5rem;
+  --space-12: 3rem;
+  --gutter: clamp(1rem, 4vw, 3rem);
+  --content-max: 80rem;
+  --radius-sm: 3px;
+  --radius-md: 8px;
+  --radius-lg: 14px;
+  --radius-pill: 999px;
+  --scrim: rgb(22 24 27 / 28%);
+  --shadow-raise: 0 1px 2px rgb(22 24 27 / 10%);
+  --shadow-pop: 0 24px 60px rgb(22 24 27 / 18%);
+  --shadow-tip: drop-shadow(0 4px 12px rgb(22 24 27 / 10%));
+}

@@ -1,4 +1,5 @@
-/* Basis-Reset. Design-Tokens entstehen in Phase 1 (je Prototyp) und danach in docs/DESIGN.md. */
+@import '../styles/tokens.css';
+
 *,
 *::before,
 *::after {
@@ -13,8 +14,36 @@ html {
 body {
   margin: 0;
   min-height: 100dvh;
-  font-family: system-ui, sans-serif;
-  line-height: 1.5;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font);
+  font-size: var(--text-base);
+  line-height: 1.45;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+svg {
+  max-width: 100%;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+  border-radius: var(--radius-sm);
+}
+
+/* Nur für Screenreader sichtbar */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 
 @media (prefers-reduced-motion: reduce) {

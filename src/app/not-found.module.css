@@ -3,16 +3,13 @@
   display: grid;
   align-content: center;
   gap: 0.75rem;
-  padding: 2rem max(1rem, 8vw);
-  background: #fbfbf9;
-  color: #16181b;
-  font-family: system-ui, sans-serif;
+  padding: var(--space-8) var(--gutter);
 }
 
 .code {
   margin: 0;
   font-size: 0.875rem;
-  color: #6c7077;
+  color: var(--ink-3);
   font-variant-numeric: tabular-nums;
 }
 
@@ -25,11 +22,11 @@
 
 .text {
   margin: 0;
-  color: #4f535a;
+  color: var(--ink-2);
 }
 
 .link {
-  color: #16181b;
+  color: var(--ink);
   width: fit-content;
   text-underline-offset: 0.25em;
 }
