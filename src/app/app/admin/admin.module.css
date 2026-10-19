@@ -1,0 +1,15 @@
+.stack {
+  display: grid;
+  gap: var(--space-5);
+}
+
+.link {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.hint {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--ink-3);
+}
