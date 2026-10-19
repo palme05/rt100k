@@ -1,0 +1,35 @@
+.page {
+  min-height: 100dvh;
+  display: grid;
+  align-content: center;
+  gap: 0.75rem;
+  padding: 2rem max(1rem, 8vw);
+  background: #fbfbf9;
+  color: #16181b;
+  font-family: system-ui, sans-serif;
+}
+
+.code {
+  margin: 0;
+  font-size: 0.875rem;
+  color: #6c7077;
+  font-variant-numeric: tabular-nums;
+}
+
+.title {
+  margin: 0;
+  font-size: clamp(1.75rem, 4vw, 2.5rem);
+  font-weight: 500;
+  letter-spacing: -0.02em;
+}
+
+.text {
+  margin: 0;
+  color: #4f535a;
+}
+
+.link {
+  color: #16181b;
+  width: fit-content;
+  text-underline-offset: 0.25em;
+}

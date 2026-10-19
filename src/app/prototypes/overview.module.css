@@ -1,114 +1,123 @@
 .page {
   min-height: 100dvh;
-  background: #f4f4f1;
+  background: #f6f6f3;
   color: #17181a;
-  padding: clamp(1.5rem, 4vw, 4rem) clamp(1rem, 4vw, 4rem);
+  padding: clamp(2rem, 6vw, 5rem) clamp(1rem, 6vw, 5rem);
   font-family: system-ui, sans-serif;
 }
 
 .intro {
-  max-width: 46rem;
+  max-width: 40rem;
+  display: grid;
+  gap: 0.6rem;
 }
 
 .intro h1 {
-  font-size: clamp(1.75rem, 4vw, 2.75rem);
-  margin: 0 0 0.5rem;
-  letter-spacing: -0.02em;
+  margin: 0;
+  font-size: clamp(1.75rem, 4vw, 2.5rem);
+  font-weight: 600;
+  letter-spacing: -0.025em;
 }
 
 .intro p {
+  margin: 0;
   color: #4a4d52;
-  margin: 0 0 0.5rem;
+}
+
+.keys {
+  font-size: 0.875rem;
+}
+
+.keys kbd {
+  font: inherit;
+  font-size: 0.8125rem;
+  border: 1px solid #d4d4ce;
+  border-radius: 4px;
+  padding: 0 0.3rem;
+  background: #fff;
 }
 
 .grid {
+  list-style: none;
+  padding: 0;
+  margin: 3rem 0 0;
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr));
-  gap: 1rem;
-  margin-top: 2rem;
+  gap: 2.5rem 2rem;
 }
 
 .card {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-  border-radius: 0.75rem;
-  padding: 1.25rem;
-  text-decoration: none;
-  color: inherit;
-  border: 1px solid #d9d9d3;
-  background: #fff;
-  transition: transform 120ms ease, box-shadow 120ms ease;
-}
-
-.card:hover,
-.card:focus-visible {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgb(0 0 0 / 8%);
-}
-
-.card:focus-visible {
-  outline: 3px solid #1f5fbf;
-  outline-offset: 2px;
-}
-
-.swatch {
-  height: 7rem;
-  border-radius: 0.5rem;
   display: grid;
-  place-items: center;
-  font-weight: 700;
-  font-size: 1.5rem;
-}
-
-.swatchA {
-  composes: swatch;
-  background: repeating-linear-gradient(90deg, #f2f2ee 0 28px, transparent 28px 56px) center / 100% 4px no-repeat, #2a2c30;
-  color: #fff;
-}
-
-.swatchB {
-  composes: swatch;
-  background: #07090a;
-  color: #ffb627;
-  font-family: ui-monospace, monospace;
-  border: 1px solid #1d2527;
-}
-
-.swatchC {
-  composes: swatch;
-  background: #f5f0e6;
-  color: #1b1915;
-  font-family: Georgia, serif;
-  font-style: italic;
-  border: 1px solid #cfc5b2;
+  gap: 0.6rem;
+  align-content: start;
 }
 
 .card h2 {
-  margin: 0;
-  font-size: 1.2rem;
+  margin: 0.4rem 0 0;
+  font-size: 1.125rem;
+  font-weight: 600;
+}
+
+.card h2 a {
+  color: inherit;
+  text-underline-offset: 0.2em;
 }
 
 .card p {
   margin: 0;
   color: #4a4d52;
-  font-size: 0.95rem;
+  font-size: 0.9375rem;
+  line-height: 1.5;
+}
+
+.swatch {
+  height: 9rem;
+  border-radius: 6px;
+}
+
+.swatchA {
+  composes: swatch;
+  background:
+    linear-gradient(#e2620b, #e2620b) 8% 50% / 52% 3px no-repeat,
+    linear-gradient(#cfcfc9, #cfcfc9) 92% 50% / 32% 2px no-repeat,
+    radial-gradient(circle, #e2620b 0 6px, transparent 7px) 60% 50% / 14px 14px no-repeat,
+    #fbfbf9;
+  border: 1px solid #e6e6e1;
+}
+
+.swatchB {
+  composes: swatch;
+  background:
+    linear-gradient(#20262e, #20262e) 33% 0 / 1px 100% no-repeat,
+    linear-gradient(#20262e, #20262e) 66% 0 / 1px 100% no-repeat,
+    linear-gradient(#8bb4d9, #8bb4d9) 10% 70% / 18% 6px no-repeat,
+    linear-gradient(#f0a544, #f0a544) 90% 70% / 2px 18px no-repeat,
+    #0d1014;
+}
+
+.swatchC {
+  composes: swatch;
+  background:
+    linear-gradient(#1b1b1a, #1b1b1a) 10% 30% / 55% 10px no-repeat,
+    linear-gradient(#1b1b1a, #1b1b1a) 10% 46% / 40% 10px no-repeat,
+    linear-gradient(#1d4e89, #1d4e89) 10% 78% / 80% 2px no-repeat,
+    #f2f1ec;
+  border: 1px solid #d5d2c9;
 }
 
 .links {
   display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem 1rem;
-  font-size: 0.9rem;
+  gap: 1rem;
+  font-size: 0.875rem;
 }
 
 .links a {
-  color: #1f5fbf;
+  color: #17181a;
+  text-underline-offset: 0.2em;
 }
 
 .note {
-  margin-top: 2rem;
-  font-size: 0.85rem;
-  color: #5d6066;
-  max-width: 46rem;
+  margin-top: 3rem;
+  font-size: 0.8125rem;
+  color: #6b6e74;
 }
