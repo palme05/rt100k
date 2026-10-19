@@ -1,6 +1,12 @@
 import { expect, test, type Page } from '@playwright/test'
 
-const PAGES = ['a', 'b', 'c'].flatMap((p) => [`/prototypes/${p}`, `/prototypes/${p}/depot/trade-republic`, `/prototypes/${p}/road`])
+const PAGES = [
+  '/prototypes',
+  '/prototypes/a',
+  '/prototypes/a/depot/trade-republic',
+  '/prototypes/a/depot/tresor',
+  '/prototypes/a/road',
+]
 
 function collectProblems(page: Page) {
   const problems: string[] = []
@@ -11,10 +17,10 @@ function collectProblems(page: Page) {
   return problems
 }
 
-test('Übersicht der Prototypen verlinkt alle Richtungen', async ({ page }) => {
+test('Referenz-Übersicht verlinkt alle Seiten', async ({ page }) => {
   await page.goto('/prototypes')
-  for (const name of ['A · Strecke', 'B · Cockpit', 'C · Editorial']) {
-    await expect(page.getByRole('link', { name })).toBeVisible()
+  for (const name of ['Übersicht', 'Depot-Detail', 'Road to 100k']) {
+    await expect(page.getByRole('link', { name, exact: true })).toBeVisible()
   }
 })
 
@@ -44,14 +50,39 @@ test('Privatsphäre-Modus blendet Beträge aus, Prozente bleiben', async ({ page
 
 test('Command Palette öffnet mit Strg+K und navigiert', async ({ page, isMobile }) => {
   test.skip(isMobile, 'Tastenkürzel nur am Desktop')
-  await page.goto('/prototypes/b')
+  await page.goto('/prototypes/a')
   await page.locator('body').click()
   await page.keyboard.press('Control+k')
   const dialog = page.getByRole('dialog', { name: 'Befehle' })
   await expect(dialog).toBeVisible()
   await page.keyboard.type('road')
   await page.keyboard.press('Enter')
-  await expect(page).toHaveURL(/\/prototypes\/b\/road$/)
+  await expect(page).toHaveURL(/\/prototypes\/a\/road$/)
+})
+
+test('Tastenfolge G D / G R navigiert', async ({ page, isMobile }) => {
+  test.skip(isMobile, 'Tastenkürzel nur am Desktop')
+  await page.goto('/prototypes/a')
+  await page.locator('body').click()
+  await page.keyboard.press('g')
+  await page.keyboard.press('r')
+  await expect(page).toHaveURL(/\/prototypes\/a\/road$/)
+  await page.keyboard.press('g')
+  await page.keyboard.press('d')
+  await expect(page).toHaveURL(/\/prototypes\/a$/)
+})
+
+test('Diagramm zeigt per Tastatur einen Tooltip und hat eine Tabellenansicht', async ({ page, isMobile }) => {
+  test.skip(isMobile, 'Tastatur nur am Desktop')
+  await page.goto('/prototypes/a')
+  const chart = page.getByRole('group', { name: /Vermögensverlauf/ })
+  const readout = page.locator(`[id="${await chart.getAttribute('aria-describedby')}"]`)
+  await chart.focus()
+  await page.keyboard.press('Home')
+  await expect(readout).toContainText('Jän 2020')
+  await expect(readout).toContainText('Vermögen')
+  await page.getByText('Als Tabelle anzeigen').first().click()
+  await expect(page.getByRole('table', { name: /Vermögensverlauf/ })).toBeVisible()
 })
 
 test('Road-to-100k-Planer reagiert auf die Sparrate', async ({ page }) => {

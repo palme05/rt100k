@@ -1,9 +1,13 @@
-import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { AllocationBars } from '@/prototypes/a/AllocationBars'
-import { ProfileChart } from '@/prototypes/a/ProfileChart'
-import { Trend } from '@/prototypes/a/Trend'
-import styles from '@/prototypes/a/a.module.css'
+import { HistoryChart } from '@/components/charts/HistoryChart'
+import { Amount } from '@/components/privacy/privacy'
+import { AllocationBars, WeightBar } from '@/components/ui/AllocationBars'
+import { DataTable, NameCell, Td, Th } from '@/components/ui/DataTable'
+import { BackLink, Grid, Muted, Note, Section, SectionHead, TextLink } from '@/components/ui/layout'
+import { Row, Rows } from '@/components/ui/Rows'
+import { HeroSummary } from '@/components/ui/Summary'
+import { Trend } from '@/components/ui/Trend'
+import { dayLabel, share } from '@/lib/display'
 import {
   BOOKINGS,
   DEPOTS,
@@ -18,8 +22,7 @@ import {
   findDepot,
   positions,
 } from '@/prototypes/mock/portfolio'
-import { dayLabel, share } from '@/prototypes/shared/format'
-import { Amount, AmountSplit } from '@/prototypes/shared/privacy'
+import { BASE } from '@/prototypes/navigation'
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
   const depot = findDepot((await params).id)
@@ -40,211 +43,111 @@ export default async function DepotPage({ params }: { params: Promise<{ id: stri
   const bookings = BOOKINGS.filter((b) => b.depotId === depot.id)
   const ter = depotTerCost(depot)
 
+  const events = bookings
+    .filter((b) => b.type === 'Kauf' || b.type === 'Verkauf')
+    .map((b) => ({ date: b.date, label: `${b.type}: ${b.title}`, kind: b.type === 'Kauf' ? ('buy' as const) : ('sell' as const) }))
+
   return (
     <>
-      <Link className={styles.back} href="/prototypes/a">
-        ← Übersicht
-      </Link>
+      <BackLink href={BASE}>Übersicht</BackLink>
 
-      <section className={styles.summary} aria-labelledby="depot-titel">
-        <div className={styles.summaryTop}>
-          <div className={styles.pageHead}>
-            <p className={styles.eyebrow}>
-              {depot.name} · seit {depot.since} · {depot.taxSimple ? 'steuereinfach' : 'nicht steuereinfach'}
-            </p>
-            <h1 id="depot-titel" className={styles.pageTitle}>
-              {depot.broker}
-            </h1>
-            <div className={styles.hero}>
-              <AmountSplit value={value} centsClassName={styles.heroCents} />
-            </div>
-          </div>
-          <dl className={styles.keyStats}>
-            <div className={styles.keyStat}>
-              <dt>Heute</dt>
-              <dd>
-                <Trend value={today / (value - today)} />
-                <small className={styles.muted}>
-                  <Amount value={today} signed whole />
-                </small>
-              </dd>
-            </div>
-            <div className={styles.keyStat}>
-              <dt>Kursgewinn</dt>
-              <dd>
-                <Trend value={cost ? gain / cost : 0} />
-                <small className={styles.muted}>
-                  <Amount value={gain} signed whole />
-                </small>
-              </dd>
-            </div>
-            <div className={styles.keyStat}>
-              <dt>Erträge 12 Monate</dt>
-              <dd>
-                <Amount value={depotIncomeTtm(depot)} whole />
-                <small className={styles.muted}>Dividenden, Zinsen, Staking</small>
-              </dd>
-            </div>
-            <div className={styles.keyStat}>
-              <dt>Laufende Kosten</dt>
-              <dd>
-                {ter > 0 ? <Amount value={ter} whole /> : '–'}
-                <small className={styles.muted}>pro Jahr (TER)</small>
-              </dd>
-            </div>
-          </dl>
-        </div>
-      </section>
+      <HeroSummary
+        id="depot-titel"
+        eyebrow={`${depot.name} · seit ${depot.since} · ${depot.taxSimple ? 'steuereinfach' : 'nicht steuereinfach'}`}
+        title={depot.broker}
+        value={value}
+        stats={[
+          { label: 'Heute', value: <Trend value={today / (value - today)} />, note: <Amount value={today} signed whole /> },
+          { label: 'Kursgewinn', value: <Trend value={cost ? gain / cost : 0} />, note: <Amount value={gain} signed whole /> },
+          { label: 'Erträge 12 Monate', value: <Amount value={depotIncomeTtm(depot)} whole />, note: 'Dividenden, Zinsen, Staking' },
+          { label: 'Laufende Kosten', value: ter > 0 ? <Amount value={ter} whole /> : '–', note: 'pro Jahr (TER)' },
+        ]}
+      />
 
-      <div className={styles.grid}>
-        <section className={styles.col8} aria-label="Verlauf des Depots">
-          <ProfileChart history={depotHistory(depot)} title={`Wertverlauf ${depot.broker}`} milestones={[]} bookings={bookings} />
-        </section>
+      <Grid>
+        <Section label="Verlauf des Depots" span="twoThirds">
+          <HistoryChart history={depotHistory(depot)} title={`Wertverlauf ${depot.broker}`} milestones={[]} events={events} />
+        </Section>
 
-        <section className={styles.col4} aria-labelledby="aufteilung-depot">
-          <div className={styles.sectionHead}>
-            <h2 id="aufteilung-depot" className={styles.sectionTitle}>
-              Aufteilung
-            </h2>
-            <p className={styles.sectionMeta}>{rows.length} Positionen</p>
-          </div>
+        <Section id="aufteilung-depot" title="Aufteilung" meta={`${rows.length} Positionen`} span="third">
           <AllocationBars items={allocation} />
-          <div className={`${styles.sectionHead} ${styles.subHead}`}>
-            <h2 className={styles.sectionTitle}>Weitere Depots</h2>
-          </div>
-          <ul className={styles.rows}>
+          <SectionHead title="Weitere Depots" spaced />
+          <Rows>
             {DEPOTS.filter((d) => d.id !== depot.id).map((d) => (
-              <li key={d.id} className={styles.row}>
-                <Link className={styles.textLink} href={`/prototypes/a/depot/${d.id}`}>
-                  {d.broker}
-                </Link>
-                <Amount className={styles.rowValue} value={depotValue(d)} whole />
-              </li>
+              <Row key={d.id} label={<TextLink href={`${BASE}/depot/${d.id}`}>{d.broker}</TextLink>} value={<Amount value={depotValue(d)} whole />} />
             ))}
-          </ul>
-        </section>
+          </Rows>
+        </Section>
 
-        <section className={styles.section} aria-labelledby="positionen">
-          <div className={styles.sectionHead}>
-            <h2 id="positionen" className={styles.sectionTitle}>
-              Positionen
-            </h2>
-            <p className={styles.sectionMeta}>Anschaffungskosten nach gleitendem Durchschnitt</p>
-          </div>
-          <div className={styles.tableScroll}>
-            <table className={styles.posTable}>
-              <thead>
-                <tr>
-                  <th scope="col">Position</th>
-                  <th scope="col" className={styles.hideSmCell}>
-                    Menge
-                  </th>
-                  <th scope="col" className={styles.hideSmCell}>
-                    Kurs
-                  </th>
-                  <th scope="col">Wert</th>
-                  <th scope="col">Gewinn</th>
-                  <th scope="col" className={styles.hideSmCell}>
-                    Heute
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((r) => (
-                  <tr key={r.id}>
-                    <td>
-                      <span className={styles.posName}>{r.name}</span>
-                      <small>
-                        {r.symbol}
-                        {r.isin ? ` · ${r.isin}` : ''}
-                      </small>
-                    </td>
-                    <td className={styles.hideSmCell}>{r.quantityLabel}</td>
-                    <td className={styles.hideSmCell}>
-                      <Amount value={r.price} />
-                    </td>
-                    <td>
-                      <Amount value={r.value} />
-                      <small>{share(r.weight)}</small>
-                      <svg className={styles.weightBar} width={64} height={3} aria-hidden="true">
-                        <rect className={styles.allocTrack} width={64} height={3} rx={1.5} />
-                        <rect className={styles.allocFill} width={Math.max(2, (r.weight / maxWeight) * 64)} height={3} rx={1.5} />
-                      </svg>
-                    </td>
-                    <td>
-                      <Trend value={r.gainPct} />
-                      <small>
-                        <Amount value={r.gain} signed whole />
-                      </small>
-                    </td>
-                    <td className={styles.hideSmCell}>
-                      <Trend value={r.changeToday} />
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </section>
+        <Section id="positionen" title="Positionen" meta="Anschaffungskosten nach gleitendem Durchschnitt">
+          <DataTable
+            caption={`Positionen im Depot ${depot.broker}`}
+            head={
+              <>
+                <Th>Position</Th>
+                <Th hideSm>Menge</Th>
+                <Th hideSm>Kurs</Th>
+                <Th>Wert</Th>
+                <Th>Gewinn</Th>
+                <Th hideSm>Heute</Th>
+              </>
+            }
+          >
+            {rows.map((r) => (
+              <tr key={r.id}>
+                <NameCell name={r.name} sub={`${r.symbol}${r.isin ? ` · ${r.isin}` : ''}`} />
+                <Td hideSm>{r.quantityLabel}</Td>
+                <Td hideSm>
+                  <Amount value={r.price} />
+                </Td>
+                <Td>
+                  <Amount value={r.value} />
+                  <small>{share(r.weight)}</small>
+                  <WeightBar value={r.weight} max={maxWeight} />
+                </Td>
+                <Td>
+                  <Trend value={r.gainPct} />
+                  <small>
+                    <Amount value={r.gain} signed whole />
+                  </small>
+                </Td>
+                <Td hideSm>
+                  <Trend value={r.changeToday} />
+                </Td>
+              </tr>
+            ))}
+          </DataTable>
+        </Section>
 
-        <section className={styles.col6} aria-labelledby="buchungen-depot">
-          <div className={styles.sectionHead}>
-            <h2 id="buchungen-depot" className={styles.sectionTitle}>
-              Buchungen
-            </h2>
-          </div>
+        <Section id="buchungen-depot" title="Buchungen" span="half">
           {bookings.length === 0 ? (
-            <p className={styles.muted}>Keine Buchungen in den letzten Wochen.</p>
+            <Muted>Keine Buchungen in den letzten Wochen.</Muted>
           ) : (
-            <ul className={styles.rows}>
+            <Rows>
               {bookings.map((b, i) => (
-                <li key={i} className={styles.rowWithDate}>
-                  <span className={styles.rowDate}>{dayLabel(b.date, false)}</span>
-                  <span className={styles.rowMain}>
-                    <span className={styles.rowTitle}>{b.title}</span>
-                    <span className={styles.rowSub}>{b.type}</span>
-                  </span>
-                  <Amount className={styles.rowValue} value={b.amount} signed />
-                </li>
+                <Row key={i} date={dayLabel(b.date, false)} label={b.title} sub={b.type} value={<Amount value={b.amount} signed />} />
               ))}
-            </ul>
+            </Rows>
           )}
-        </section>
+        </Section>
 
-        <section className={styles.col6} aria-labelledby="steuer-depot">
-          <div className={styles.sectionHead}>
-            <h2 id="steuer-depot" className={styles.sectionTitle}>
-              Steuer
-            </h2>
-            <p className={styles.sectionMeta}>≈ Schätzung</p>
-          </div>
-          <ul className={styles.rows}>
-            <li className={styles.row}>
-              <span>Status</span>
-              <span className={styles.rowValue}>{depot.taxSimple ? 'Bank führt KESt ab' : 'selbst erklären (E1kv)'}</span>
-            </li>
-            {depot.kind === 'sachwert' ? (
-              <li className={styles.row}>
-                <span>Silber steuerfrei ab</span>
-                <span className={styles.rowValue}>{dayLabel(TAX_2026.silverTaxFreeFrom)}</span>
-              </li>
-            ) : null}
-            {depot.kind === 'krypto' ? (
-              <li className={styles.row}>
-                <span>Bitcoin-Altbestand (vor 1. 3. 2021)</span>
-                <span className={styles.rowValue}>≈ steuerfrei</span>
-              </li>
-            ) : null}
-            <li className={styles.row}>
-              <span>KESt bei Verkauf heute</span>
-              <span className={styles.rowValue}>
-                ≈ <Amount value={Math.max(gain, 0) * 0.275} />
-              </span>
-            </li>
-          </ul>
-          <p className={styles.note}>Schätzungen, keine Steuerberatung.</p>
-        </section>
-      </div>
+        <Section id="steuer-depot" title="Steuer" meta="≈ Schätzung" span="half">
+          <Rows>
+            <Row label="Status" value={depot.taxSimple ? 'Bank führt KESt ab' : 'selbst erklären (E1kv)'} />
+            {depot.kind === 'sachwert' ? <Row label="Silber steuerfrei ab" value={dayLabel(TAX_2026.silverTaxFreeFrom)} /> : null}
+            {depot.kind === 'krypto' ? <Row label="Bitcoin-Altbestand (vor 1. 3. 2021)" value="≈ steuerfrei" /> : null}
+            <Row
+              label="KESt bei Verkauf heute"
+              value={
+                <>
+                  ≈ <Amount value={Math.max(gain, 0) * 0.275} />
+                </>
+              }
+            />
+          </Rows>
+          <Note>Schätzungen, keine Steuerberatung.</Note>
+        </Section>
+      </Grid>
     </>
   )
 }

@@ -1,9 +1,11 @@
 .page {
   min-height: 100dvh;
-  background: #f6f6f3;
-  color: #17181a;
-  padding: clamp(2rem, 6vw, 5rem) clamp(1rem, 6vw, 5rem);
-  font-family: system-ui, sans-serif;
+  max-width: var(--content-max);
+  margin: 0 auto;
+  padding: clamp(2rem, 6vw, 5rem) var(--gutter);
+  display: grid;
+  align-content: start;
+  gap: var(--space-12);
 }
 
 .intro {
@@ -12,112 +14,81 @@
   gap: 0.6rem;
 }
 
+.eyebrow {
+  margin: 0;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+}
+
 .intro h1 {
   margin: 0;
-  font-size: clamp(1.75rem, 4vw, 2.5rem);
-  font-weight: 600;
-  letter-spacing: -0.025em;
+  font-size: var(--text-2xl);
+  font-weight: var(--weight-medium);
+  letter-spacing: -0.03em;
 }
 
 .intro p {
   margin: 0;
-  color: #4a4d52;
+  color: var(--ink-2);
+}
+
+.intro .eyebrow {
+  color: var(--ink-3);
 }
 
 .keys {
-  font-size: 0.875rem;
+  font-size: var(--text-md);
 }
 
-.keys kbd {
+.keys kbd,
+.intro code {
   font: inherit;
-  font-size: 0.8125rem;
-  border: 1px solid #d4d4ce;
+  font-size: var(--text-sm);
+  border: 1px solid var(--rule-strong);
   border-radius: 4px;
   padding: 0 0.3rem;
-  background: #fff;
+  background: var(--surface);
 }
 
-.grid {
+.list {
   list-style: none;
   padding: 0;
-  margin: 3rem 0 0;
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr));
-  gap: 2.5rem 2rem;
-}
-
-.card {
-  display: grid;
-  gap: 0.6rem;
-  align-content: start;
-}
-
-.card h2 {
-  margin: 0.4rem 0 0;
-  font-size: 1.125rem;
-  font-weight: 600;
-}
-
-.card h2 a {
-  color: inherit;
-  text-underline-offset: 0.2em;
-}
-
-.card p {
   margin: 0;
-  color: #4a4d52;
-  font-size: 0.9375rem;
-  line-height: 1.5;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+  gap: var(--space-8) var(--space-10);
 }
 
-.swatch {
-  height: 9rem;
-  border-radius: 6px;
+.item {
+  display: grid;
+  gap: var(--space-2);
+  align-content: start;
+  border-top: 1px solid var(--rule);
+  padding-top: var(--space-5);
 }
 
-.swatchA {
-  composes: swatch;
-  background:
-    linear-gradient(#e2620b, #e2620b) 8% 50% / 52% 3px no-repeat,
-    linear-gradient(#cfcfc9, #cfcfc9) 92% 50% / 32% 2px no-repeat,
-    radial-gradient(circle, #e2620b 0 6px, transparent 7px) 60% 50% / 14px 14px no-repeat,
-    #fbfbf9;
-  border: 1px solid #e6e6e1;
+.item h2 {
+  margin: 0;
+  font-size: var(--text-lg);
+  font-weight: var(--weight-semibold);
 }
 
-.swatchB {
-  composes: swatch;
-  background:
-    linear-gradient(#20262e, #20262e) 33% 0 / 1px 100% no-repeat,
-    linear-gradient(#20262e, #20262e) 66% 0 / 1px 100% no-repeat,
-    linear-gradient(#8bb4d9, #8bb4d9) 10% 70% / 18% 6px no-repeat,
-    linear-gradient(#f0a544, #f0a544) 90% 70% / 2px 18px no-repeat,
-    #0d1014;
+.item h2 a {
+  border-bottom: 1px solid var(--rule-strong);
 }
 
-.swatchC {
-  composes: swatch;
-  background:
-    linear-gradient(#1b1b1a, #1b1b1a) 10% 30% / 55% 10px no-repeat,
-    linear-gradient(#1b1b1a, #1b1b1a) 10% 46% / 40% 10px no-repeat,
-    linear-gradient(#1d4e89, #1d4e89) 10% 78% / 80% 2px no-repeat,
-    #f2f1ec;
-  border: 1px solid #d5d2c9;
+.item h2 a:hover {
+  border-bottom-color: var(--accent);
 }
 
-.links {
-  display: flex;
-  gap: 1rem;
-  font-size: 0.875rem;
-}
-
-.links a {
-  color: #17181a;
-  text-underline-offset: 0.2em;
+.item p {
+  margin: 0;
+  color: var(--ink-2);
+  font-size: var(--text-base);
 }
 
 .note {
-  margin-top: 3rem;
-  font-size: 0.8125rem;
-  color: #6b6e74;
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--ink-3);
 }

@@ -1,0 +1,20 @@
+/* Börsenstatus: Punkt + Text, nie nur Farbe. */
+
+.dot {
+  display: inline-block;
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 50%;
+  background: var(--rule-strong);
+  margin-right: 0.55rem;
+  vertical-align: 0.1em;
+}
+
+.open {
+  composes: dot;
+  background: var(--pos);
+}
+
+.status {
+  color: var(--ink-3);
+}

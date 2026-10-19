@@ -1,0 +1,34 @@
+/* Pill-Button für Werkzeuge (Privatsphäre, Suche, Zurücksetzen). */
+
+.button {
+  font: inherit;
+  font-size: var(--text-sm);
+  color: var(--ink-2);
+  background: transparent;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-pill);
+  padding: 0.3rem var(--space-3);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.button:hover {
+  border-color: var(--rule-strong);
+  color: var(--ink);
+}
+
+.button[aria-pressed='true'] {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--bg);
+}
+
+.button kbd {
+  font: inherit;
+  color: var(--ink-3);
+  margin-left: 0.35rem;
+}
+
+.button[aria-pressed='true'] kbd {
+  color: var(--rule-strong);
+}

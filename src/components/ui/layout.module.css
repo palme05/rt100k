@@ -1,0 +1,133 @@
+/* Raster und Abschnitte: Weißraum + Haarlinie statt Karten. */
+
+.grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 2.75rem;
+}
+
+@media (min-width: 820px) {
+  .grid {
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    gap: var(--space-12) var(--space-10);
+  }
+}
+
+@media (min-width: 1120px) {
+  .grid {
+    gap: var(--space-12);
+  }
+}
+
+.section {
+  grid-column: 1 / -1;
+  min-width: 0;
+  border-top: 1px solid var(--rule);
+  padding-top: var(--space-5);
+}
+
+/* Breiten im 12er-Raster: ab 820px halb, ab 1120px Drittel / zwei Drittel */
+@media (min-width: 820px) {
+  .third,
+  .half {
+    grid-column: span 6;
+  }
+}
+
+@media (min-width: 1120px) {
+  .third {
+    grid-column: span 4;
+  }
+
+  .twoThirds {
+    grid-column: span 8;
+  }
+}
+
+.dimmed {
+  opacity: 0.55;
+  transition: opacity 150ms ease;
+}
+
+.head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-2) var(--space-4);
+  flex-wrap: wrap;
+  margin-bottom: var(--space-4);
+}
+
+.spaced {
+  margin-top: var(--space-8);
+}
+
+.title {
+  margin: 0;
+  font-size: var(--text-base);
+  font-weight: var(--weight-semibold);
+  letter-spacing: -0.005em;
+}
+
+.meta {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--ink-3);
+}
+
+.pageHead {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.pageTitle {
+  margin: 0;
+  font-size: var(--text-2xl);
+  font-weight: var(--weight-medium);
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+  text-wrap: balance;
+}
+
+.pageSub {
+  margin: 0;
+  color: var(--ink-3);
+}
+
+.back {
+  font-size: var(--text-md);
+  color: var(--ink-3);
+  width: fit-content;
+}
+
+.back:hover {
+  color: var(--ink);
+}
+
+.textLink {
+  color: var(--ink);
+  border-bottom: 1px solid var(--rule-strong);
+  padding-bottom: 1px;
+  white-space: nowrap;
+}
+
+.textLink:hover {
+  border-bottom-color: var(--accent);
+}
+
+.note {
+  font-size: var(--text-sm);
+  color: var(--ink-3);
+  margin: var(--space-3) 0 0;
+}
+
+.disclaimer {
+  font-size: var(--text-sm);
+  color: var(--ink-3);
+  max-width: 44rem;
+  margin: 0;
+}
+
+.muted {
+  color: var(--ink-3);
+}

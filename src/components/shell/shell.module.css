@@ -1,0 +1,101 @@
+/* App-Rahmen: Kopfzeile mit Haarlinie, Inhalt in einer Spalte mit max. Breite. */
+
+.header {
+  border-bottom: 1px solid var(--rule);
+  background: var(--bg);
+}
+
+.headerInner {
+  max-width: var(--content-max);
+  margin: 0 auto;
+  padding: 0 var(--gutter);
+  min-height: 3.5rem;
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  flex-wrap: wrap;
+}
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  font-weight: var(--weight-semibold);
+  font-size: 1rem;
+  letter-spacing: -0.01em;
+}
+
+.brandMark {
+  display: block;
+}
+
+.brandMark line:first-child {
+  stroke: var(--rule-strong);
+}
+
+.brandMark line:nth-child(2) {
+  stroke: var(--accent);
+}
+
+.brandMark circle {
+  fill: var(--accent);
+  stroke: var(--bg);
+}
+
+.nav {
+  display: flex;
+  gap: var(--space-6);
+  align-self: stretch;
+}
+
+.navLink {
+  display: inline-flex;
+  align-items: center;
+  font-size: var(--text-md);
+  color: var(--ink-3);
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+}
+
+.navLink:hover {
+  color: var(--ink);
+}
+
+.navLink[aria-current='page'] {
+  color: var(--ink);
+  border-bottom-color: var(--accent);
+}
+
+.tools {
+  margin-left: auto;
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.main {
+  max-width: var(--content-max);
+  margin: 0 auto;
+  padding: var(--space-10) var(--gutter) 5rem;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-12);
+}
+
+@media (max-width: 720px) {
+  .headerInner {
+    gap: var(--space-1) var(--space-4);
+    padding-block: 0.6rem 0;
+  }
+
+  .nav {
+    order: 3;
+    width: 100%;
+    min-height: 2.5rem;
+  }
+
+  /* Suche ist am Handy über die Navigation erreichbar, Kürzel gibt es dort nicht */
+  .search {
+    display: none;
+  }
+}
