@@ -95,4 +95,5 @@ jobs:
           fail-on-severity: high
           comment-summary-in-pr: on-failure
           # Nur Open-Source-Lizenzen (Brief: ausschließlich OSS-Abhängigkeiten).
-          deny-licenses: AGPL-1.0-only, AGPL-3.0-only, AGPL-3.0-or-later, SSPL-1.0, BUSL-1.1, Elastic-2.0, Commons-Clause
+          # Nur gültige SPDX-IDs (sonst bricht die Action ab); „Commons Clause“ ist kein SPDX-Bezeichner.
+          deny-licenses: AGPL-1.0-only, AGPL-3.0-only, AGPL-3.0-or-later, SSPL-1.0, BUSL-1.1, Elastic-2.0
