@@ -12,7 +12,7 @@ Vercel Hobby · Region fra1 · Next.js 16 (App Router, alle Seiten dynamisch ger
    ├─ Server Components / Server Actions → Data-Access-Schicht src/server/dal
    │    (Autorisierung zentral, deny by default, withUser() setzt app.user_id je Transaktion)
    ├─ Better Auth (selbst gehostet, Passkeys + TOTP, Einladungen) → /api/auth/*
-   ├─ Kursdienst src/server/quotes (Yahoo · CoinGecko · gold-api · EZB, Data Cache 60 s,
+   ├─ Kursdienst src/server/quotes (Yahoo inkl. Metall-Futures · CoinGecko · EZB, Data Cache 60 s,
    │    Fallback letzter Schlusskurs)
    ├─ /api/cron/daily (CRON_SECRET) ← Vercel Cron 22:00 UTC
    └─ /api/status (Erreichbarkeit der Kursquellen, 10 min gecacht)

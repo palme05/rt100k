@@ -25,7 +25,8 @@ Schutzmaßnahmen, damit das Risiko klein bleibt:
 | Aktien/ETF-Kurse | **Twelve Data** Basic | kostenlos mit Key | 800 Calls/Tag, 8/Min | Free-Lizenz laut Drittquellen „internal, non-display“ ⚠️ | viele EU-Börsen nur bezahlt | ? | ⚠️ vermutlich ungeeignet (Anzeige an Familie = Display) |
 | Aktien-Kurse | **Alpha Vantage** Free | kostenlos mit Key | **25 Calls/Tag**, 5/Min, „compact“ | nur persönliche Nutzung | teilweise (`.DEX`) | Tagesdaten | Notfall-Fallback für Tagesschlusskurse |
 | Krypto | **CoinGecko** Demo-API | kostenlos mit Key, keine Karte | ≈ 10.000 Credits/Monat, 100 Calls/Min (Changelog 5/2026) | **Attribution Pflicht** („Data provided by CoinGecko“) | global, EUR direkt | ~1–5 Min | **Primär** für Krypto |
-| Edelmetall-Spot | **gold-api.com** | frei, kein Key, keine Karte | laut Anbieter kein Limit für Echtzeitkurse | prüfen | XAU/XAG (Platin prüfen) | Echtzeit | **Primär**, USD → EUR über EZB |
+| Edelmetall-Spot | **gold-api.com** | frei, kein Key, keine Karte | laut Anbieter kein Limit für Echtzeitkurse | prüfen | XAU/XAG (Platin prüfen) | Echtzeit | ❌ **verworfen** (20.10.2026): aus Vercel HTTP 404, Domain nicht auflösbar. Eine verwaiste Domain könnte von Dritten übernommen werden und falsche Kurse liefern |
+| Edelmetalle | **Yahoo Finance** Futures (`GC=F`, `SI=F`, `PL=F`) | wie Yahoo oben | wie Yahoo oben | wie Yahoo oben (von Tom akzeptiert) | USD je Feinunze | ca. 10–15 Min | **Primär**, je Gramm umgerechnet, USD → EUR über EZB; Future weicht meist < 1 % vom Spot ab |
 | Edelmetall-Spot | **MetalpriceAPI** Free | kostenlos mit Key | ≈ 100 Calls/Monat (prüfen) | prüfen | XAU, XAG, XPT, XPD in EUR | täglich/Echtzeit je Plan | Fallback (1×/Tag) |
 | ISIN/WKN → Ticker | **OpenFIGI** (Bloomberg) | frei, Key optional (kostenlos) | ohne Key ≈ 25 Req/Min, max. 10 Jobs/Req; mit Key mehr | kostenlos, keine Mengenlimits pro Tag | global | — | **Primär** fürs Instrument-Mapping, Ergebnis dauerhaft cachen |
 | AGE / Steuerdaten Meldefonds | **OeKB my.oekb.at** | frei einsehbar und downloadbar | — | Nutzungsregeln (v3.1, 11/2023) regeln v. a. Meldungen; **automatisierter Abruf nicht geklärt** | alle Meldefonds AT | bei Meldung | Phase 5: zunächst halbautomatisch (Direktlink + CSV-Upload); Automatisierung nur nach Klärung (Anfrage an fondsdaten@oekb.at) |
@@ -38,7 +39,7 @@ Schutzmaßnahmen, damit das Risiko klein bleibt:
 |---|---|---|---|
 | Aktien/ETF (EU + US) | Yahoo `v8/finance/chart/{symbol}`, Suche über `v1/finance/search` | 60 s (Vercel Data Cache), Suche 1 h | letzter gespeicherter Tagesschluss |
 | Krypto | CoinGecko `simple/price` (EUR, gebündelt), Suche über `search`; Demo-Key optional (`COINGECKO_API_KEY`) | 60 s | letzter Tagesschluss |
-| Edelmetalle | gold-api.com `price/{XAU,XAG,XPT}` (USD je Feinunze → EUR je Gramm) | 5 Min | letzter Tagesschluss |
+| Edelmetalle | Yahoo `v8/finance/chart` für die Front-Month-Futures `GC=F` (Gold), `SI=F` (Silber), `PL=F` (Platin); USD je Feinunze → je Gramm, dann über EZB in EUR | 5 Min | letzter Tagesschluss |
 | Wechselkurse | EZB `eurofxref-daily.xml` | 1 h | letzter gespeicherter EZB-Kurs |
 
 - Alle Antworten laufen durch zod-Schemas, Zahlen werden exakt geparst (kein Float, Kurse in Mikro-Einheiten), Timeout 6 s, max. 1 MB.
@@ -57,7 +58,7 @@ QuoteService
      Aktien/ETF EU:  Yahoo → Alpha Vantage (Tagesschluss) → letzter DB-Schlusskurs
      Aktien US:      Yahoo → Finnhub → letzter DB-Schlusskurs
      Krypto:         CoinGecko → letzter DB-Schlusskurs
-     Edelmetalle:    gold-api.com → MetalpriceAPI → letzter DB-Schlusskurs
+     Edelmetalle:    Yahoo (Futures) → MetalpriceAPI → letzter DB-Schlusskurs
      FX:             EZB (täglich) → letzter DB-Kurs
 ```
 Jede Antwort trägt `{ price, currency, asOf, source, delayed: boolean }`, die UI zeigt Zeitstempel und Quelle.
@@ -69,7 +70,7 @@ In der DB landen nur **Tagesschlusskurse** gehaltener oder beobachteter Instrume
 1. ~~Yahoo Finance~~ – entschieden am 19.10.2026: Primärquelle mit Schutzmaßnahmen (siehe oben), umgesetzt in Phase 2.
 2. **Twelve Data:** Lizenz der Free-Stufe („non-display“) vor Nutzung im Wortlaut prüfen.
 3. **OeKB:** Nutzungsregeln im Wortlaut lesen bzw. bei der OeKB anfragen, ob ein automatisierter Abruf zulässig ist.
-4. **gold-api.com:** Bedingungen im Wortlaut prüfen. Gold, Silber und Platin werden abgefragt; fehlt ein Kurs, greift der letzte Schlusskurs.
+4. ~~gold-api.com~~ – am 20.10.2026 verworfen (nicht erreichbar), ersetzt durch Yahoo-Futures. Ein echter Spot-Fallback (z. B. MetalpriceAPI mit kostenlosem Key) wäre möglich, falls die Abweichung des Futures stört.
 5. **CoinGecko Demo-Key:** ohne Key funktioniert der öffentliche Endpunkt, aber mit engerem Limit. Für den Dauerbetrieb einen kostenlosen Demo-Key anlegen (keine Karte) und als `COINGECKO_API_KEY` in Vercel hinterlegen.
 
 ## Quellen

@@ -47,7 +47,7 @@ Stand der Recherche: **19.10.2026**. Ziel: alles an Vermögens-/Depotfunktionen,
 | Aktien, ETFs, Fonds | ✅ | ✅ | ✅ | 2 | ✅ |
 | Anleihen | ✅ | ✅ | ? | 2 | ✅ (Kursabdeckung eingeschränkt, s. DATA_SOURCES) |
 | Krypto | ✅/💎 (zählt als Zusatz-Asset) | ✅ (inkl. DeFi) | ✅ | 2 | ✅ (CoinGecko) |
-| Edelmetalle / Rohstoffe | ✅/💎 (Zusatz-Asset) | ✅ | ✅ | 2 | ✅ (Spotpreis-API) |
+| Edelmetalle / Rohstoffe | ✅/💎 (Zusatz-Asset) | ✅ | ✅ | 2 | ✅ (Gold, Silber, Platin je Gramm über COMEX-Futures) |
 | Immobilien, Auto, Sonstiges (manuell) | ✅/💎 (Zusatz-Asset) | ✅ (inkl. Kunst, Sammlerstücke) | ✅ | 2 | ✅ |
 | Cash / Tagesgeld / Festgeld | ✅ | ✅ | ✅ | 2 | ✅ |
 | Versicherungen | Beta (2026) | ✅ | ✅ Krankenkasse (9/2026) | IDEAS | ✅, aber außerhalb Brief-Scope |
