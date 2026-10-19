@@ -1,0 +1,415 @@
+import { sql } from 'drizzle-orm'
+import {
+  bigint,
+  boolean,
+  char,
+  check,
+  date,
+  index,
+  integer,
+  jsonb,
+  numeric,
+  pgPolicy,
+  pgRole,
+  pgTable,
+  primaryKey,
+  text,
+  timestamp,
+  uniqueIndex,
+  uuid,
+} from 'drizzle-orm/pg-core'
+
+/**
+ * Datenmodell rt100k.
+ *
+ * - Auth-Tabellen folgen dem Schema von Better Auth (Feldnamen = Schlüssel hier).
+ * - Nutzerdaten tragen `owner_id`; Row Level Security erlaubt der App-Rolle nur
+ *   Zeilen des Nutzers, der per `set_config('app.user_id', …)` in der laufenden
+ *   Transaktion gesetzt ist (siehe src/server/db/client.ts → withUser).
+ * - Geld als Integer-Cent (`bigint`), Stückzahlen als `numeric(30,12)` (String).
+ * - Die Tabellen gehören der Migrationsrolle; nur sie darf DDL. Rechte der
+ *   App-Rolle: drizzle/0002_grants.sql.
+ */
+
+export const appRole = pgRole('rt100k_app').existing()
+
+/** Aktueller Nutzer der Transaktion (NULL, wenn keiner gesetzt ist → alles verboten). */
+const currentUser = sql`app_user_id()`
+const ownRows = sql`owner_id = app_user_id()`
+
+const createdAt = () => timestamp('created_at', { withTimezone: true }).notNull().defaultNow()
+const updatedAt = () =>
+  timestamp('updated_at', { withTimezone: true })
+    .notNull()
+    .defaultNow()
+    .$onUpdate(() => new Date())
+
+// ── Auth (Better Auth) ──────────────────────────────────────────────────────
+
+export const user = pgTable('user', {
+  id: text('id').primaryKey(),
+  name: text('name').notNull(),
+  email: text('email').notNull().unique(),
+  emailVerified: boolean('email_verified').notNull().default(false),
+  image: text('image'),
+  createdAt: createdAt(),
+  updatedAt: updatedAt(),
+  twoFactorEnabled: boolean('two_factor_enabled').default(false),
+  /** 'member' | 'admin' – nie vom Client setzbar */
+  role: text('role').notNull().default('member'),
+})
+
+export const session = pgTable(
+  'session',
+  {
+    id: text('id').primaryKey(),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+    token: text('token').notNull().unique(),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+    ipAddress: text('ip_address'),
+    userAgent: text('user_agent'),
+    userId: text('user_id')
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
+  },
+  (t) => [index('session_user_idx').on(t.userId)],
+)
+
+export const account = pgTable(
+  'account',
+  {
+    id: text('id').primaryKey(),
+    accountId: text('account_id').notNull(),
+    providerId: text('provider_id').notNull(),
+    userId: text('user_id')
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    accessToken: text('access_token'),
+    refreshToken: text('refresh_token'),
+    idToken: text('id_token'),
+    accessTokenExpiresAt: timestamp('access_token_expires_at', { withTimezone: true }),
+    refreshTokenExpiresAt: timestamp('refresh_token_expires_at', { withTimezone: true }),
+    scope: text('scope'),
+    password: text('password'),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [index('account_user_idx').on(t.userId)],
+)
+
+export const verification = pgTable(
+  'verification',
+  {
+    id: text('id').primaryKey(),
+    identifier: text('identifier').notNull(),
+    value: text('value').notNull(),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [index('verification_identifier_idx').on(t.identifier)],
+)
+
+export const twoFactor = pgTable(
+  'two_factor',
+  {
+    id: text('id').primaryKey(),
+    secret: text('secret').notNull(),
+    backupCodes: text('backup_codes').notNull(),
+    userId: text('user_id')
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    verified: boolean('verified').default(true),
+    failedVerificationCount: integer('failed_verification_count').default(0),
+    lockedUntil: timestamp('locked_until', { withTimezone: true }),
+  },
+  (t) => [index('two_factor_user_idx').on(t.userId)],
+)
+
+export const passkey = pgTable(
+  'passkey',
+  {
+    id: text('id').primaryKey(),
+    name: text('name'),
+    publicKey: text('public_key').notNull(),
+    userId: text('user_id')
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    credentialID: text('credential_id').notNull(),
+    counter: integer('counter').notNull(),
+    deviceType: text('device_type').notNull(),
+    backedUp: boolean('backed_up').notNull(),
+    transports: text('transports'),
+    createdAt: timestamp('created_at', { withTimezone: true }),
+    aaguid: text('aaguid'),
+  },
+  (t) => [index('passkey_user_idx').on(t.userId), uniqueIndex('passkey_credential_idx').on(t.credentialID)],
+)
+
+export const rateLimit = pgTable('rate_limit', {
+  id: text('id').primaryKey(),
+  key: text('key').notNull().unique(),
+  count: integer('count').notNull(),
+  lastRequest: bigint('last_request', { mode: 'number' }).notNull(),
+})
+
+// ── Einladungen & Audit ─────────────────────────────────────────────────────
+
+/** Registrierung nur per Einladung: Token nur als SHA-256 gespeichert, einmalig, ablaufend, widerrufbar. */
+export const invitation = pgTable(
+  'invitation',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    tokenHash: text('token_hash').notNull().unique(),
+    role: text('role').notNull().default('member'),
+    note: text('note'),
+    createdBy: text('created_by').references(() => user.id, { onDelete: 'set null' }),
+    createdAt: createdAt(),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+    usedAt: timestamp('used_at', { withTimezone: true }),
+    usedBy: text('used_by').references(() => user.id, { onDelete: 'set null' }),
+    revokedAt: timestamp('revoked_at', { withTimezone: true }),
+  },
+  (t) => [check('invitation_role_check', sql`${t.role} in ('member', 'admin')`)],
+)
+
+/**
+ * Audit-Log: nur anhängen. Lesen nur eigene Einträge; Löschen nur nach Ablauf
+ * der Aufbewahrungsfrist (2 Jahre). Keine Finanzdaten, Tokens oder Session-IDs.
+ */
+export const auditEvent = pgTable(
+  'audit_event',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: text('user_id')
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    actorId: text('actor_id').references(() => user.id, { onDelete: 'set null' }),
+    type: text('type').notNull(),
+    detail: jsonb('detail').$type<Record<string, string | number | boolean | null>>().notNull().default({}),
+    ip: text('ip'),
+    userAgent: text('user_agent'),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    index('audit_event_user_idx').on(t.userId, t.createdAt),
+    pgPolicy('audit_event_select_own', { for: 'select', to: appRole, using: sql`user_id = ${currentUser}` }),
+    pgPolicy('audit_event_insert', { for: 'insert', to: appRole, withCheck: sql`true` }),
+    pgPolicy('audit_event_delete_expired', {
+      for: 'delete',
+      to: appRole,
+      using: sql`created_at < now() - interval '730 days'`,
+    }),
+  ],
+).enableRLS()
+
+// ── Vermögen ────────────────────────────────────────────────────────────────
+
+export const PORTFOLIO_KINDS = ['depot', 'krypto', 'cash', 'sachwert'] as const
+export type PortfolioKind = (typeof PORTFOLIO_KINDS)[number]
+
+/** Depot oder Konto (Tagesgeld, Verrechnungskonto, Tresor …). */
+export const portfolio = pgTable(
+  'portfolio',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    ownerId: text('owner_id')
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    name: text('name').notNull(),
+    kind: text('kind').$type<PortfolioKind>().notNull(),
+    broker: text('broker'),
+    currency: char('currency', { length: 3 }).notNull().default('EUR'),
+    taxSimple: boolean('tax_simple').notNull().default(true),
+    createdAt: createdAt(),
+    archivedAt: timestamp('archived_at', { withTimezone: true }),
+  },
+  (t) => [
+    index('portfolio_owner_idx').on(t.ownerId),
+    check('portfolio_kind_check', sql`${t.kind} in ('depot', 'krypto', 'cash', 'sachwert')`),
+    check('portfolio_name_check', sql`char_length(${t.name}) between 1 and 80`),
+    pgPolicy('portfolio_owner', { for: 'all', to: appRole, using: ownRows, withCheck: ownRows }),
+  ],
+).enableRLS()
+
+export const INSTRUMENT_KINDS = ['stock', 'etf', 'fund', 'bond', 'crypto', 'metal', 'other'] as const
+export type InstrumentKind = (typeof INSTRUMENT_KINDS)[number]
+
+/**
+ * Wertpapier, Coin oder Edelmetall. `owner_id IS NULL` = allgemeine Stammdaten
+ * (für alle lesbar, unveränderlich für die App), sonst privat.
+ */
+export const instrument = pgTable(
+  'instrument',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    ownerId: text('owner_id').references(() => user.id, { onDelete: 'cascade' }),
+    kind: text('kind').$type<InstrumentKind>().notNull(),
+    name: text('name').notNull(),
+    isin: text('isin'),
+    /** Symbol beim Kursanbieter, z. B. VWCE.DE (Yahoo) */
+    symbol: text('symbol'),
+    /** ID bei CoinGecko, z. B. bitcoin */
+    coingeckoId: text('coingecko_id'),
+    /** XAU, XAG, XPT, XPD – Kurs je Gramm */
+    metal: text('metal'),
+    /** Kurswährung */
+    currency: char('currency', { length: 3 }).notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    check('instrument_kind_check', sql`${t.kind} in ('stock', 'etf', 'fund', 'bond', 'crypto', 'metal', 'other')`),
+    check('instrument_name_check', sql`char_length(${t.name}) between 1 and 120`),
+    check('instrument_isin_check', sql`${t.isin} is null or ${t.isin} ~ '^[A-Z]{2}[A-Z0-9]{9}[0-9]$'`),
+    check('instrument_metal_check', sql`${t.metal} is null or ${t.metal} in ('XAU', 'XAG', 'XPT', 'XPD')`),
+    uniqueIndex('instrument_global_symbol_idx').on(t.symbol).where(sql`owner_id is null and symbol is not null`),
+    uniqueIndex('instrument_global_coingecko_idx').on(t.coingeckoId).where(sql`owner_id is null and coingecko_id is not null`),
+    uniqueIndex('instrument_global_metal_idx').on(t.metal).where(sql`owner_id is null and metal is not null`),
+    pgPolicy('instrument_select', { for: 'select', to: appRole, using: sql`owner_id is null or owner_id = ${currentUser}` }),
+    pgPolicy('instrument_insert', {
+      for: 'insert',
+      to: appRole,
+      withCheck: sql`owner_id is null or owner_id = ${currentUser}`,
+    }),
+    pgPolicy('instrument_update_own', { for: 'update', to: appRole, using: ownRows, withCheck: ownRows }),
+    pgPolicy('instrument_delete_own', { for: 'delete', to: appRole, using: ownRows }),
+  ],
+).enableRLS()
+
+export const BOOKING_TYPES = [
+  'buy',
+  'sell',
+  'dividend',
+  'interest',
+  'fee',
+  'tax',
+  'deposit',
+  'withdrawal',
+  'transfer_in',
+  'transfer_out',
+  'split',
+  'staking',
+] as const
+export type BookingType = (typeof BOOKING_TYPES)[number]
+
+/** Buchung (Transaktion). Beträge in Euro-Cent; Bedeutung je Typ: src/lib/holdings.ts. */
+export const booking = pgTable(
+  'booking',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    portfolioId: uuid('portfolio_id')
+      .notNull()
+      .references(() => portfolio.id, { onDelete: 'cascade' }),
+    ownerId: text('owner_id')
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    instrumentId: uuid('instrument_id').references(() => instrument.id, { onDelete: 'restrict' }),
+    type: text('type').$type<BookingType>().notNull(),
+    /** Handelstag (Wiener Datum) */
+    occurredOn: date('occurred_on', { mode: 'string' }).notNull(),
+    quantity: numeric('quantity', { precision: 30, scale: 12 }),
+    /** Split-Faktor (neue Stück je altem Stück) */
+    factor: numeric('factor', { precision: 20, scale: 10 }),
+    amountCents: bigint('amount_cents', { mode: 'number' }).notNull().default(0),
+    feeCents: bigint('fee_cents', { mode: 'number' }).notNull().default(0),
+    taxCents: bigint('tax_cents', { mode: 'number' }).notNull().default(0),
+    currency: char('currency', { length: 3 }).notNull().default('EUR'),
+    note: text('note'),
+    source: text('source').notNull().default('manual'),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [
+    index('booking_portfolio_idx').on(t.portfolioId, t.occurredOn),
+    index('booking_owner_idx').on(t.ownerId),
+    index('booking_instrument_idx').on(t.instrumentId),
+    check(
+      'booking_type_check',
+      sql`${t.type} in ('buy', 'sell', 'dividend', 'interest', 'fee', 'tax', 'deposit', 'withdrawal', 'transfer_in', 'transfer_out', 'split', 'staking')`,
+    ),
+    check('booking_amounts_check', sql`${t.amountCents} >= 0 and ${t.feeCents} >= 0 and ${t.taxCents} >= 0`),
+    check('booking_quantity_check', sql`${t.quantity} is null or ${t.quantity} > 0`),
+    check('booking_factor_check', sql`${t.factor} is null or ${t.factor} > 0`),
+    // Mehrwährung folgt später; bis dahin werden alle Buchungen in Euro erfasst
+    check('booking_currency_check', sql`${t.currency} = 'EUR'`),
+    check('booking_note_check', sql`${t.note} is null or char_length(${t.note}) <= 500`),
+    pgPolicy('booking_owner', {
+      for: 'all',
+      to: appRole,
+      using: ownRows,
+      withCheck: sql`owner_id = ${currentUser} and exists (select 1 from portfolio p where p.id = portfolio_id and p.owner_id = ${currentUser})`,
+    }),
+  ],
+).enableRLS()
+
+// ── Kurse (allgemein, keine Nutzerdaten) ────────────────────────────────────
+
+/** Tagesschlusskurse gehaltener/beobachteter Instrumente, Kurs × 10⁶ in Kurswährung. */
+export const priceDaily = pgTable(
+  'price_daily',
+  {
+    instrumentId: uuid('instrument_id')
+      .notNull()
+      .references(() => instrument.id, { onDelete: 'cascade' }),
+    day: date('day', { mode: 'string' }).notNull(),
+    closeMicros: bigint('close_micros', { mode: 'number' }).notNull(),
+    source: text('source').notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.instrumentId, t.day] })],
+)
+
+/** EZB-Referenzkurse: Einheiten Fremdwährung je 1 EUR. */
+export const fxDaily = pgTable(
+  'fx_daily',
+  {
+    currency: char('currency', { length: 3 }).notNull(),
+    day: date('day', { mode: 'string' }).notNull(),
+    rate: numeric('rate', { precision: 20, scale: 10 }).notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.currency, t.day] })],
+)
+
+// ── Verlauf & Ziele ─────────────────────────────────────────────────────────
+
+/** Täglicher Wert je Depot (Vercel Cron). */
+export const portfolioSnapshot = pgTable(
+  'portfolio_snapshot',
+  {
+    portfolioId: uuid('portfolio_id')
+      .notNull()
+      .references(() => portfolio.id, { onDelete: 'cascade' }),
+    ownerId: text('owner_id')
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    day: date('day', { mode: 'string' }).notNull(),
+    valueCents: bigint('value_cents', { mode: 'number' }).notNull(),
+    investedCents: bigint('invested_cents', { mode: 'number' }).notNull(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.portfolioId, t.day] }),
+    index('portfolio_snapshot_owner_idx').on(t.ownerId, t.day),
+    pgPolicy('portfolio_snapshot_owner', { for: 'all', to: appRole, using: ownRows, withCheck: ownRows }),
+  ],
+).enableRLS()
+
+/** Annahmen für Road to 100k (eine Zeile je Nutzer). */
+export const roadSettings = pgTable(
+  'road_settings',
+  {
+    ownerId: text('owner_id')
+      .primaryKey()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    targetCents: bigint('target_cents', { mode: 'number' }).notNull().default(10_000_000),
+    monthlyContributionCents: bigint('monthly_contribution_cents', { mode: 'number' }).notNull().default(50_000),
+    /** Basispunkte p. a., 650 = 6,5 % */
+    expectedReturnBp: integer('expected_return_bp').notNull().default(650),
+    volatilityBp: integer('volatility_bp').notNull().default(1500),
+    includeTangibles: boolean('include_tangibles').notNull().default(true),
+    updatedAt: updatedAt(),
+  },
+  (t) => [
+    check('road_settings_ranges', sql`${t.targetCents} > 0 and ${t.monthlyContributionCents} >= 0 and ${t.expectedReturnBp} between -2000 and 3000 and ${t.volatilityBp} between 0 and 10000`),
+    pgPolicy('road_settings_owner', { for: 'all', to: appRole, using: ownRows, withCheck: ownRows }),
+  ],
+).enableRLS()
