@@ -1,6 +1,6 @@
 # Architektur
 
-Stand: Phase 1 (19.10.2026). Grundsatz: **0 € Kosten, Sicherheit vor Features.** Jede Architekturentscheidung muss in die Free Tiers unten passen.
+Stand: Phase 2 (20.10.2026). Grundsatz: **0 € Kosten, Sicherheit vor Features.** Jede Architekturentscheidung muss in die Free Tiers unten passen.
 
 ## Überblick
 
@@ -9,14 +9,18 @@ Browser / PWA (de-AT, Europe/Vienna)
    │  HTTPS, strikte CSP mit Nonce (src/proxy.ts), Security-Header (next.config.ts)
    ▼
 Vercel Hobby · Region fra1 · Next.js 16 (App Router, alle Seiten dynamisch gerendert)
-   ├─ Server Components / Server Actions → Data-Access-Schicht (Autorisierung zentral, deny by default)
-   ├─ Better Auth (selbst gehostet, Passkeys + TOTP)          ← ab Phase 2
-   ├─ QuoteService (Provider-Kette, 60-s-Cache)                ← ab Phase 2
-   └─ /api/cron/daily (CRON_SECRET) ← Vercel Cron 1×/Tag
-   ▼  TLS (sslmode=require, channel_binding=require)
-Neon Postgres 18 · aws-eu-central-1 (Frankfurt) · Projekt rt100k (silent-salad-93686485)
-   ├─ Branch main     → Produktion
-   └─ Branch preview  → Vercel-Previews, nur Testdaten       ← ab Phase 2
+   ├─ Server Components / Server Actions → Data-Access-Schicht src/server/dal
+   │    (Autorisierung zentral, deny by default, withUser() setzt app.user_id je Transaktion)
+   ├─ Better Auth (selbst gehostet, Passkeys + TOTP, Einladungen) → /api/auth/*
+   ├─ Kursdienst src/server/quotes (Yahoo · CoinGecko · gold-api · EZB, Data Cache 60 s,
+   │    Fallback letzter Schlusskurs)
+   ├─ /api/cron/daily (CRON_SECRET) ← Vercel Cron 22:00 UTC
+   └─ /api/status (Erreichbarkeit der Kursquellen, 10 min gecacht)
+   ▼  node-postgres über den Neon-Pooler · TLS (sslmode=require, channel_binding=require)
+Neon Postgres 18 · aws-eu-central-1 (Frankfurt) · Projekt rt100k (silent-salad-93686485) · DB rt100k
+   ├─ Branch main     → Produktion (0,25–0,5 CU)
+   └─ Branch preview  → Vercel-Previews, nur Testdaten (0,25 CU, eigenes App-Passwort)
+   Rollen: rt100k_owner (Owner, Migrationen) · rt100k_app (nur DML, RLS greift)
 
 GitHub Actions (öffentliches Repo, kostenlos)
    ├─ CI: gitleaks, lint, typecheck, test, build, e2e, pnpm audit
@@ -34,11 +38,16 @@ GitHub Actions (öffentliches Repo, kostenlos)
 | A3 | **Kein Tailwind**, CSS Modules + CSS-Variablen als Design-Tokens (`src/styles/tokens.css`) | Brief erlaubt beides; weniger Abhängigkeiten. Designsystem „Strecke“ (Richtung A, gewählt am 19.10.2026): `docs/DESIGN.md`. |
 | A4 | **Alle Seiten dynamisch gerendert** | Voraussetzung für CSP-Nonces. Kosten: jede Seitenansicht ist ein Function-Aufruf; bei Familiennutzung vernachlässigbar (siehe Budget). |
 | A5 | **Better Auth selbst gehostet** (MIT) statt *Neon Managed Better Auth* | Neon Auth unterstützt laut Doku (Stand 10/2026) nur die Plugins Admin, Email OTP, JWT, Magic Link, Organization, Open API, Phone Number – **keine Passkeys und kein TOTP-2FA**. Die Brief-Ausweichlösung greift: Better Auth mit `@better-auth/passkey` und `twoFactor` (TOTP + Backup-Codes), Tabellen in der eigenen Neon-DB, integriertes Rate-Limiting mit DB-Speicher. |
-| A6 | **Drizzle ORM** + versionierte SQL-Migrations, Treiber `@neondatabase/serverless` | Brief. |
+| A6 | **Drizzle ORM** + versionierte SQL-Migrationen (`drizzle/`), Treiber **node-postgres** über den Neon-Pooler | Ein Code-Pfad für Neon, CI-Postgres und lokale Tests; interaktive Transaktionen für RLS (`set_config` je Transaktion, kompatibel mit Transaction-Pooling). Kleiner Pool, 5 s Leerlauf. |
 | A7 | **Geld als Integer-Cent** (`src/lib/money.ts`), Stückzahlen als skalierte Ganzzahlen/Decimal (Phase 2) | Brief. ESLint verbietet `parseFloat`. |
 | A8 | **Schrift selbst gehostet:** Instrument Sans Variable über `@fontsource-variable/instrument-sans` (npm, OFL) | Keine Requests an Google (DSGVO), CSP bleibt bei `font-src 'self'`. Die Schriften der Richtungen B und C sind entfernt. |
 | A9 | **Eigene SVG-Charts** (`src/components/charts/charts.tsx`): Crosshair, Tastatur, Tabellenansicht, Privatsphäre-Modus; für Kurscharts mit Intraday-Daten später ggf. TradingView lightweight-charts (Apache-2.0) | Volle gestalterische Kontrolle, keine Bundle-Kosten, CSP-konform (keine Inline-Styles). |
 | A10 | **Prognose- und Kennzahlen-Logik als reine Funktionen** (`src/lib/forecast.ts`, `road.ts`, `returns.ts`, `markets.ts`) mit Unit-Tests | Wird ab Phase 2 direkt weiterverwendet; Monte-Carlo mit festem Seed, damit Server und Browser identisch rechnen. |
+| A11 | **Row Level Security als zweite Linie**: Policies prüfen `owner_id = app_user_id()`, die App-Rolle hat kein BYPASSRLS und kein DDL; Tabellen gehören der Owner-Rolle | Brief (Zugriffskontrolle). Fehler in der DAL führen nicht automatisch zu Datenlecks. |
+| A12 | **Migrationen**: `pnpm db:migrate` mit `DATABASE_URL_MIGRATIONS` (Owner-Rolle). Aus der Claude-Umgebung ohne direkte DB-Verbindung über `scripts/migration-sql.ts` und die Neon-SQL-API in einer Transaktion, inkl. Drizzle-Buchhaltung | Keine DDL-Rechte zur Laufzeit; kein Migrations-Secret in Vercel. |
+| A13 | **Registrierung nur per Einladung, keine E-Mails** (Entscheidung Tom, 19.10.2026) | Hinweise zu neuen Geräten erscheinen in der App; Passwort-Reset per E-Mail entfällt (Konto-Wiederherstellung: siehe SECURITY.md, Restrisiken). |
+| A14 | **Kurse nie in der DB, Schlusskurse schon**: Live-Kurse im Next-Data-Cache (60 s), Tagesschluss im Cron; Stammdaten nur nach Bestätigung beim Anbieter | Brief-Regel „Live-Kurse nicht in der DB“; kein Nutzer kann Stammdaten für andere verfälschen. |
+| A15 | **Tests gegen echtes Postgres** (`pnpm test:db`, CI-Service Postgres 18) statt Mocks | RLS, Rollen und Constraints lassen sich nur gegen eine echte Datenbank prüfen. |
 
 ## Free-Tier-Grenzen (geprüft am 19.10.2026)
 
@@ -102,8 +111,9 @@ Gegenmaßnahmen, falls es knapp wird: Alarmregeln außerhalb der DB vorhalten, A
 
 Regeln: Live-Kurse nie in der DB · Schlusskurse nur für gehaltene/beobachtete Instrumente · hochgeladene PDFs nie speichern (nur Transaktionen + SHA-256 des Dokuments) · Audit-Log mit Aufbewahrungsfrist.
 
-## Offene Architekturfragen (vor Phase 2 mit Tom klären)
+## Offene Architekturfragen
 
 1. ~~Kursquelle für EU-Werte~~ – entschieden: Yahoo Finance mit Fallback-Kette (`docs/DATA_SOURCES.md`).
-2. **E-Mail-Versand** (Login-Benachrichtigung neues Gerät, Einladungen, Konto-Wiederherstellung): kostenlose Optionen sind z. B. ein SMTP-Zugang eines bestehenden Postfachs (App-Passwort) oder ein Free-Tier-Mailanbieter ohne Kreditkarte; Letzterer braucht meist eine eigene Domain.
-3. **Passwortlos?** Vorschlag: Passkey als Standard, Passwort + TOTP als Rückfallweg, Backup-Codes. Admin zwingend mit 2FA.
+2. ~~E-Mail-Versand~~ – entschieden: vorerst keine E-Mails (A13).
+3. ~~Passwortlos?~~ – umgesetzt: Passkey bevorzugt, Passwort + TOTP als Rückfallweg, Backup-Codes, Admin zwingend mit 2FA.
+4. **Neon-CU-Verbrauch im Admin-Bereich** braucht einen Neon-API-Schlüssel (read-only) – Phase 6.

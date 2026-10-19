@@ -18,12 +18,17 @@ pnpm install                 # Abhängigkeiten + Git-Hooks
 pnpm dev                     # Dev-Server
 pnpm lint | pnpm typecheck | pnpm test
 pnpm check                   # alle drei
+pnpm test:db                 # Integrationstests gegen Postgres (RLS, Zugriff, Auth)
 pnpm build                   # Produktions-Build
-pnpm exec playwright test    # E2E (startet `pnpm start`, vorher bauen)
+pnpm exec playwright test    # E2E: frische DB rt100k_e2e + `pnpm start` mit Testkursen (vorher bauen)
+pnpm db:generate             # Migration aus src/server/db/schema.ts erzeugen (Rechte in eigener Migration!)
+pnpm db:migrate              # Migrationen anwenden (DATABASE_URL_MIGRATIONS = Owner-Rolle)
+node scripts/migration-sql.ts [nach-Zeitstempel]   # Migrationen als SQL-Liste für die Neon-SQL-API
+node scripts/create-invitation.ts admin <URL>      # erste Einladung (Owner-Zugang nötig)
 gitleaks git --redact --config .gitleaks.toml   # Secret-Scan der Historie
 ```
 
-Im Cloud-Container: `PW_CHROMIUM_PATH=/opt/pw-browsers/chromium pnpm exec playwright test` (kein `playwright install`).
+Im Cloud-Container: `pg_ctlcluster 16 main start` (lokales Postgres, Passwort für `postgres` = `postgres`), dann `PW_CHROMIUM_PATH=/opt/pw-browsers/chromium pnpm exec playwright test` (kein `playwright install`). Kurs-APIs sind aus dem Container nicht erreichbar – live prüfen über `/api/status` der Preview.
 
 ## Konventionen
 
@@ -34,7 +39,10 @@ Im Cloud-Container: `PW_CHROMIUM_PATH=/opt/pw-browsers/chromium pnpm exec playwr
 - **Styling:** CSS Modules + CSS-Variablen (Design-Tokens), kein Tailwind, keine Standard-Komponentenbibliothek.
 - **Kein Inline-Style-Attribut** (`style={…}`): Die CSP erlaubt keine Inline-Styles. Dynamische Werte über SVG-Attribute oder Klassen lösen.
 - **Validierung:** zod für alle Eingaben und alle externen Daten.
-- **DB-Zugriff** nur über die Data-Access-Schicht mit Autorisierung (ab Phase 2). Jede neue Abfrage braucht einen Negativ-Test (fremde Daten → Fehler).
+- **DB-Zugriff** nur über `src/server/dal` (ESLint sperrt DB-Imports in `src/app`, `src/components`, `src/lib`). Nutzerdaten immer in `withUser(actor.id, …)` **und** zusätzlich mit `ownerId`-Filter; fremde/ungültige IDs → `NotFoundError`. Jede neue Abfrage braucht einen Negativ-Test in `*.db.test.ts`.
+- **Neue Tabellen:** Spalte `owner_id` + RLS-Policy im Schema, Rechte für `rt100k_app` in einer eigenen Migration (`pnpm db:generate --custom`).
+- **Server Actions:** zuerst `requireUser()`/`requireAdmin()`, dann DAL; nie IDs oder Rollen aus dem Formular vertrauen.
+- **Secrets im Code/Tests:** keine Literale – Test-Secrets und -Passwörter werden je Lauf erzeugt (gitleaks).
 - **Abhängigkeiten:** so wenige wie möglich, nur OSS-Lizenzen. pnpm installiert nur Versionen ≥ 7 Tage alt. Neue Pakete mit Install-Skripten in `pnpm-workspace.yaml` → `onlyBuiltDependencies` freigeben (begründen).
 - **GitHub Actions** nur per Commit-SHA mit Versionskommentar pinnen.
 - **Commits:** klein, sauber benannt (`feat:`, `fix:`, `docs:`, `chore:`, `ci:`, `test:`, `security:`), Tests grün.
@@ -48,17 +56,19 @@ Im Cloud-Container: `PW_CHROMIUM_PATH=/opt/pw-browsers/chromium pnpm exec playwr
 
 ## Struktur
 
-- `src/lib/` – reine Logik mit Tests (Geld, Format, Monate, Prognose, Road to 100k, Kennzahlen, Börsenzeiten, CSP)
-- `src/styles/tokens.css` – Design-Tokens (einzige Quelle für Farben, Schrift, Abstände)
-- `src/components/` – Komponentenbibliothek „Strecke“: `shell`, `ui`, `charts`, `road`, `privacy`, `command`, `markets`, `hooks`. Regeln in [`docs/DESIGN.md`](docs/DESIGN.md)
-- `src/prototypes/` – Mock-Daten und Navigation der Referenzseiten (fallen in Phase 2 weg)
-- `src/app/prototypes/` – Referenzseiten `/prototypes/a` (Übersicht, `depot/[id]`, `road`)
-- `e2e/` – Playwright: Security-Header/CSP, Referenzseiten (Fehler, CSP, Überlauf), Privatsphäre-Modus, Palette, Tastenkürzel, Diagramm-Tastatur, Planer
+- `src/lib/` – reine Logik mit Tests (Geld, Stückzahlen, Bestände, Bewertung, Verlauf, Format, Monate, Prognose, Road, Kennzahlen, Börsenzeiten, CSP)
+- `src/server/` – nur Server: `db` (Schema, Client, withUser), `dal` (Data-Access-Schicht), `auth` (Better Auth, Session, Einladungs-Registrierung, Sperre), `quotes` (Kursanbieter, Parser, Cache), `cron`, `overview.ts`, `road.ts`
+- `src/app/` – Seiten: `/anmelden`, `/einladung/[token]`, `/app` (Übersicht, `depots`, `road`, `sicherheit`, `admin`), API: `/api/auth`, `/api/cron/daily`, `/api/status`
+- `src/components/` – Komponentenbibliothek „Strecke“ (`shell`, `ui`, `charts`, `road`, `privacy`, `command`, `markets`, `hooks`); Regeln in [`docs/DESIGN.md`](docs/DESIGN.md)
+- `src/styles/tokens.css` – Design-Tokens
+- `drizzle/` – versionierte Migrationen (0000 Rollen/Funktion, 0001 Tabellen+RLS, 0002 Rechte, …)
+- `scripts/` – Migrationen, Einladung, E2E-DB
+- `e2e/` – Playwright (Anmeldung, 2FA, Einladungen, Depots, Zugriff, Security)
 
 **UI-Regeln:** Seiten nur aus `src/components/` zusammensetzen. Keine Hex-Werte außerhalb von `tokens.css`. Beträge immer über `Amount`/`AmountSplit` (Privatsphäre-Modus).
 
 ## Infrastruktur
 
 - GitHub: `palme05/rt100k`
-- Neon: Projekt `rt100k` (`silent-salad-93686485`), aws-eu-central-1, PG 18, Branch `main`
-- Vercel: Team `palme00`, Projekt `rt100k`, Region `fra1`
+- Neon: Projekt `rt100k` (`silent-salad-93686485`), aws-eu-central-1, PG 18, DB `rt100k`; Branches `main` (Produktion, `br-old-tooth-b9i8mmyc`) und `preview` (`br-plain-union-b9ovgtmf`); Rollen `rt100k_owner` (Owner/Migrationen) und `rt100k_app` (Laufzeit)
+- Vercel: Team `palme00`, Projekt `rt100k`, Region `fra1`, Produktion `https://rt100k.vercel.app`; Env-Vars (sensitive): `DATABASE_URL`, `BETTER_AUTH_SECRET` (Prod + Preview getrennt), `BETTER_AUTH_URL`, `CRON_SECRET` (nur Prod)

@@ -2,7 +2,7 @@
 
 Selbst gehosteter, quelloffener Vermögenstracker für Familie und Freunde: Depots, Krypto, Cash und Sachwerte an einem Ort, mit Performance-Analyse, österreichischem Steuer-Cockpit und dem Herzstück **Road to 100k** (Meilensteine, Prognosekegel, Zinseszins-Kipppunkt). Ohne Abo, ohne Broker-Logins, auf Free Tiers.
 
-> **Status:** Phase 1 (Design) abgeschlossen: Designsystem „Strecke“ mit Referenzseiten. Als Nächstes Phase 2 (Anmeldung, Datenbank, Dashboard). Noch nicht für echte Daten geeignet.
+> **Status:** Phase 2 (Kern) fertig: Anmeldung mit Passkey/2FA per Einladung, Depots, Buchungen, Kurse, Übersicht, Road to 100k. Als Nächstes Phase 3 (Import von Abrechnungen). Vor echten Familiendaten folgt das vollständige Security-Review (Phase 6).
 
 ## Grundsätze
 
@@ -13,18 +13,20 @@ Selbst gehosteter, quelloffener Vermögenstracker für Familie und Freunde: Depo
 
 ## Stack
 
-Next.js 16 (App Router) · TypeScript 6 strict · Neon Postgres (Frankfurt) + Drizzle · Better Auth (Passkeys, TOTP) · zod · Vitest · Playwright · pnpm
+Next.js 16 (App Router) · TypeScript 6 strict · Neon Postgres 18 (Frankfurt) mit Row Level Security · Drizzle + node-postgres · Better Auth (Passkeys, TOTP) · zod · Vitest · Playwright · pnpm
 
 ## Entwicklung
 
-Voraussetzungen: Node ≥ 22, pnpm 10, [gitleaks](https://github.com/gitleaks/gitleaks#installing) (für den Pre-Commit-Hook).
+Voraussetzungen: Node ≥ 22, pnpm 10, PostgreSQL ≥ 16 lokal, [gitleaks](https://github.com/gitleaks/gitleaks#installing) (für den Pre-Commit-Hook).
 
 ```bash
 pnpm install          # installiert auch die Git-Hooks (lefthook)
-pnpm dev              # http://localhost:3000
 pnpm check            # lint + typecheck + unit tests
-pnpm build && pnpm exec playwright test   # E2E gegen den Produktions-Build
+pnpm test:db          # Integrationstests gegen Postgres (DATABASE_URL_TEST_ADMIN, Standard postgres:postgres@127.0.0.1)
+pnpm build && pnpm exec playwright test   # E2E: eigene DB rt100k_e2e, Testkurse
 ```
+
+Lokal starten: Datenbank anlegen und migrieren (`DATABASE_URL_MIGRATIONS=… pnpm db:migrate`), Passwort der App-Rolle setzen (`ALTER ROLE rt100k_app LOGIN PASSWORD '…'`), `.env.local` nach `.env.example` füllen, `pnpm dev`, erste Einladung mit `node scripts/create-invitation.ts admin http://localhost:3000`.
 
 Secrets gehören **nie** ins Repo – Vorlage: [`.env.example`](.env.example), echte Werte als Vercel-Env-Vars bzw. in `.env.local`.
 
