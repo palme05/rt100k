@@ -40,7 +40,7 @@ Meldeweg für Sicherheitslücken: siehe [`/SECURITY.md`](../SECURITY.md).
 - [x] Keine Source Maps im Browser (Produktion)
 - [x] ESLint: `react/no-danger`, `no-eval`, `no-implied-eval`, `no-new-func`, `parseFloat` gesperrt
 - [x] Supply Chain: Release-Age 7 Tage, Build-Skripte nur freigegeben, Lockfile, `pnpm audit`, Dependabot (Cooldown), Actions per SHA, Dependency Review
-- [x] CodeQL-Workflow (aktiv sobald Repo öffentlich), ZAP-Baseline-Workflow (aktiv sobald Bypass-Secret gesetzt)
+- [x] CodeQL-Workflow (aktiv seit das Repo öffentlich ist), ZAP-Baseline in der CI gegen den lokalen Produktions-Build (ohne Bypass-Secret, vor jedem Merge)
 - [x] `SECURITY.md` mit Meldeweg
 - [ ] **Tom:** Repo öffentlich schalten, Secret Scanning + Push Protection, Dependabot Alerts, Private Vulnerability Reporting aktivieren, Branch-Schutz für `main` (siehe README „Einmalige Einrichtung“)
 
@@ -124,7 +124,7 @@ Meldeweg für Sicherheitslücken: siehe [`/SECURITY.md`](../SECURITY.md).
 ## Notfallplan
 
 **Bei Verdacht auf Secret-Leak** (Commit, Log, Screenshot):
-1. Secret sofort tauschen, Ablauf in `docs/EINRICHTUNG.md` → Schritt 6: Datenbank-Passwort per `ALTER ROLE` · Vercel-Env-Var ersetzen + Redeploy · `CRON_SECRET`/API-Keys neu · Auth-Schlüssel **nur über `BETTER_AUTH_SECRETS`** (einfaches Ersetzen von `BETTER_AUTH_SECRET` sperrt alle 2FA-Konten aus; Test `Schlüsseltausch` in `auth.db.test.ts`).
+1. Secret sofort tauschen, Ablauf in `docs/EINRICHTUNG.md` → Schritt 5: Datenbank-Passwort per `ALTER ROLE` · Vercel-Env-Var ersetzen + Redeploy · `CRON_SECRET`/API-Keys neu · Auth-Schlüssel **nur über `BETTER_AUTH_SECRETS`** (einfaches Ersetzen von `BETTER_AUTH_SECRET` sperrt alle 2FA-Konten aus; Test `Schlüsseltausch` in `auth.db.test.ts`).
 2. Leak aus der Historie entfernen ist **zweitrangig** – das Secret gilt als verbrannt, sobald es öffentlich war.
 3. Audit-Log und Neon-/Vercel-Logs auf Missbrauch prüfen.
 

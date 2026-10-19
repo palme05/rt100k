@@ -25,7 +25,7 @@ Neon Postgres 18 · aws-eu-central-1 (Frankfurt) · Projekt rt100k (silent-salad
 GitHub Actions (öffentliches Repo, kostenlos)
    ├─ CI: gitleaks, lint, typecheck, test, build, e2e, pnpm audit
    ├─ CodeQL, Dependency Review, Dependabot
-   ├─ ZAP-Baseline gegen Preview-Deploys
+   ├─ ZAP-Baseline in der CI gegen den lokalen Produktions-Build
    └─ Kursalarme alle 30 Min zu Handelszeiten               ← Phase 6
 ```
 

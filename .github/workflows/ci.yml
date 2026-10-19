@@ -78,6 +78,24 @@ jobs:
         run: pnpm exec playwright install --with-deps chromium
       - name: E2E (Anmeldung, 2FA, Depots, Zugriff, Security-Header, CSP)
         run: pnpm exec playwright test
+      # Dynamischer Scan vor dem Merge: derselbe Produktions-Build mit frischer DB und
+      # Testkursen. Kein Vercel-Bypass-Secret nötig; kein Report-Upload (Artefakte
+      # öffentlicher Repos sind öffentlich). FAIL-Regeln in .zap/rules.tsv brechen den Lauf ab.
+      - name: OWASP ZAP Baseline (Produktions-Build lokal)
+        env:
+          DATABASE_URL: postgres://rt100k_app:app@127.0.0.1:5432/rt100k_e2e
+          BETTER_AUTH_URL: http://localhost:3200
+          RT100K_QUOTES: fixture
+        run: |
+          BETTER_AUTH_SECRET="$(openssl rand -base64 32)" CRON_SECRET="$(openssl rand -base64 32)" \
+            sh -c 'node scripts/e2e-db.ts && exec pnpm start --port 3200' > zap-server.log 2>&1 &
+          for i in $(seq 1 60); do curl -fsS -o /dev/null http://localhost:3200/anmelden && break; sleep 1; done
+          curl -fsS -o /dev/null http://localhost:3200/anmelden || { cat zap-server.log; exit 1; }
+          # Image per Digest gepinnt (zaproxy 2.17.0); der Container braucht Schreibrechte in .zap
+          chmod a+rwx .zap
+          docker run --rm --network host -v "$PWD/.zap:/zap/wrk" \
+            ghcr.io/zaproxy/zaproxy@sha256:5ccfff9a411743ab2615136a2edd7416bec9ce41572fa94e935df38c14adb2b6 \
+            zap-baseline.py -t http://localhost:3200 -c rules.tsv -I
 
   dependency-review:
     name: Dependency Review

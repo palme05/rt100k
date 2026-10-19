@@ -32,7 +32,7 @@ Secrets gehören **nie** ins Repo – Vorlage: [`.env.example`](.env.example), e
 
 ## Einmalige Einrichtung
 
-Repo-Einstellungen (Sichtbarkeit, Sicherheitsfunktionen, Branch-Schutz, ZAP-Secret) setzt der Besitzer im Browser: Schritt-für-Schritt in [`docs/EINRICHTUNG.md`](docs/EINRICHTUNG.md).
+Repo-Einstellungen (Sichtbarkeit, Sicherheitsfunktionen, Branch-Schutz) setzt der Besitzer im Browser: Schritt-für-Schritt in [`docs/EINRICHTUNG.md`](docs/EINRICHTUNG.md).
 
 ## Dokumentation
 
