@@ -7,6 +7,7 @@
  */
 import { createHash, randomBytes } from 'node:crypto'
 import pg from 'pg'
+import { withStrictTls } from '../src/server/db/tls.ts'
 
 const [role = 'member', baseUrl = 'http://localhost:3000'] = process.argv.slice(2)
 if (role !== 'member' && role !== 'admin') {
@@ -21,7 +22,7 @@ if (!url) {
 
 const token = randomBytes(32).toString('base64url')
 const hash = createHash('sha256').update(token, 'utf8').digest('hex')
-const client = new pg.Client({ connectionString: url })
+const client = new pg.Client({ connectionString: withStrictTls(url) })
 await client.connect()
 try {
   await client.query(`insert into invitation (token_hash, role, note, expires_at) values ($1, $2, 'Bootstrap', now() + interval '72 hours')`, [hash, role])

@@ -108,6 +108,7 @@ Meldeweg für Sicherheitslücken: siehe [`/SECURITY.md`](../SECURITY.md).
 | Origin-/CSRF-Prüfung: fremde Origin und fehlende Origin mit Cookie → 403 | ✅ (Tests) |
 | App-Rolle: kein DDL, kein Rollenwechsel, kein Abschalten von RLS | ✅ (Tests, auch auf Neon geprüft) |
 | Session-Tokens verlassen nie den Server (Geräteliste aus eigener Abfrage) | ✅ |
+| DB-Verbindung: TLS mit Zertifikats- und Hostnamenprüfung (`sslmode=verify-full` im Code erzwungen), Channel Binding | ✅ (Unit-Test) |
 | Kursdaten: zod, Größen-/Zeitlimit, Steuerzeichen entfernt, Namen gekürzt; Stammdaten nur nach Server-Bestätigung beim Anbieter | ✅ (Tests) |
 | Cron nur mit Secret (konstante Vergleichszeit) | ✅ (Unit + E2E) |
 | Secrets im Repo: keine; Test-Secrets und -Passwörter je Lauf zufällig; gitleaks über die gesamte Historie | ✅ |

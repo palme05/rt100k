@@ -8,6 +8,7 @@
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { migrate } from 'drizzle-orm/node-postgres/migrator'
 import pg from 'pg'
+import { withStrictTls } from '../src/server/db/tls.ts'
 
 const url = process.env.DATABASE_URL_MIGRATIONS
 if (!url) {
@@ -15,7 +16,7 @@ if (!url) {
   process.exit(1)
 }
 
-const pool = new pg.Pool({ connectionString: url, max: 1 })
+const pool = new pg.Pool({ connectionString: withStrictTls(url), max: 1 })
 try {
   await migrate(drizzle(pool), { migrationsFolder: './drizzle' })
   process.stdout.write('Migrationen angewendet.\n')
