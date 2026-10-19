@@ -1,6 +1,6 @@
 import 'server-only'
 import { providerFetch } from './fetch'
-import { parseCoinGeckoPrices, parseEcbXml, parseGoldApi, parseYahooChart } from './parsers'
+import { parseCoinGeckoPrices, parseEcbXml, parseYahooChart } from './parsers'
 
 /**
  * Erreichbarkeit der Kursquellen mit festen Testwerten. 10 Minuten gecacht:
@@ -21,14 +21,14 @@ async function check(provider: string, fn: () => Promise<boolean>): Promise<bool
 }
 
 export async function providerStatus() {
-  const [yahoo, coingecko, ecb, goldApi] = await Promise.all([
+  const [yahoo, coingecko, ecb, edelmetalle] = await Promise.all([
     check('Yahoo', async () => parseYahooChart(await providerFetch('Yahoo', 'https://query1.finance.yahoo.com/v8/finance/chart/VWCE.DE?range=1d&interval=1d&status=1', { revalidate: TTL })) !== null),
     check('CoinGecko', async () => parseCoinGeckoPrices(await providerFetch('CoinGecko', 'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=eur&status=1', { revalidate: TTL })).has('bitcoin')),
     check('EZB', async () => {
       const xml = await providerFetch('EZB', 'https://www.ecb.europa.eu/stats/eurofxref/eurofxref-daily.xml?status=1', { revalidate: TTL, as: 'text' })
       return typeof xml === 'string' && parseEcbXml(xml) !== null
     }),
-    check('gold-api.com', async () => parseGoldApi(await providerFetch('gold-api.com', 'https://api.gold-api.com/price/XAU?status=1', { revalidate: TTL })) !== null),
+    check('Yahoo Gold', async () => parseYahooChart(await providerFetch('Yahoo', 'https://query1.finance.yahoo.com/v8/finance/chart/GC=F?range=1d&interval=1d&status=1', { revalidate: TTL }))?.currency === 'USD'),
   ])
-  return { yahoo, coingecko, ecb, goldApi }
+  return { yahoo, coingecko, ecb, edelmetalle }
 }

@@ -128,21 +128,17 @@ export function parseCoinGeckoSearch(json: unknown): InstrumentCandidate[] {
   }))
 }
 
-// ── gold-api.com (USD je Feinunze) ─────────────────────────────────────────
+// ── Edelmetalle (Yahoo, COMEX-Front-Month-Future, USD je Feinunze) ─────────
 
 /** Feinunze in Gramm × 10⁷ */
 const TROY_OUNCE_G_E7 = 311_034_768n
 
-const goldApi = z.object({ price: num, updatedAt: z.string().optional(), symbol: z.string().optional() })
+/** Yahoo-Symbole der COMEX/NYMEX-Futures. Weicht vom Spot meist unter 1 % ab. */
+export const METAL_FUTURES: Readonly<Record<string, string>> = { XAU: 'GC=F', XAG: 'SI=F', XPT: 'PL=F' }
 
-/** Kurs je Gramm in USD. */
-export function parseGoldApi(json: unknown): ParsedPrice | null {
-  const parsed = goldApi.safeParse(json)
-  if (!parsed.success) return null
-  const ounce = toMicros(parsed.data.price)
-  if (ounce === null || ounce <= 0n) return null
-  const updated = parsed.data.updatedAt ? new Date(parsed.data.updatedAt) : new Date()
-  return { priceMicros: mulDiv(ounce, 10_000_000n, TROY_OUNCE_G_E7), currency: 'USD', asOf: Number.isNaN(updated.getTime()) ? new Date() : updated }
+/** Rechnet einen Kurs je Feinunze in einen Kurs je Gramm um. */
+export function perGram(price: ParsedPrice): ParsedPrice {
+  return { ...price, priceMicros: mulDiv(price.priceMicros, 10_000_000n, TROY_OUNCE_G_E7) }
 }
 
 // ── EZB-Referenzkurse (XML) ────────────────────────────────────────────────
@@ -166,7 +162,7 @@ export function parseEcbXml(xml: string): FxRates | null {
 }
 
 export const METALS: readonly InstrumentCandidate[] = [
-  { provider: 'metal', key: 'XAU', name: 'Gold (physisch)', kind: 'metal', detail: 'Kurs je Gramm Feingold' },
-  { provider: 'metal', key: 'XAG', name: 'Silber (physisch)', kind: 'metal', detail: 'Kurs je Gramm Feinsilber' },
-  { provider: 'metal', key: 'XPT', name: 'Platin (physisch)', kind: 'metal', detail: 'Kurs je Gramm Feinplatin' },
+  { provider: 'metal', key: 'XAU', name: 'Gold (physisch)', kind: 'metal', detail: 'Kurs je Gramm Feingold (COMEX-Future)' },
+  { provider: 'metal', key: 'XAG', name: 'Silber (physisch)', kind: 'metal', detail: 'Kurs je Gramm Feinsilber (COMEX-Future)' },
+  { provider: 'metal', key: 'XPT', name: 'Platin (physisch)', kind: 'metal', detail: 'Kurs je Gramm Feinplatin (NYMEX-Future)' },
 ]

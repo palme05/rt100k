@@ -9,7 +9,7 @@ export interface Quote {
   delayed: boolean
 }
 
-export type QuoteSource = 'yahoo' | 'coingecko' | 'gold-api' | 'schlusskurs' | 'testdaten'
+export type QuoteSource = 'yahoo' | 'coingecko' | 'schlusskurs' | 'testdaten'
 
 /** Suchergebnis beim Anlegen eines Instruments. */
 export interface InstrumentCandidate {

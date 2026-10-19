@@ -5,14 +5,14 @@ import { getDb } from '../db/client'
 import { fxDaily, priceDaily } from '../db/schema'
 import type { InstrumentDto } from '../dal/instruments'
 import { providerFetch } from './fetch'
-import { METALS, parseCoinGeckoPrices, parseCoinGeckoSearch, parseEcbXml, parseGoldApi, parseYahooChart, parseYahooSearch, type FxRates } from './parsers'
+import { METAL_FUTURES, METALS, parseCoinGeckoPrices, parseCoinGeckoSearch, parseEcbXml, parseYahooChart, parseYahooSearch, perGram, type FxRates } from './parsers'
 import type { InstrumentCandidate, Quote } from './types'
 
 /**
  * Kursdienst mit Fallback-Kette (docs/DATA_SOURCES.md):
  *   Aktien/ETF: Yahoo → letzter Schlusskurs aus der DB
  *   Krypto:     CoinGecko → letzter Schlusskurs
- *   Metalle:    gold-api.com → letzter Schlusskurs
+ *   Metalle:    Yahoo (COMEX-Future je Unze → je Gramm) → letzter Schlusskurs
  *   Devisen:    EZB → letzter Kurs aus der DB
  * Live-Kurse werden nie gespeichert, nur 60 s im Data Cache gehalten.
  * Fällt eine Quelle aus, bricht nichts: die UI zeigt „Kurs von …, verzögert“.
@@ -48,9 +48,9 @@ async function inBatches<T, R>(items: readonly T[], fn: (item: T) => Promise<R>)
   return results
 }
 
-async function yahooQuote(symbol: string): Promise<Quote | null> {
+async function yahooQuote(symbol: string, ttl = QUOTE_TTL): Promise<Quote | null> {
   try {
-    const json = await providerFetch('Yahoo', `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?range=1d&interval=1d`, { revalidate: QUOTE_TTL })
+    const json = await providerFetch('Yahoo', `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?range=1d&interval=1d`, { revalidate: ttl })
     const parsed = parseYahooChart(json)
     if (!parsed) return null
     // Kurse älter als 4 Tage gelten als verzögert (Wochenende/Feiertage eingerechnet)
@@ -79,14 +79,11 @@ async function coingeckoQuotes(ids: readonly string[]): Promise<Map<string, Quot
 }
 
 async function metalQuote(metal: string): Promise<Quote | null> {
-  try {
-    const json = await providerFetch('gold-api.com', `https://api.gold-api.com/price/${encodeURIComponent(metal)}`, { revalidate: METAL_TTL })
-    const parsed = parseGoldApi(json)
-    return parsed ? { ...parsed, source: 'gold-api', delayed: false } : null
-  } catch (error) {
-    console.warn('Kursabruf fehlgeschlagen:', error instanceof Error ? error.message : 'unbekannt')
-    return null
-  }
+  const symbol = METAL_FUTURES[metal]
+  if (!symbol) return null
+  const quote = await yahooQuote(symbol, METAL_TTL)
+  // Nur USD je Feinunze ist eindeutig umrechenbar
+  return quote && quote.currency === 'USD' ? { ...quote, ...perGram(quote) } : null
 }
 
 /** Letzte Schlusskurse aus der DB (Fallback). */

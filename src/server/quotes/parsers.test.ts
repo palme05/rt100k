@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { expandExponent, parseJsonExact } from './json'
-import { METALS, parseCoinGeckoPrices, parseCoinGeckoSearch, parseEcbXml, parseGoldApi, parseYahooChart, parseYahooSearch, toMicros } from './parsers'
+import { METAL_FUTURES, METALS, parseCoinGeckoPrices, parseCoinGeckoSearch, parseEcbXml, parseYahooChart, parseYahooSearch, perGram, toMicros } from './parsers'
 
 // Beispielantworten im Format der Anbieter (gekürzt, Werte erfunden)
 const yahooChart = `{"chart":{"result":[{"meta":{"currency":"EUR","symbol":"VWCE.DE","exchangeName":"GER","regularMarketPrice":128.45,"regularMarketTime":1792420320,"previousClose":127.9},"timestamp":[1792420320],"indicators":{"quote":[{}]}}],"error":null}}`
@@ -8,7 +8,7 @@ const yahooLondon = `{"chart":{"result":[{"meta":{"currency":"GBp","symbol":"VUS
 const yahooSearch = `{"explains":[],"count":3,"quotes":[{"exchange":"GER","shortname":"VANGUARD FTSE ALL-WORLD U.ETF","quoteType":"ETF","symbol":"VWCE.DE","index":"quotes","score":20000,"typeDisp":"ETF","longname":"Vanguard FTSE All-World UCITS ETF USD Accumulation","exchDisp":"XETRA","isYahooFinance":true},{"exchange":"MIL","shortname":"VANGUARD FTSE AW","quoteType":"ETF","symbol":"VWCE.MI","exchDisp":"Milan","isYahooFinance":true},{"exchange":"CCC","shortname":"Bitcoin USD","quoteType":"CRYPTOCURRENCY","symbol":"BTC-USD"}],"news":[]}`
 const coingecko = `{"bitcoin":{"eur":58123.45,"last_updated_at":1792420300},"ethereum":{"eur":2210.1},"shiba-inu":{"eur":1.234e-5}}`
 const coingeckoSearch = `{"coins":[{"id":"bitcoin","name":"Bitcoin","api_symbol":"bitcoin","symbol":"BTC","market_cap_rank":1,"thumb":"x"},{"id":"bitcoin-cash","name":"Bitcoin Cash","symbol":"BCH","market_cap_rank":19}],"exchanges":[],"nfts":[]}`
-const gold = `{"name":"Gold","price":2401.25,"symbol":"XAU","updatedAt":"2026-10-19T12:30:00Z","updatedAtReadable":"a few seconds ago"}`
+const gold = `{"chart":{"result":[{"meta":{"currency":"USD","symbol":"GC=F","exchangeName":"CMX","instrumentType":"FUTURE","regularMarketPrice":2401.25,"regularMarketTime":1792413000}}],"error":null}}`
 const ecb = `<?xml version="1.0" encoding="UTF-8"?>
 <gesmes:Envelope xmlns:gesmes="http://www.gesmes.org/xml/2002-08-01" xmlns="http://www.ecb.int/vocabulary/2002-08-01/eurofxref">
   <gesmes:subject>Reference rates</gesmes:subject>
@@ -83,14 +83,16 @@ describe('CoinGecko', () => {
   })
 })
 
-describe('gold-api.com', () => {
+describe('Edelmetalle', () => {
   it('rechnet USD je Unze in USD je Gramm um', () => {
     // 2.401,25 USD / 31,1034768 g = 77,20 USD/g
-    expect(parseGoldApi(parseJsonExact(gold))).toEqual({ priceMicros: 77_201_980n, currency: 'USD', asOf: new Date('2026-10-19T12:30:00Z') })
+    const ounce = parseYahooChart(parseJsonExact(gold))!
+    expect(perGram(ounce)).toEqual({ priceMicros: 77_201_980n, currency: 'USD', asOf: new Date('2026-10-19T12:30:00Z') })
   })
 
-  it('Metalle zur Auswahl', () => {
+  it('Metalle zur Auswahl, jedes mit Future-Symbol', () => {
     expect(METALS.map((m) => m.key)).toEqual(['XAU', 'XAG', 'XPT'])
+    for (const m of METALS) expect(METAL_FUTURES[m.key]).toMatch(/^[A-Z]{2}=F$/)
   })
 })
 

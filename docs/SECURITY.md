@@ -118,7 +118,7 @@ Meldeweg für Sicherheitslücken: siehe [`/SECURITY.md`](../SECURITY.md).
 - Admins können fremde Sessions und Konten noch nicht per Oberfläche sperren; im Notfall per SQL (Notfallplan). Kandidat für Phase 6.
 - Konto-Wiederherstellung ohne E-Mail: verliert jemand Passwort und 2FA, hilft nur ein neues Konto per Einladung (Daten bleiben beim alten Konto). Eine Admin-gestützte Wiederherstellung folgt bewusst nicht ohne Rückfrage.
 - Better Auth erlaubt technisch ein „vertrauenswürdiges Gerät“ (30 Tage ohne 2FA) per API-Parameter; die Oberfläche bietet es nicht an. Prüfen, ob abschaltbar (Phase 6).
-- Yahoo Finance ohne offizielle API (von Tom akzeptiert); Ausfälle fängt der letzte Schlusskurs ab.
+- Yahoo Finance ohne offizielle API (von Tom akzeptiert), seit 20.10.2026 auch für Edelmetalle (gold-api.com war nicht mehr erreichbar; eine verwaiste Kurs-Domain wäre ein Einfallstor für falsche Kurse). Ausfälle fängt der letzte Schlusskurs ab.
 
 ## Notfallplan
 
