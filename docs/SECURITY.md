@@ -87,13 +87,16 @@ Meldeweg für Sicherheitslücken: siehe [`/SECURITY.md`](../SECURITY.md).
 | Prüfung | Ergebnis |
 |---|---|
 | Prototypen enthalten nur fiktive Mock-Daten, keine Datenbank-, Auth- oder API-Zugriffe | ✅ |
-| CSP unverändert streng: alle 9 Prototyp-Seiten ohne CSP-Verletzung (Playwright, Desktop + Mobil) | ✅ |
+| CSP unverändert streng: alle Referenzseiten ohne CSP-Verletzung (Playwright, Desktop + Mobil) | ✅ |
 | Keine `style`-Attribute: Diagramme positionieren ausschließlich über SVG-Attribute | ✅ |
 | Schriften selbst gehostet (`@fontsource`, OFL), keine externen Requests | ✅ |
 | Eigene 404-Seite (die Standardseite von Next nutzt Inline-Styles, die die CSP blockieren würde) | ✅ |
 | Privatsphäre-Modus maskiert Beträge inkl. Achsen und Tooltips; Prozente bleiben sichtbar | ✅ (E2E-Test) |
 | Preview-Deploy hinter Vercel-Authentifizierung | ✅ |
 | `localStorage` nur für die Privatsphäre-Einstellung, in try/catch | ✅ |
+| Designsystem: keine neuen Abhängigkeiten; vier Schriftpakete der verworfenen Richtungen entfernt (kleinere Angriffsfläche) | ✅ |
+| Keine Farb-Literale außerhalb der Tokens, keine `style`-Attribute (per `grep` geprüft) | ✅ |
+| Tastenkürzel (`P`, `g d`, `g r`) greifen nicht in Eingabefeldern | ✅ |
 
 ## Notfallplan
 
