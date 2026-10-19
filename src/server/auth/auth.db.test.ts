@@ -1,7 +1,8 @@
-import { randomInt } from 'node:crypto'
+import { randomBytes, randomInt } from 'node:crypto'
 import { eq } from 'drizzle-orm'
 import { beforeAll, describe, expect, it, vi } from 'vitest'
 import { createUser } from '@/test/fixtures'
+import { totp } from '../../../e2e/helpers/totp'
 import { getDb, withUser } from '../db/client'
 import { auditEvent, user } from '../db/schema'
 import type { Actor } from '../dal/actor'
@@ -150,5 +151,40 @@ describe('Zwei-Faktor', () => {
     const cookie = (login.headers.get('set-cookie') ?? '').split(';')[0] ?? ''
     const res = await post('/two-factor/disable', { password: PASSWORD }, { cookie })
     expect(res.status).toBe(403)
+  })
+})
+
+describe('Schlüsseltausch', () => {
+  it('mit BETTER_AUTH_SECRETS bleiben 2FA-Geheimnisse lesbar, alte Sessions werden ungültig', async () => {
+    await register('rotation@example.org')
+    const login = await post('/sign-in/email', { email: 'rotation@example.org', password: PASSWORD })
+    const cookie = (login.headers.get('set-cookie') ?? '').split(';')[0] ?? ''
+    const enable = await post('/two-factor/enable', { password: PASSWORD }, { cookie })
+    const secret = new URL(((await enable.json()) as { totpURI: string }).totpURI).searchParams.get('secret') ?? ''
+    expect((await post('/two-factor/verify-totp', { code: totp(secret) }, { cookie })).status).toBe(200)
+
+    // Neuer Schlüssel, der alte bleibt nur zum Entschlüsseln (Ablauf in docs/EINRICHTUNG.md)
+    vi.resetModules()
+    vi.stubEnv('BETTER_AUTH_SECRETS', `1:${randomBytes(32).toString('base64')}`)
+    try {
+      const rotated = (await import('./auth')).getAuth()
+      const call = (path: string, body: unknown, c?: string) =>
+        rotated.handler(
+          new Request(`${ORIGIN}/api/auth${path}`, {
+            method: path === '/get-session' ? 'GET' : 'POST',
+            headers: { 'content-type': 'application/json', origin: ORIGIN, 'x-forwarded-for': randomIp(), ...(c ? { cookie: c } : {}) },
+            ...(path === '/get-session' ? {} : { body: JSON.stringify(body) }),
+          }),
+        )
+      expect(await (await call('/get-session', null, cookie)).json()).toBeNull()
+
+      const again = await call('/sign-in/email', { email: 'rotation@example.org', password: PASSWORD })
+      expect(await again.json()).toMatchObject({ twoFactorRedirect: true })
+      const pending = (again.headers.get('set-cookie') ?? '').split(/,(?=\s*[\w.-]+=)/).map((c) => c.split(';')[0]?.trim()).join('; ')
+      expect((await call('/two-factor/verify-totp', { code: totp(secret) }, pending)).status).toBe(200)
+    } finally {
+      vi.unstubAllEnvs()
+      vi.resetModules()
+    }
   })
 })
