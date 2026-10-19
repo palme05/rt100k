@@ -55,6 +55,43 @@ Claude Code öffnet für jede Phase einen Pull Request und sagt dir, wann er fer
 2. **Rebase and merge** wählen (die kleinen, sauber benannten Commits bleiben so erhalten) und bestätigen.
 3. Vercel deployt `main` danach automatisch in die Produktion.
 
+## 6. Schlüssel tauschen – vor der ersten Anmeldung (10 Min)
+
+Die ersten Schlüssel hat Claude Code erzeugt, sie stehen deshalb im Sitzungsprotokoll. Bitte einmal selbst tauschen, **bevor** du dich registrierst. Solange es noch kein Konto gibt, hat der Tausch keine Folgen.
+
+Neue Werte erzeugst du mit deinem Passwortmanager: zufällig, **48 Zeichen, nur Buchstaben und Ziffern** (Sonderzeichen machen in Datenbank-Adressen Ärger). Jeden Wert nur zwischen Passwortmanager, Vercel und Neon kopieren, nie in Chats, Issues oder Commits.
+
+1. **Datenbank-Passwort, Produktion:** https://console.neon.tech → Projekt `rt100k` → **SQL Editor**, Branch `main`, Datenbank `rt100k`:
+   `ALTER ROLE rt100k_app PASSWORD '<neuer Wert>';`
+2. https://vercel.com/palme00/rt100k/settings/environment-variables öffnen. Bei `DATABASE_URL` (Production) auf **Edit**, den Teil zwischen `rt100k_app:` und `@` durch den neuen Wert ersetzen.
+3. **Datenbank-Passwort, Preview:** Schritt 1 mit Branch `preview` und einem *anderen* neuen Wert wiederholen, dann `DATABASE_URL` (Preview) in Vercel genauso anpassen.
+4. `BETTER_AUTH_SECRET` bei Production durch einen neuen Wert ersetzen, bei Preview durch einen weiteren.
+5. `CRON_SECRET` (nur Production) durch einen neuen Wert ersetzen.
+6. Vercel → **Deployments** → beim obersten Production-Deployment **⋯** → **Redeploy**.
+7. Prüfen: https://rt100k.vercel.app/anmelden lädt ohne Fehler.
+
+### Später tauschen (bei Verdacht, sonst einmal im Jahr)
+
+Sobald Konten mit 2FA existieren, darf `BETTER_AUTH_SECRET` **nicht mehr einfach ersetzt werden**: Mit ihm sind die 2FA-Geheimnisse verschlüsselt, alle mit 2FA wären ausgesperrt (ein Test im Repo prüft genau das). Stattdessen:
+
+1. `BETTER_AUTH_SECRET` unverändert lassen. Er wird ab jetzt nur noch zum Entschlüsseln alter Daten gebraucht.
+2. Neue Variable `BETTER_AUTH_SECRETS` (mit **S**) anlegen, Wert `1:<neuer Wert>`. Beim nächsten Tausch `2:<neuester Wert>,1:<voriger Wert>`, immer der neueste vorne.
+3. Redeploy. Folge: Alle werden einmal abgemeldet, Passwort, 2FA und Passkeys bleiben gültig.
+
+`CRON_SECRET` und das Datenbank-Passwort tauschst du jederzeit wie oben (Schritte 1–2, 5–6), ohne Folgen außer einer kurzen Unterbrechung bis zum Redeploy.
+
+## 7. Erste Anmeldung als Admin (5 Min, nach Schritt 6)
+
+Öffentliche Registrierung gibt es nicht. Dein Admin-Konto entsteht über einen Einladungslink, den Claude Code dir schickt (nur einmal nutzbar, läuft ab).
+
+1. Den Link öffnen, Name, E-Mail und ein Passwort mit mindestens 12 Zeichen eingeben → **Konto anlegen**.
+2. rt100k leitet dich direkt zu **Sicherheit**: Als Admin musst du die Zwei-Faktor-Anmeldung einrichten, vorher geht nichts weiter. QR-Code mit einer Authenticator-App scannen (z. B. Aegis, 2FAS, Google Authenticator), Code eingeben.
+3. Die **Backup-Codes** in deinem Passwortmanager speichern. Sie werden nur einmal angezeigt.
+4. Empfohlen: **Passkey hinzufügen** (Face ID, Fingerabdruck oder Windows Hello). Danach meldest du dich ohne Passwort an.
+5. Familie und Freunde lädst du unter **Admin** ein. Den Link schickst du ihnen selbst (Signal, WhatsApp …), rt100k verschickt keine Mails.
+
+Als Admin siehst du Namen, Rollen und den Sicherheitsstatus der Konten, aber **keine Depots oder Beträge** anderer Personen. Das erzwingt die Datenbank selbst (Row Level Security).
+
 ## Danach
 
 - Dependabot-PRs für Sicherheitsupdates darfst du mergen, wenn alle Checks grün sind. Normale Versions-Updates übernimmt Claude Code in seine Phasen-PRs.

@@ -1,8 +1,8 @@
 # Datenquellen
 
-Stand: **19.10.2026**. Alle Quellen müssen **kostenlos ohne Kreditkarte** nutzbar sein (Brief, Regel 1). Externe Daten gelten als **nicht vertrauenswürdig**: Jede Antwort wird mit zod validiert, nie ungefiltert gerendert, und Ausfälle brechen die App nicht (Fallback-Kette, „Kurs von 14:32, verzögert“).
+Stand: **20.10.2026** (Phase 2 umgesetzt). Alle Quellen müssen **kostenlos ohne Kreditkarte** nutzbar sein (Brief, Regel 1). Externe Daten gelten als **nicht vertrauenswürdig**: Jede Antwort wird mit zod validiert, nie ungefiltert gerendert, und Ausfälle brechen die App nicht (Fallback-Kette, „Kurs von 14:32, verzögert“).
 
-> Die Angaben beruhen auf Websuche (Anbieterseiten waren aus der Build-Umgebung nicht direkt abrufbar). Limits und Nutzungsbedingungen ändern sich. **Vor der Implementierung in Phase 2 je Quelle Live-Test und aktuelle ToS prüfen** und das Ergebnis hier nachtragen.
+> Die Angaben in der Übersicht beruhen auf Websuche (Anbieterseiten waren aus der Build-Umgebung nicht direkt abrufbar). Limits und Nutzungsbedingungen ändern sich. Ob die Quellen aus der Produktion erreichbar sind, zeigt `/api/status` (Ergebnis 10 Min gecacht).
 
 ## Entscheidung (19.10.2026)
 
@@ -32,7 +32,22 @@ Schutzmaßnahmen, damit das Risiko klein bleibt:
 | ETF-Holdings (Durchschau) | Emittenten-CSVs (iShares, Xtrackers, Vanguard, Amundi …) | frei | — | je Emittent prüfen | ETF-abhängig | täglich/monatlich | Phase 4, nur gecacht + nur aktuellster Stand |
 | Börsenzeiten/Feiertage | eigene Kalenderdatei (Xetra, Wiener Börse, NYSE/Nasdaq) | — | — | — | — | — | Phase 2, jährlich pflegen; keine API nötig |
 
-## Provider-Architektur (ab Phase 2)
+## Umsetzung Phase 2
+
+| Asset-Klasse | Abruf | Cache | Fallback |
+|---|---|---|---|
+| Aktien/ETF (EU + US) | Yahoo `v8/finance/chart/{symbol}`, Suche über `v1/finance/search` | 60 s (Vercel Data Cache), Suche 1 h | letzter gespeicherter Tagesschluss |
+| Krypto | CoinGecko `simple/price` (EUR, gebündelt), Suche über `search`; Demo-Key optional (`COINGECKO_API_KEY`) | 60 s | letzter Tagesschluss |
+| Edelmetalle | gold-api.com `price/{XAU,XAG,XPT}` (USD je Feinunze → EUR je Gramm) | 5 Min | letzter Tagesschluss |
+| Wechselkurse | EZB `eurofxref-daily.xml` | 1 h | letzter gespeicherter EZB-Kurs |
+
+- Alle Antworten laufen durch zod-Schemas, Zahlen werden exakt geparst (kein Float, Kurse in Mikro-Einheiten), Timeout 6 s, max. 1 MB.
+- Instrumente landen nur nach **serverseitiger Prüfung** in der Datenbank: Die Auswahl im Formular wird vor dem Speichern noch einmal beim Anbieter nachgeschlagen, Name und Währung kommen von dort, nicht aus dem Browser.
+- Der Cron `/api/cron/daily` (22:00 UTC, nach US-Börsenschluss) speichert **nur Tagesschlusskurse** gehaltener Instrumente und die EZB-Kurse, dazu je Nutzer einen Tageswert für den Verlauf. Live-Kurse landen nie in der Datenbank.
+- Die UI zeigt Zeitstempel und „teils verzögert“, wenn ein Kurs aus dem Fallback stammt oder älter als vier Tage ist. Krypto-Ansichten tragen „Data provided by CoinGecko“.
+- **Noch nicht umgesetzt:** Finnhub, Alpha Vantage, MetalpriceAPI (bräuchten Keys; die Fallback-Kette endet vorerst beim letzten Schlusskurs) und OpenFIGI (ISIN-Suche läuft vorerst über die Yahoo-Suche). Börsenkalender gibt es seit Phase 1 als eigene Datei (`src/lib/markets.ts`).
+
+## Provider-Architektur (Zielbild)
 
 ```
 QuoteService
@@ -51,10 +66,11 @@ In der DB landen nur **Tagesschlusskurse** gehaltener oder beobachteter Instrume
 
 ## Offene Punkte
 
-1. ~~Yahoo Finance~~ – entschieden am 19.10.2026: Primärquelle mit Schutzmaßnahmen (siehe oben).
+1. ~~Yahoo Finance~~ – entschieden am 19.10.2026: Primärquelle mit Schutzmaßnahmen (siehe oben), umgesetzt in Phase 2.
 2. **Twelve Data:** Lizenz der Free-Stufe („non-display“) vor Nutzung im Wortlaut prüfen.
 3. **OeKB:** Nutzungsregeln im Wortlaut lesen bzw. bei der OeKB anfragen, ob ein automatisierter Abruf zulässig ist.
-4. **gold-api.com:** Platin-Abdeckung und Bedingungen prüfen.
+4. **gold-api.com:** Bedingungen im Wortlaut prüfen. Gold, Silber und Platin werden abgefragt; fehlt ein Kurs, greift der letzte Schlusskurs.
+5. **CoinGecko Demo-Key:** ohne Key funktioniert der öffentliche Endpunkt, aber mit engerem Limit. Für den Dauerbetrieb einen kostenlosen Demo-Key anlegen (keine Karte) und als `COINGECKO_API_KEY` in Vercel hinterlegen.
 
 ## Quellen
 

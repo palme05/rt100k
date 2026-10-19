@@ -1,6 +1,6 @@
 # Designsystem „Strecke“
 
-Stand: 19.10.2026 · gewählt aus drei Prototypen (Richtung A). Referenzseiten mit fiktiven Daten: `/prototypes/a`, `/prototypes/a/depot/trade-republic`, `/prototypes/a/road`. Die Referenzseiten fallen weg, sobald die echten Seiten stehen (Phase 2).
+Stand: 20.10.2026 · gewählt aus drei Prototypen (Richtung A). Die Prototyp-Seiten sind mit Phase 2 entfallen; Referenz sind jetzt die App-Seiten unter `/app` (Übersicht, Depots, Road to 100k, Sicherheit, Admin).
 
 ## Grundsätze
 
@@ -73,6 +73,9 @@ Alle unter `src/components/`. Seiten setzen sich nur daraus zusammen, eigene CSS
 | `RouteLine`, `RouteSummary`, `RoadPlanner` | `road/` | Road to 100k: Linienplan, Ankunftssatz, Planer |
 | `Markets` | `markets/` | Börsen offen/geschlossen (Punkt + Text) |
 | Schaltflächen-Stil | `ui/button.module.css` | Pill-Button (Werkzeuge, Zurücksetzen) |
+| `Form`, `Field`, `Input`, `Select`, `Textarea`, `Checkbox`, `Button`, `Actions`, `Message` | `ui/forms.tsx` | Formulare: sichtbare Labels, Hinweis und Fehler am Feld (aria-describedby), Meldungen mit Titelwort |
+| `QrCode` | `ui/QrCode.tsx` | QR-Code als SVG-Pfad (2FA-Einrichtung), CSP-konform |
+| `AuthFrame` | `shell/AuthFrame.tsx` | Schmale Spalte für Anmeldung, 2FA, Einladung |
 
 Reine Logik liegt in `src/lib/` (Prognose, Kennzahlen, Monate, Road) und ist unit-getestet.
 
@@ -101,6 +104,8 @@ Grundlage sind die Dataviz-Regeln: Form nach Aufgabe wählen, Farbe zuletzt.
 Die Richtung lebt vom warmen Papierton und der feinen Linienführung. Ein dunkles Thema braucht eigene, gegen den dunklen Grund geprüfte Stufen (Akzent und Zweitfarbe verlieren sonst Kontrast) und ist kein bloßes Invertieren. Es steht in `docs/IDEAS.md` und kommt frühestens in Phase 6. Die Tokens sind so angelegt, dass es später nur einen zweiten Wertesatz braucht.
 
 ## Do / Don't
+
+**Formulare:** Primär-Schaltfläche in Tinte (nie Akzent), Gefahr in Rot mit Wort („Depot löschen“), Löschen nur mit Bestätigung. Zahlenfelder mit `inputMode="decimal"` und deutschem Format, Vorschau („Ø Kurs 128,45 €“) unter dem Feld.
 
 | Do | Don't |
 |---|---|
