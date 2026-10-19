@@ -27,3 +27,29 @@ test('lädt ohne CSP-Verletzungen', async ({ page }) => {
   await page.waitForLoadState('networkidle')
   expect(violations).toEqual([])
 })
+
+test('geschützte Seiten leiten ohne Anmeldung zur Anmeldung', async ({ page }) => {
+  for (const path of ['/app', '/app/depots', '/app/road', '/app/admin', '/app/sicherheit']) {
+    await page.goto(path)
+    await expect(page).toHaveURL(/\/anmelden$/)
+  }
+})
+
+test('API: Cron ohne Secret und öffentliche Registrierung sind zu', async ({ request }) => {
+  expect((await request.get('/api/cron/daily')).status()).toBe(401)
+  expect((await request.get('/api/cron/daily', { headers: { authorization: 'Bearer falsch' } })).status()).toBe(401)
+  const signup = await request.post('/api/auth/sign-up/email', { data: { name: 'Eve', email: 'eve@e2e.invalid', password: 'x'.repeat(16) } })
+  expect(signup.status()).toBe(404)
+})
+
+test('unbekannter Einladungslink zeigt keinen Formular-Zugang', async ({ page }) => {
+  await page.goto(`/einladung/${'a'.repeat(43)}`)
+  await expect(page.getByRole('heading', { name: 'Link ungültig' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Konto anlegen' })).toHaveCount(0)
+})
+
+test('Unbekannte Seite zeigt die eigene 404-Seite', async ({ page }) => {
+  const response = await page.goto('/gibt-es-nicht')
+  expect(response?.status()).toBe(404)
+  await expect(page.getByRole('heading', { name: 'Diese Seite gibt es nicht.' })).toBeVisible()
+})

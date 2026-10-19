@@ -33,7 +33,7 @@ export function PortfolioForm({
         <Field id={`${id}-name`} label="Name" hint="z. B. „Hauptdepot“ oder „Notgroschen“" error={err('name')}>
           <Input id={`${id}-name`} name="name" required maxLength={80} defaultValue={defaults?.name} {...describedBy(`${id}-name`, true, err('name'))} />
         </Field>
-        <Field id={`${id}-kind`} label="Art" error={err('kind')}>
+        <Field id={`${id}-kind`} label="Art des Kontos" error={err('kind')}>
           <Select id={`${id}-kind`} name="kind" defaultValue={defaults?.kind ?? 'depot'} disabled={Boolean(defaults)}>
             {KINDS.map((k) => (
               <option key={k.value} value={k.value}>

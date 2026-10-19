@@ -21,7 +21,11 @@ export function TwoFactorForm() {
     const result = backup ? await authClient.twoFactor.verifyBackupCode({ code }) : await authClient.twoFactor.verifyTotp({ code })
     setPending(false)
     if (result.error) {
-      setError(result.error.status === 401 ? 'Die Anmeldung ist abgelaufen. Bitte erneut mit Passwort anmelden.' : authErrorMessage(result.error))
+      setError(
+        result.error.code === 'INVALID_TWO_FACTOR_COOKIE' || result.error.code === 'TOO_MANY_ATTEMPTS_REQUEST_NEW_CODE'
+          ? 'Die Anmeldung ist abgelaufen oder es gab zu viele Versuche. Bitte erneut mit Passwort anmelden.'
+          : authErrorMessage(result.error),
+      )
       return
     }
     router.push('/app')

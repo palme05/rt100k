@@ -17,6 +17,8 @@ export function authErrorMessage(error: { status?: number; message?: string | un
       return 'Das Passwort braucht mindestens 12 Zeichen.'
     case 'PASSWORD_TOO_LONG':
       return 'Das Passwort darf höchstens 128 Zeichen haben.'
+    case 'ACCOUNT_TEMPORARILY_LOCKED':
+      return 'Zu viele falsche Codes. Die Anmeldung ist für kurze Zeit gesperrt.'
     case 'TWO_FACTOR_NOT_ENABLED':
       return 'Die Zwei-Faktor-Anmeldung ist nicht aktiv.'
   }
