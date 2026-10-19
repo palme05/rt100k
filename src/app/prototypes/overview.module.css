@@ -1,0 +1,114 @@
+.page {
+  min-height: 100dvh;
+  background: #f4f4f1;
+  color: #17181a;
+  padding: clamp(1.5rem, 4vw, 4rem) clamp(1rem, 4vw, 4rem);
+  font-family: system-ui, sans-serif;
+}
+
+.intro {
+  max-width: 46rem;
+}
+
+.intro h1 {
+  font-size: clamp(1.75rem, 4vw, 2.75rem);
+  margin: 0 0 0.5rem;
+  letter-spacing: -0.02em;
+}
+
+.intro p {
+  color: #4a4d52;
+  margin: 0 0 0.5rem;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr));
+  gap: 1rem;
+  margin-top: 2rem;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  border-radius: 0.75rem;
+  padding: 1.25rem;
+  text-decoration: none;
+  color: inherit;
+  border: 1px solid #d9d9d3;
+  background: #fff;
+  transition: transform 120ms ease, box-shadow 120ms ease;
+}
+
+.card:hover,
+.card:focus-visible {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 8%);
+}
+
+.card:focus-visible {
+  outline: 3px solid #1f5fbf;
+  outline-offset: 2px;
+}
+
+.swatch {
+  height: 7rem;
+  border-radius: 0.5rem;
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+  font-size: 1.5rem;
+}
+
+.swatchA {
+  composes: swatch;
+  background: repeating-linear-gradient(90deg, #f2f2ee 0 28px, transparent 28px 56px) center / 100% 4px no-repeat, #2a2c30;
+  color: #fff;
+}
+
+.swatchB {
+  composes: swatch;
+  background: #07090a;
+  color: #ffb627;
+  font-family: ui-monospace, monospace;
+  border: 1px solid #1d2527;
+}
+
+.swatchC {
+  composes: swatch;
+  background: #f5f0e6;
+  color: #1b1915;
+  font-family: Georgia, serif;
+  font-style: italic;
+  border: 1px solid #cfc5b2;
+}
+
+.card h2 {
+  margin: 0;
+  font-size: 1.2rem;
+}
+
+.card p {
+  margin: 0;
+  color: #4a4d52;
+  font-size: 0.95rem;
+}
+
+.links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+  font-size: 0.9rem;
+}
+
+.links a {
+  color: #1f5fbf;
+}
+
+.note {
+  margin-top: 2rem;
+  font-size: 0.85rem;
+  color: #5d6066;
+  max-width: 46rem;
+}

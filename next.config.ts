@@ -18,7 +18,6 @@ const securityHeaders = [
       'payment=()',
       'usb=()',
       'serial=()',
-      'bluetooth=()',
       'interest-cohort=()',
       'browsing-topics=()',
     ].join(', '),
