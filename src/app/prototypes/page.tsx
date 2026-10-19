@@ -6,24 +6,21 @@ export const metadata = { title: 'Drei Richtungen' }
 const DIRECTIONS = [
   {
     id: 'a',
-    name: 'A · Road Trip',
+    name: 'A · Strecke',
     swatch: styles.swatchA,
-    label: '100K',
-    text: 'Der Name wörtlich: Vermögen als Straße, Meilensteine als Ortstafeln, Kilometersteine in Tausend Euro, Tacho für die Sparrate. Die Prognose ist eine Fahrbahn, die sich in die Zukunft verbreitert.',
+    text: 'Hell, ruhig, viel Weißraum. Tinte und ein orangefarbener Akzent. Der Weg zu 100.000 € als Routenlinie mit Stationen, Abschnitte nur durch Haarlinien getrennt.',
   },
   {
     id: 'b',
-    name: 'B · Mission Control',
+    name: 'B · Cockpit',
     swatch: styles.swatchB,
-    label: 'T−25 MON',
-    text: 'Dunkles Cockpit in B612 Mono (Airbus-Cockpitschrift), extrem datendicht: Telemetrie, Positions-Heatmap, Drawdown-Kurve, Sensitivitätsmatrix, Command Palette.',
+    text: 'Dunkles Instrumentenpanel, jede Zahl in Monospace, sehr datendicht: sortierbare Positionen, Heatmap, Drawdown-Kurve, Sensitivitätsmatrix.',
   },
   {
     id: 'c',
     name: 'C · Editorial',
     swatch: styles.swatchC,
-    label: 'Ausgabe Nr. 34',
-    text: 'Finanzmagazin auf Papierton: Serifen, Zeitungsgrafiken mit Annotationen, Kurszettel, der Monatsrückblick als „Ausgabe“, Road to 100k als Long-Read.',
+    text: 'Finanzmagazin auf Papierton. Serifen, annotierte Grafiken, Kurszettel. Der Monatsrückblick als Titelgeschichte, Road to 100k als Long-Read.',
   },
 ]
 
@@ -31,38 +28,28 @@ export default function PrototypesPage() {
   return (
     <main className={styles.page}>
       <div className={styles.intro}>
-        <h1>rt100k – drei Richtungen</h1>
-        <p>
-          Klickbare Prototypen mit fiktiven Mock-Daten. Jede Richtung hat Übersicht, Depot-Detail und Road-to-100k-Ansicht,
-          für Desktop und Handy.
-        </p>
-        <p>
-          Überall: <kbd>P</kbd> blendet Beträge aus, <kbd>⌘K</kbd> / <kbd>Strg+K</kbd> öffnet die Befehlsleiste,{' '}
-          <kbd>G</kbd> <kbd>R</kbd> springt zu Road to 100k.
+        <h1>Drei Richtungen für rt100k</h1>
+        <p>Klickbare Prototypen mit fiktiven Daten. Jede Richtung zeigt Übersicht, Depot-Detail und Road to 100k, am Desktop und am Handy.</p>
+        <p className={styles.keys}>
+          <kbd>P</kbd> Beträge ausblenden · <kbd>⌘K</kbd> / <kbd>Strg K</kbd> Suche · <kbd>G</kbd> <kbd>R</kbd> Road to 100k
         </p>
       </div>
-      <div className={styles.grid}>
+      <ul className={styles.grid}>
         {DIRECTIONS.map((d) => (
-          <article key={d.id} className={styles.card}>
-            <div className={d.swatch} aria-hidden="true">
-              {d.label}
-            </div>
+          <li key={d.id} className={styles.card}>
+            <div className={d.swatch} aria-hidden="true" />
             <h2>
               <Link href={`/prototypes/${d.id}`}>{d.name}</Link>
             </h2>
             <p>{d.text}</p>
             <div className={styles.links}>
-              <Link href={`/prototypes/${d.id}`}>Übersicht</Link>
               <Link href={`/prototypes/${d.id}/depot/trade-republic`}>Depot-Detail</Link>
               <Link href={`/prototypes/${d.id}/road`}>Road to 100k</Link>
             </div>
-          </article>
+          </li>
         ))}
-      </div>
-      <p className={styles.note}>
-        Alle Zahlen sind erfunden (deterministisch erzeugt). Prognosen sind Simulationen, keine Anlageberatung. Steuerwerte sind
-        Schätzungen.
-      </p>
+      </ul>
+      <p className={styles.note}>Alle Zahlen sind erfunden. Prognosen sind Simulationen, keine Anlageberatung. Steuerwerte sind Schätzungen.</p>
     </main>
   )
 }
