@@ -82,6 +82,19 @@ Meldeweg für Sicherheitslücken: siehe [`/SECURITY.md`](../SECURITY.md).
 | `pnpm audit --prod --audit-level high` | siehe CI |
 | Offene Punkte | Repo noch privat → Secret Scanning/CodeQL/PVR inaktiv; ZAP-Secret fehlt; Rate-Limits erst mit ersten Endpunkten (Phase 2) |
 
+## Security-Check Phase 1 (19.10.2026)
+
+| Prüfung | Ergebnis |
+|---|---|
+| Prototypen enthalten nur fiktive Mock-Daten, keine Datenbank-, Auth- oder API-Zugriffe | ✅ |
+| CSP unverändert streng: alle 9 Prototyp-Seiten ohne CSP-Verletzung (Playwright, Desktop + Mobil) | ✅ |
+| Keine `style`-Attribute: Diagramme positionieren ausschließlich über SVG-Attribute | ✅ |
+| Schriften selbst gehostet (`@fontsource`, OFL), keine externen Requests | ✅ |
+| Eigene 404-Seite (die Standardseite von Next nutzt Inline-Styles, die die CSP blockieren würde) | ✅ |
+| Privatsphäre-Modus maskiert Beträge inkl. Achsen und Tooltips; Prozente bleiben sichtbar | ✅ (E2E-Test) |
+| Preview-Deploy hinter Vercel-Authentifizierung | ✅ |
+| `localStorage` nur für die Privatsphäre-Einstellung, in try/catch | ✅ |
+
 ## Notfallplan
 
 **Bei Verdacht auf Secret-Leak** (Commit, Log, Screenshot):

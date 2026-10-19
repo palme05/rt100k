@@ -36,8 +36,9 @@ GitHub Actions (öffentliches Repo, kostenlos)
 | A5 | **Better Auth selbst gehostet** (MIT) statt *Neon Managed Better Auth* | Neon Auth unterstützt laut Doku (Stand 10/2026) nur die Plugins Admin, Email OTP, JWT, Magic Link, Organization, Open API, Phone Number – **keine Passkeys und kein TOTP-2FA**. Die Brief-Ausweichlösung greift: Better Auth mit `@better-auth/passkey` und `twoFactor` (TOTP + Backup-Codes), Tabellen in der eigenen Neon-DB, integriertes Rate-Limiting mit DB-Speicher. |
 | A6 | **Drizzle ORM** + versionierte SQL-Migrations, Treiber `@neondatabase/serverless` | Brief. |
 | A7 | **Geld als Integer-Cent** (`src/lib/money.ts`), Stückzahlen als skalierte Ganzzahlen/Decimal (Phase 2) | Brief. ESLint verbietet `parseFloat`. |
-| A8 | **Fonts selbst gehostet** über `@fontsource`-Pakete (npm) | Keine Requests an Google (DSGVO), CSP bleibt bei `font-src 'self'`. |
-| A9 | **Eigene SVG-Charts** für die Prototypen; für echte Kurscharts später TradingView lightweight-charts (Apache-2.0) | Volle gestalterische Kontrolle, null Bundle-Kosten für Prototypen. |
+| A8 | **Fonts selbst gehostet** über `@fontsource`-Pakete (npm, OFL): Instrument Sans (A), IBM Plex Sans/Mono (B), Newsreader + Source Sans 3 (C) | Keine Requests an Google (DSGVO), CSP bleibt bei `font-src 'self'`. Nach der Designwahl bleiben nur die Schriften der gewählten Richtung. |
+| A9 | **Eigene SVG-Charts** (`src/prototypes/shared/charts.tsx`): Crosshair, Tastatur, Tabellenansicht, Privatsphäre-Modus; für Kurscharts mit Intraday-Daten später ggf. TradingView lightweight-charts (Apache-2.0) | Volle gestalterische Kontrolle, keine Bundle-Kosten, CSP-konform (keine Inline-Styles). |
+| A10 | **Prognose- und Kennzahlen-Logik als reine Funktionen** (`src/lib/forecast.ts`, `returns.ts`, `markets.ts`) mit Unit-Tests | Wird ab Phase 2 direkt weiterverwendet; Monte-Carlo mit festem Seed, damit Server und Browser identisch rechnen. |
 
 ## Free-Tier-Grenzen (geprüft am 19.10.2026)
 

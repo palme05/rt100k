@@ -46,6 +46,13 @@ Im Cloud-Container: `PW_CHROMIUM_PATH=/opt/pw-browsers/chromium pnpm exec playwr
 3. Preview-Deploy auf Vercel prüfen.
 4. Kurzer Bericht an Tom: fertig / offen / Security-Befunde / Free-Tier-Verbrauch.
 
+## Struktur
+
+- `src/lib/` – reine Logik mit Tests (Geld, Format, Prognose, Kennzahlen, Börsenzeiten, CSP)
+- `src/prototypes/` – Phase-1-Prototypen (`a`, `b`, `c`), Mock-Daten und geteilte Diagramme; wird nach der Designwahl zur Komponentenbibliothek bzw. entfernt
+- `src/app/prototypes/` – Routen der Prototypen (`/prototypes/a|b|c`, je Übersicht, `depot/[id]`, `road`)
+- `e2e/` – Playwright: Security-Header/CSP, alle Prototyp-Seiten (Fehler, CSP, Überlauf), Privatsphäre-Modus, Palette
+
 ## Infrastruktur
 
 - GitHub: `palme05/rt100k`
