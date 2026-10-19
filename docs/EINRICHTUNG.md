@@ -39,18 +39,7 @@ Vorab geprüft: Die gesamte Git-Historie aller Branches enthält keine Secrets u
 
 Damit kann nichts mehr ungeprüft auf `main` landen: Jede Änderung braucht einen Pull Request, alle Checks müssen grün sein, und schwere Sicherheitsfunde blockieren den Merge.
 
-## 4. Schlüssel für den ZAP-Sicherheitsscan (2 Min)
-
-Der automatische OWASP-ZAP-Scan prüft jedes Preview-Deployment. Weil die Previews hinter dem Vercel-Login liegen, braucht er einen Bypass-Schlüssel. Den Schlüssel bitte direkt von Vercel nach GitHub kopieren und nirgendwo sonst einfügen (auch nicht in den Chat).
-
-1. https://vercel.com/palme00/rt100k/settings/deployment-protection öffnen.
-2. Bei **Protection Bypass for Automation** auf **Add Secret** (bzw. **Generate**) klicken und den Wert kopieren.
-3. https://github.com/palme05/rt100k/settings/secrets/actions öffnen → **New repository secret**.
-4. **Name:** `VERCEL_AUTOMATION_BYPASS_SECRET` · **Secret:** einfügen → **Add secret**.
-
-Der Scan startet automatisch nach jedem erfolgreichen Preview-Deploy (Reiter **Actions** → „OWASP ZAP Baseline“), aber erst, wenn der Workflow auf `main` liegt, also nach dem Merge von Phase 2.
-
-## 5. Pull Requests mergen (pro Phase 1 Klick)
+## 4. Pull Requests mergen (pro Phase 1 Klick)
 
 Claude Code öffnet für jede Phase einen Pull Request und sagt dir, wann er fertig ist.
 
@@ -58,7 +47,7 @@ Claude Code öffnet für jede Phase einen Pull Request und sagt dir, wann er fer
 2. **Rebase and merge** wählen (die kleinen, sauber benannten Commits bleiben so erhalten) und bestätigen.
 3. Vercel deployt `main` danach automatisch in die Produktion.
 
-## 6. Schlüssel tauschen – vor der ersten Anmeldung (10 Min)
+## 5. Schlüssel tauschen – vor der ersten Anmeldung (10 Min)
 
 Die ersten Schlüssel hat Claude Code erzeugt, sie stehen deshalb im Sitzungsprotokoll. Bitte einmal selbst tauschen, **bevor** du dich registrierst. Solange es noch kein Konto gibt, hat der Tausch keine Folgen.
 
@@ -85,7 +74,7 @@ Sobald Konten mit 2FA existieren, darf `BETTER_AUTH_SECRET` **nicht mehr einfach
 
 `CRON_SECRET` und das Datenbank-Passwort tauschst du jederzeit wie oben (Schritte 1–2, 5–6), ohne Folgen außer einer kurzen Unterbrechung bis zum Redeploy.
 
-## 7. Erste Anmeldung als Admin (5 Min, nach Schritt 6)
+## 6. Erste Anmeldung als Admin (5 Min, nach Schritt 5)
 
 Öffentliche Registrierung gibt es nicht. Dein Admin-Konto entsteht über einen Einladungslink, den Claude Code dir schickt (nur einmal nutzbar, läuft ab).
 
