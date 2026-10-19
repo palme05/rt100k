@@ -287,9 +287,9 @@ export function LineChart(props: LineChartProps) {
             <line className={classNames.grid} x1={margin.left} x2={width - margin.right} y1={y(t)} y2={y(t)} />
             <text
               className={classNames.axisText}
-              x={yAxisSide === 'left' ? margin.left - 6 : width - margin.right + 6}
+              x={yAxisSide === 'left' ? margin.left - 6 : endLabelSpace > 0 ? width - 2 : width - margin.right + 6}
               y={y(t) + fontSize / 3}
-              textAnchor={yAxisSide === 'left' ? 'end' : 'start'}
+              textAnchor={yAxisSide === 'left' || endLabelSpace > 0 ? 'end' : 'start'}
             >
               {fmt.tick(t)}
             </text>
