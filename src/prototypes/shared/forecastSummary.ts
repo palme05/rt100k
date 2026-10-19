@@ -1,6 +1,6 @@
-import { etaQuantile, monteCarlo, monthsToTarget, projectDeterministic } from '@/lib/forecast'
+import { etaQuantile, monteCarlo, monthsToTarget, probabilityByMonth, projectDeterministic } from '@/lib/forecast'
 import { FORECAST_DEFAULTS, HISTORY, MILESTONES, NEXT_GOALS, TOTAL_VALUE, reachedMonth } from '../mock/portfolio'
-import { addMonths } from './format'
+import { addMonths, monthsBetween } from './format'
 
 /** Standardprognose für Übersichtsseiten (serverseitig, gleicher Seed wie der Planer). */
 const NOW = HISTORY.at(-1)?.month ?? '2026-10'
@@ -33,3 +33,9 @@ export const GOAL_INFO: readonly MilestoneInfo[] = NEXT_GOALS.map((value) => ({ 
 export const ETA_100K = eta(100_000)
 export const MONTHS_TO_100K = monthsToTarget(det, 100_000)
 export const NOW_MONTH = NOW
+
+/** Wahrscheinlichkeit, 100k bis Ende eines Jahres zu erreichen (Standardannahmen). */
+export function probability100kByYearEnd(year: number): number {
+  const hits = mc.firstHit.get(100_000)
+  return hits ? probabilityByMonth(hits, monthsBetween(NOW, `${year}-12`)) : 0
+}
