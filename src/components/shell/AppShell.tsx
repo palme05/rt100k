@@ -5,9 +5,11 @@ import styles from './shell.module.css'
 /** Seitenrahmen: Kopfzeile + Inhaltsspalte. */
 export function AppShell({
   children,
+  account,
   ...header
 }: {
   children: React.ReactNode
+  account?: React.ReactNode
   homeHref: string
   nav: readonly NavItem[]
   commands: readonly Command[]
@@ -15,7 +17,7 @@ export function AppShell({
 }) {
   return (
     <>
-      <AppHeader {...header} />
+      <AppHeader {...header}>{account}</AppHeader>
       <main className={styles.main} id="inhalt">
         {children}
       </main>

@@ -14,6 +14,8 @@ export interface RoadPlannerData {
   defaults: Required<Omit<RoadAssumptions, 'lumpSum'>>
   milestones: readonly number[]
   goals: readonly number[]
+  /** gespeicherte Vorgabe, Standard: Sachwerte zählen mit */
+  includeTangibles?: boolean
 }
 
 export interface RoadSettings {
@@ -25,7 +27,7 @@ export interface RoadSettings {
 }
 
 export function defaultSettings(data: RoadPlannerData): RoadSettings {
-  return { ...data.defaults, lumpSum: 0, includeTangibles: true }
+  return { ...data.defaults, lumpSum: 0, includeTangibles: data.includeTangibles ?? true }
 }
 
 export function useRoadForecast(data: RoadPlannerData) {

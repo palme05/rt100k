@@ -1,0 +1,70 @@
+/* Rahmen für Anmeldung, 2FA und Einladung: schmale Spalte, viel Weißraum. */
+
+.frame {
+  min-height: 100dvh;
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  padding: var(--space-10) var(--gutter);
+}
+
+.column {
+  width: min(26rem, 100%);
+  display: grid;
+  gap: var(--space-6);
+}
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  font-weight: var(--weight-semibold);
+  width: fit-content;
+}
+
+.brand svg line:first-child {
+  stroke: var(--rule-strong);
+}
+
+.brand svg line:nth-child(2) {
+  stroke: var(--accent);
+}
+
+.brand svg circle {
+  fill: var(--accent);
+  stroke: var(--bg);
+}
+
+.title {
+  margin: 0;
+  font-size: var(--text-2xl);
+  font-weight: var(--weight-medium);
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+}
+
+.lead {
+  margin: calc(var(--space-3) * -1) 0 0;
+  color: var(--ink-2);
+}
+
+.footnote {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--ink-3);
+}
+
+.divider {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  color: var(--ink-3);
+  font-size: var(--text-sm);
+}
+
+.divider::before,
+.divider::after {
+  content: '';
+  flex: 1;
+  border-top: 1px solid var(--rule);
+}

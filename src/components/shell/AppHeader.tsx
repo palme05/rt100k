@@ -29,11 +29,14 @@ export function AppHeader({
   nav,
   commands,
   hotkeys,
+  children,
 }: {
   homeHref: string
   nav: readonly NavItem[]
   commands: readonly Command[]
   hotkeys: Readonly<Record<string, string>>
+  /** Konto-Bereich rechts (z. B. Sicherheit, Abmelden) */
+  children?: React.ReactNode
 }) {
   const pathname = usePathname()
   return (
@@ -58,6 +61,7 @@ export function AppHeader({
           <span className={styles.search}>
             <CommandPalette commands={commands} />
           </span>
+          {children}
         </div>
       </div>
       <GoHotkeys routes={hotkeys} />
