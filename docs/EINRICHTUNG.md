@@ -47,6 +47,8 @@ Der automatische OWASP-ZAP-Scan prüft jedes Preview-Deployment. Weil die Previe
 3. https://github.com/palme05/rt100k/settings/secrets/actions öffnen → **New repository secret**.
 4. **Name:** `VERCEL_AUTOMATION_BYPASS_SECRET` · **Secret:** einfügen → **Add secret**.
 
+Der Scan startet automatisch nach jedem erfolgreichen Preview-Deploy (Reiter **Actions** → „OWASP ZAP Baseline“), aber erst, wenn der Workflow auf `main` liegt, also nach dem Merge von Phase 2.
+
 ## 5. Pull Requests mergen (pro Phase 1 Klick)
 
 Claude Code öffnet für jede Phase einen Pull Request und sagt dir, wann er fertig ist.
