@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { formatDate, formatPercentFromBasisPoints, formatTime } from './format'
+import { formatDate, formatPercentFromBasisPoints, formatTime, viennaDay } from './format'
 
 describe('formatDate / formatTime', () => {
   it('zeigt UTC-Zeitpunkte in Wiener Zeit', () => {
@@ -19,5 +19,13 @@ describe('formatPercentFromBasisPoints', () => {
     expect(formatPercentFromBasisPoints(1234)).toBe('+12,3 %')
     expect(formatPercentFromBasisPoints(-50)).toBe('-0,5 %')
     expect(formatPercentFromBasisPoints(0)).toBe('0,0 %')
+  })
+})
+
+describe('viennaDay', () => {
+  it('nimmt den Wiener Kalendertag, nicht UTC', () => {
+    expect(viennaDay(new Date('2026-10-19T21:59:00Z'))).toBe('2026-10-19')
+    expect(viennaDay(new Date('2026-10-19T22:30:00Z'))).toBe('2026-10-20')
+    expect(viennaDay(new Date('2026-01-15T23:30:00Z'))).toBe('2026-01-16')
   })
 })
