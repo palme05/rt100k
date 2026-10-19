@@ -1,0 +1,110 @@
+.stack {
+  display: grid;
+  gap: var(--space-5);
+}
+
+.muted {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--ink-3);
+}
+
+/* Instrumentsuche */
+.picker {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.chip {
+  font: inherit;
+  font-size: var(--text-sm);
+  padding: 0.25rem 0.7rem;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--rule-strong);
+  background: var(--surface);
+  color: var(--ink-2);
+  cursor: pointer;
+}
+
+.chip:hover {
+  border-color: var(--ink-3);
+  color: var(--ink);
+}
+
+.chipActive {
+  composes: chip;
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--bg);
+}
+
+.chipActive:hover {
+  color: var(--bg);
+}
+
+.results {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  max-height: 18rem;
+  overflow-y: auto;
+}
+
+.results li + li {
+  border-top: 1px solid var(--rule);
+}
+
+.result {
+  font: inherit;
+  width: 100%;
+  text-align: left;
+  display: grid;
+  gap: 0.1rem;
+  padding: 0.6rem 0.8rem;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--ink);
+}
+
+.result:hover,
+.result:focus-visible {
+  background: var(--wash);
+}
+
+.resultName {
+  font-weight: var(--weight-medium);
+}
+
+.resultDetail {
+  font-size: var(--text-sm);
+  color: var(--ink-3);
+}
+
+/* Gefahrenbereich */
+.danger {
+  display: grid;
+  gap: var(--space-4);
+  max-width: 32rem;
+}
+
+.empty {
+  display: grid;
+  gap: var(--space-4);
+  justify-items: start;
+  max-width: 36rem;
+}
+
+.empty p {
+  margin: 0;
+  color: var(--ink-2);
+}
