@@ -42,3 +42,15 @@ export function formatTime(date: Date): string {
 export function formatPercentFromBasisPoints(basisPoints: number): string {
   return percentFormatter.format(basisPoints / 10_000)
 }
+
+const isoDayFormatter = new Intl.DateTimeFormat('en-CA', {
+  timeZone: DISPLAY_TIME_ZONE,
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+})
+
+/** Kalendertag in Wien als 'YYYY-MM-DD' (Handelstag, Snapshot-Tag). */
+export function viennaDay(date: Date = new Date()): string {
+  return isoDayFormatter.format(date)
+}
