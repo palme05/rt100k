@@ -3,10 +3,11 @@ import { sql } from 'drizzle-orm'
 import { drizzle, type NodePgDatabase } from 'drizzle-orm/node-postgres'
 import pg from 'pg'
 import * as schema from './schema'
+import { withStrictTls } from './tls'
 
 /**
- * Datenbankzugang der App: nur die App-Rolle (kein DDL), nur TLS (Neon-URL mit
- * sslmode=require). Kleiner Pool mit kurzer Leerlaufzeit, damit offene
+ * Datenbankzugang der App: nur die App-Rolle (kein DDL), nur TLS mit
+ * Zertifikatsprüfung (withStrictTls). Kleiner Pool mit kurzer Leerlaufzeit, damit offene
  * Verbindungen Neon nicht wach halten.
  */
 
@@ -20,7 +21,7 @@ export function getDb(): Db {
   const url = process.env.DATABASE_URL
   if (!url) throw new Error('DATABASE_URL fehlt.')
   const pool = new pg.Pool({
-    connectionString: url,
+    connectionString: withStrictTls(url),
     max: 3,
     idleTimeoutMillis: 5_000,
     connectionTimeoutMillis: 10_000,
