@@ -4,7 +4,7 @@ import { dayLabel } from '@/lib/display'
 import { alertTriggered, milestonesCrossed, speculationEnded } from '@/lib/notify'
 import { estimateTaxYear, type TaxInstrument } from '@/lib/tax'
 import type { Actor } from './dal/actor'
-import { addNotifications, deletePushSubscription, listPriceAlerts, listPushEndpoints, markAlertTriggered, type NewNotification } from './dal/notifications'
+import { addNotifications, deletePushSubscription, listPriceAlerts, listPushEndpoints, markAlertTriggered, pruneNotifications, type NewNotification } from './dal/notifications'
 import { listDailyTotals } from './dal/snapshots'
 import type { PortfolioValuation } from './overview'
 import type { FxRates } from './quotes/parsers'
@@ -12,6 +12,8 @@ import { quoteInEur } from './quotes/service'
 import type { Quote } from './quotes/types'
 import { sendPing, vapidKeys } from './push'
 import { MILESTONES } from './road'
+
+export const NOTIFICATION_RETENTION_DAYS = 365
 
 /**
  * Hinweise des täglichen Laufs je Nutzer (in dessen RLS-Kontext):
@@ -78,6 +80,7 @@ export async function generateNotifications(
   }
 
   const created = await addNotifications(actor, items)
+  await pruneNotifications(actor, new Date(Date.now() - NOTIFICATION_RETENTION_DAYS * 86_400_000))
   let pushed = 0
   const keys = vapidKeys()
   if (created > 0 && keys) {

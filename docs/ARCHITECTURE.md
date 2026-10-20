@@ -67,6 +67,7 @@ GitHub Actions (öffentliches Repo, kostenlos)
 | A30 | **Backup als JSON, Wiederherstellen nur in ein leeres Konto** über einen Route-Handler (`src/server/dal/backup.ts`) | Kein Zusammenführen mit vorhandenen Daten (Duplikate, Konflikte); Route-Handler statt Server Action wegen der Größe (bis 10 MB, Server Actions sind auf 1 MB begrenzt). Jede Buchung läuft durch dieselbe Prüfung wie das Formular. |
 | A31 | **Monatsrückblick aus Vorlagen** (`src/lib/review.ts`), bei jedem Aufruf gerechnet | Keine KI (Brief), keine gespeicherten Ausgaben – Korrekturen an Buchungen wirken sofort. Highlights als Bausteine, damit Beträge den Privatsphäre-Modus respektieren. |
 | A32 | **Freigaben per Einmal-Link, nur lesend** (`portfolio_share`, `src/server/dal/shares.ts`); Lesen im Besitzer-Kontext erst nach geprüfter Freigabe | Kein Ausforschen von Konten über E-Mail-Suche; RLS der bestehenden Tabellen bleibt unverändert (kein Risiko für alle anderen Abfragen); Annehmen über eine `SECURITY DEFINER`-Funktion, weil der Empfänger die Zeile vorher nicht sehen darf. Geteilte Depots zählen nicht zum eigenen Vermögen. |
+| A33 | **Hinweise aus dem täglichen Lauf, Web Push als Ping ohne Inhalt** (`src/server/notifications.ts`, `src/server/push.ts`) | Kursalarme werden einmal täglich mit dem Schlusskurs geprüft statt alle 30 Minuten über GitHub Actions: kein DB-Zugang in GitHub, ≈ 12 CU-h/Monat gespart, kein zusätzlicher Kursabruf. Push ohne Bibliothek (VAPID/ES256 mit `node:crypto`) und ohne Nutzdaten – also keine Verschlüsselung nötig und keine Beträge auf dem Sperrbildschirm. Schlüssel per HKDF aus `BETTER_AUTH_SECRET` (keine weitere Env-Var nötig), überschreibbar mit `VAPID_PRIVATE_KEY`/`VAPID_PUBLIC_KEY`. Push-Ziele nur bei bekannten Diensten (SSRF-Schutz). |
 | A15 | **Tests gegen echtes Postgres** (`pnpm test:db`, CI-Service Postgres 18) statt Mocks | RLS, Rollen und Constraints lassen sich nur gegen eine echte Datenbank prüfen. |
 
 ## Free-Tier-Grenzen (geprüft am 19.10.2026)
@@ -102,7 +103,7 @@ Projekt-Einstellungen: Autoscaling **0,25–0,5 CU** (begrenzt den Verbrauch pro
 | Job | Wo | Zeitplan | DB wach? |
 |---|---|---|---|
 | Tages-Snapshot (Schlusskurse gehaltener/beobachteter Instrumente, EZB-Kurse, Vermögensverlauf) | Vercel Cron `0 22 * * *` (22:00–22:59 UTC = nach US-Börsenschluss, auch bei Sommerzeit) | 1×/Tag | ~5–10 Min |
-| Kursalarme (Phase 6) | GitHub Actions `*/30 7-21 * * 1-5` UTC, Krypto 4×/Tag | ≤ alle 30 Min, nur Handelszeiten | nur wenn aktive Alarme existieren |
+| Hinweise (Phase 6: Kursalarme, Dividenden, Meilensteine, Spekulationsfrist) und Push-Ping | im Tages-Cron, je Nutzer nach dem Tageswert (A33) | 1×/Tag | im selben Lauf |
 
 ## Compute-Budget (Schätzung, 100 CU-h verfügbar)
 
@@ -110,11 +111,10 @@ Projekt-Einstellungen: Autoscaling **0,25–0,5 CU** (begrenzt den Verbrauch pro
 |---|---|---|
 | Nutzer (≈ 10 Personen) | zusammen ~2 h DB-Wachzeit/Tag inkl. 5-Min-Nachlauf, Ø 0,3 CU | ≈ 18 |
 | Tages-Cron | 10 Min/Tag × 0,5 CU | ≈ 2,5 |
-| Kursalarme | 28 Läufe × 21 Tage, je 5 Min wach × 0,25 CU | ≈ 12 |
 | Preview-Branch / Tests | ~10 h/Monat × 0,25 CU | ≈ 2,5 |
-| **Summe** | | **≈ 35 von 100** |
+| **Summe** | | **≈ 23 von 100** |
 
-Gegenmaßnahmen, falls es knapp wird: Alarmregeln außerhalb der DB vorhalten, Alarm-Takt halbieren, Max-CU auf 0,25 senken. Verbrauch und DB-Größe werden im Admin-Bereich angezeigt (Phase 2, über die Neon-API mit read-only Key).
+Gegenmaßnahmen, falls es knapp wird: Max-CU auf 0,25 senken, Kurshistorie seltener nachladen. Verbrauch und DB-Größe werden im Admin-Bereich angezeigt (Phase 2, über die Neon-API mit read-only Key).
 
 ## Speicherbudget (Schätzung, 1 GB verfügbar)
 
@@ -126,6 +126,7 @@ Gegenmaßnahmen, falls es knapp wird: Alarmregeln außerhalb der DB vorhalten, A
 | EZB-Kurse | 30 Währungen × 3.650 Tage | ≈ 7 MB |
 | Audit-Log | 10 Nutzer × 30 Ereignisse/Tag, 2 Jahre Aufbewahrung, ~200 B | ≈ 45 MB |
 | ETF-Durchschau | je Nutzer und ETF nur zusammengefasste Gewichte (≈ 60 Einträge), z. B. 10 Nutzer × 10 ETFs | < 1 MB |
+| Hinweise, Kursalarme, Push-Abos | Hinweise 1 Jahr Aufbewahrung, ~300 B, wenige je Nutzer und Woche | < 2 MB |
 | Auth, Sessions, Ziele, Sonstiges | | < 10 MB |
 | **Summe** | | **≈ 175 MB von 1 GB** |
 

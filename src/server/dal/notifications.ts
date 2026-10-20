@@ -1,5 +1,5 @@
 import 'server-only'
-import { and, count, desc, eq, isNull } from 'drizzle-orm'
+import { and, count, desc, eq, isNull, lt } from 'drizzle-orm'
 import { z } from 'zod'
 import { MAX_PRICE_ALERTS } from '@/lib/notify'
 import { isAllowedPushEndpoint } from '@/lib/push'
@@ -67,6 +67,17 @@ export async function addNotifications(actor: Actor, items: readonly NewNotifica
       .insert(notification)
       .values(items.map((i) => ({ ownerId: actor.id, kind: i.kind, title: i.title.slice(0, 120), body: i.body?.slice(0, 500) ?? null, amountCents: i.amountCents ?? null, link: i.link ?? null, dedupeKey: i.dedupeKey.slice(0, 200) })))
       .onConflictDoNothing()
+      .returning({ id: notification.id }),
+  )
+  return rows.length
+}
+
+/** Alte Hinweise entfernen (Aufbewahrung 1 Jahr; alle Regeln schauen nur wenige Tage zurück, nichts wird doppelt gemeldet). */
+export async function pruneNotifications(actor: Actor, before: Date): Promise<number> {
+  const rows = await withUser(actor.id, (tx) =>
+    tx
+      .delete(notification)
+      .where(and(eq(notification.ownerId, actor.id), lt(notification.createdAt, before)))
       .returning({ id: notification.id }),
   )
   return rows.length

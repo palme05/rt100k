@@ -19,6 +19,7 @@ import {
   listPriceAlerts,
   listPushEndpoints,
   markAllRead,
+  pruneNotifications,
   savePushSubscription,
   unreadCount,
 } from './notifications'
@@ -49,6 +50,18 @@ describe('Hinweise', () => {
     expect((await listNotifications(alice))[0]).toMatchObject({ title: 'Dividende: Test', amount: 12.34, read: false })
     await markAllRead(alice)
     expect(await unreadCount(alice)).toBe(0)
+  })
+
+  it('Aufräumen löscht nur eigene, alte Hinweise', async () => {
+    const old = new Date(Date.now() - 400 * 86_400_000)
+    await withUser(alice.id, (tx) => tx.insert(notification).values({ ownerId: alice.id, kind: 'milestone', title: 'Alt', dedupeKey: 'alt', createdAt: old }))
+    await withUser(bob.id, (tx) => tx.insert(notification).values({ ownerId: bob.id, kind: 'milestone', title: 'Alt', dedupeKey: 'alt', createdAt: old }))
+    const cutoff = new Date(Date.now() - 365 * 86_400_000)
+    expect(await pruneNotifications(alice, cutoff)).toBe(1)
+    expect((await listNotifications(alice)).map((n) => n.title)).not.toContain('Alt')
+    expect((await listNotifications(alice)).length).toBe(2)
+    expect((await listNotifications(bob)).map((n) => n.title)).toEqual(['Alt'])
+    expect(await pruneNotifications(bob, cutoff)).toBe(1)
   })
 
   it('jeder sieht nur eigene Hinweise; ohne Kontext nichts; fremde owner_id nicht schreibbar', async () => {

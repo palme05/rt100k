@@ -35,8 +35,12 @@ test('Offline: letzter Stand ohne Netz, beim Abmelden gelöscht', async ({ page,
   await expect.poll(() => page.evaluate(() => Boolean(navigator.serviceWorker.controller))).toBe(true)
 
   await context.setOffline(true)
-  await page.goto('/app/depots')
-  await expect(page.getByRole('heading', { name: 'Offline', level: 1 })).toBeVisible()
+  // Chromium setzt die Offline-Emulation für einen gerade neu gestarteten Service Worker
+  // asynchron – der erste Aufruf kann noch durchrutschen, daher wiederholen.
+  await expect(async () => {
+    await page.goto('/app/depots')
+    await expect(page.getByRole('heading', { name: 'Offline', level: 1 })).toBeVisible({ timeout: 1000 })
+  }).toPass({ timeout: 15_000 })
   const stand = page.getByRole('region', { name: 'Letzter Stand' })
   await expect(stand).toBeVisible()
   await expect(stand.getByText('Gesamtvermögen')).toBeVisible()

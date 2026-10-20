@@ -104,3 +104,30 @@
     display: none;
   }
 }
+
+/* Hinweis-Glocke: Symbol plus Zahl (nie nur Farbe) */
+.bell {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.bell svg {
+  display: block;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.bellCount {
+  font-size: var(--text-2xs);
+  font-weight: var(--weight-semibold);
+  font-variant-numeric: tabular-nums;
+  color: var(--bg);
+  background: var(--ink);
+  border-radius: var(--radius-pill);
+  padding: 0 0.4rem;
+  line-height: 1.35rem;
+}

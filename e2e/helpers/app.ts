@@ -23,6 +23,21 @@ export async function createInvite(role: 'member' | 'admin' = 'member'): Promise
   return token
 }
 
+/** Hinweis direkt in der DB anlegen (sonst nur über den täglichen Lauf). */
+export async function addNotification(email: string, title: string, amountCents: number | null = null): Promise<void> {
+  const client = new pg.Client({ connectionString: OWNER_URL })
+  await client.connect()
+  try {
+    await client.query(
+      `insert into notification (owner_id, kind, title, body, amount_cents, link, dedupe_key)
+       select id, 'dividend', $2, 'Testhinweis', $3, '/app/depots', $4 from "user" where email = $1`,
+      [email, title, amountCents, `e2e:${randomBytes(8).toString('hex')}`],
+    )
+  } finally {
+    await client.end()
+  }
+}
+
 let counter = 0
 export function uniqueEmail(prefix = 'nutzer'): string {
   return `${prefix}-${Date.now()}-${process.pid}-${++counter}@e2e.invalid`
