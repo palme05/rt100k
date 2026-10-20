@@ -6,6 +6,7 @@ import {
   benchmarkIndex,
   costsByYear,
   dailySeries,
+  expectedPayments,
   incomeByMonth,
   incomeForecast,
   PERIOD_LABEL,
@@ -74,6 +75,8 @@ export interface AnalysisDto {
     forecast12: number
     yieldOnCost: number | null
     byYear: { year: string; amount: number }[]
+    /** erwartete Zahlungen der nächsten 12 Monate je Position */
+    calendar: { month: string; name: string; type: 'dividend' | 'interest'; amount: number }[]
   }
   costs: { year: string; fees: number; taxes: number }[]
   gains: { realized: number; unrealized: number; income: number; fees: number; taxes: number }
@@ -224,6 +227,9 @@ export async function loadAnalysis(actor: Actor, options: { benchmarkId: string 
       forecast12: forecast.reduce((s, f) => s + f.cents, 0) / 100,
       yieldOnCost: openCostCents > 0 ? dividendForecast / openCostCents : null,
       byYear: [...byYear.entries()].sort(([a], [b]) => (a < b ? -1 : 1)).map(([year, cents]) => ({ year, amount: cents / 100 })),
+      calendar: expectedPayments(series.income, series.quantities, today)
+        .slice(0, 36)
+        .map((p) => ({ month: p.month, name: p.instrumentId ? nameOf(p.instrumentId) : 'Zinsen (Konto)', type: p.type, amount: p.cents / 100 })),
     },
     costs: costs.map((c) => ({ year: c.year, fees: c.feesCents / 100, taxes: c.taxCents / 100 })),
     gains: {

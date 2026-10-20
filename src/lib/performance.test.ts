@@ -6,6 +6,7 @@ import {
   benchmarkIndex,
   costsByYear,
   dailySeries,
+  expectedPayments,
   incomeForecast,
   periodStart,
   xirr,
@@ -228,6 +229,10 @@ describe('IZF, Erträge, Kosten, Benchmark', () => {
     expect(forecast.find((f) => f.month === '2027-03')!.cents).toBe(2_000)
     expect(forecast.find((f) => f.month === '2026-12')!.cents).toBe(50)
     expect(forecast.reduce((s, f) => s + f.cents, 0)).toBe(2_050)
+    expect(expectedPayments(income, new Map([['a', 20n]]), '2026-10-20')).toEqual([
+      { month: '2026-12', instrumentId: null, type: 'interest', cents: 50 },
+      { month: '2027-03', instrumentId: 'a', type: 'dividend', cents: 2_000 },
+    ])
   })
 
   it('Gebühren und Steuern je Jahr', () => {
