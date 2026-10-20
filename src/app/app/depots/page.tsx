@@ -23,9 +23,14 @@ export default async function PortfoliosPage() {
         title="Alle Depots"
         meta={`${valuation.portfolios.length} insgesamt`}
         actions={
-          <Link className={button.button} href="/app/depots/neu">
-            Neues Depot
-          </Link>
+          <span className={styles.headActions}>
+            <Link className={button.button} href="/app/import">
+              Importieren
+            </Link>
+            <Link className={button.button} href="/app/depots/neu">
+              Neues Depot
+            </Link>
+          </span>
         }
       >
         {valuation.portfolios.length === 0 ? (

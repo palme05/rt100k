@@ -177,7 +177,7 @@ export function BookingForm({ portfolioId, kind, held, today }: { portfolioId: s
   )
 }
 
-function InstrumentPicker({
+export function InstrumentPicker({
   id,
   held,
   value,

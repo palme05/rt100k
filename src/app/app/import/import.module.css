@@ -1,0 +1,114 @@
+/* Import: Dateiliste, Review-Tabelle, Spaltenzuordnung. Nur Tokens, keine freien Farben. */
+
+.stack {
+  display: grid;
+  gap: var(--space-5);
+  min-width: 0;
+}
+
+.files {
+  display: grid;
+  gap: var(--space-5);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.file {
+  display: grid;
+  gap: var(--space-3);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--rule);
+  min-width: 0;
+}
+
+.fileHead {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-4);
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.fileName {
+  font-weight: var(--weight-medium);
+  overflow-wrap: anywhere;
+}
+
+.muted {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--ink-3);
+}
+
+.status {
+  display: grid;
+  gap: var(--space-1);
+  justify-items: start;
+  font-size: var(--text-sm);
+}
+
+.status small {
+  color: var(--ink-3);
+  max-width: 22rem;
+}
+
+.ok {
+  color: var(--pos);
+}
+
+.check {
+  color: var(--ink-2);
+  font-weight: var(--weight-medium);
+}
+
+.unsure {
+  color: var(--neg);
+  font-weight: var(--weight-medium);
+}
+
+.duplicate {
+  color: var(--ink-2);
+}
+
+.rowError {
+  color: var(--neg);
+}
+
+.unselected td {
+  color: var(--ink-3);
+}
+
+.editRow td {
+  background: var(--wash);
+}
+
+.edit {
+  display: grid;
+  gap: var(--space-4);
+  padding: var(--space-3) 0;
+}
+
+.mapping {
+  display: grid;
+  gap: var(--space-4);
+  min-width: 0;
+}
+
+.saved {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+.savedItem {
+  display: inline-flex;
+  gap: var(--space-1);
+}
+
+.inlineLink {
+  margin-left: var(--space-2);
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
