@@ -4,7 +4,6 @@ import { withUser } from '../db/client'
 import { booking, user } from '../db/schema'
 import type { Actor } from './actor'
 import { NotFoundError, ValidationError } from './errors'
-import { clearRateLimits } from './rate-limit'
 
 /**
  * Konto mit allen Daten löschen. Fremdschlüssel kaskadieren (Depots,
@@ -27,7 +26,6 @@ export async function deleteAccount(actor: Actor): Promise<void> {
     }
     await tx.delete(booking).where(eq(booking.ownerId, actor.id))
     await tx.delete(user).where(eq(user.id, actor.id))
-    await clearRateLimits(actor.id, tx)
   })
 }
 

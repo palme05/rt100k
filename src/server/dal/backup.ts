@@ -1,5 +1,5 @@
 import 'server-only'
-import { and, count, eq, inArray, isNull, or } from 'drizzle-orm'
+import { and, count, eq, inArray, isNull, or, sql } from 'drizzle-orm'
 import { z } from 'zod'
 import { toCsv, csvAmount, type CsvValue } from '@/lib/csv-export'
 import { viennaDay } from '@/lib/format'
@@ -312,8 +312,14 @@ export async function restoreBackup(actor: Actor, value: unknown): Promise<Resto
   }
 
   return withUser(actor.id, async (tx) => {
+    // je Nutzer nur ein Wiederherstellen gleichzeitig (sonst sähen beide ein leeres Konto)
+    await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended(${`restore:${actor.id}`}, 0))`)
     const [existing] = await tx.select({ n: count() }).from(portfolio).where(eq(portfolio.ownerId, actor.id))
     if ((existing?.n ?? 0) > 0) throw new ValidationError('Wiederherstellen geht nur in ein Konto ohne Depots – sonst entstünden doppelte Buchungen.')
+    // Reste früherer Durchläufe entfernen (ohne Depots nutzlos) – sonst wüchse der
+    // Speicher mit jedem „Depots löschen → wiederherstellen“
+    await tx.delete(importFile).where(eq(importFile.ownerId, actor.id))
+    await tx.delete(instrument).where(eq(instrument.ownerId, actor.id))
 
     // Instrumente: allgemeine finden, sonst als private Stammdaten anlegen (ohne Kursanbieter-Kennungen)
     const instrumentMap = new Map<string, string>()

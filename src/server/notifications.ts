@@ -84,10 +84,12 @@ export async function generateNotifications(
   let pushed = 0
   const keys = vapidKeys()
   if (created > 0 && keys) {
-    for (const endpoint of await listPushEndpoints(actor)) {
-      const result = await sendPing(endpoint, keys)
+    // höchstens MAX_PUSH_SUBSCRIPTIONS Geräte, parallel (je Ping 5 s Timeout)
+    const endpoints = await listPushEndpoints(actor)
+    const results = await Promise.all(endpoints.map((endpoint) => sendPing(endpoint, keys)))
+    for (const [i, result] of results.entries()) {
       if (result === 'ok') pushed++
-      if (result === 'gone') await deletePushSubscription(actor, endpoint)
+      if (result === 'gone') await deletePushSubscription(actor, endpoints[i])
     }
   }
   return { created, pushed }

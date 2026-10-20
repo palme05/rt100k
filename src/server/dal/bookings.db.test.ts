@@ -1,9 +1,11 @@
 import { beforeAll, describe, expect, it } from 'vitest'
 import { createUser, vwce } from '@/test/fixtures'
 import type { Actor } from './actor'
-import { createBooking, deleteBooking, listBookings } from './bookings'
+import { booking } from '../db/schema'
+import { withUser } from '../db/client'
+import { createBooking, deleteBooking, listBookings, MAX_BOOKINGS_PER_USER } from './bookings'
 import { ValidationError } from './errors'
-import { createPortfolio } from './portfolios'
+import { createPortfolio, MAX_PORTFOLIOS_PER_USER } from './portfolios'
 
 let user: Actor
 let depot: string
@@ -82,4 +84,26 @@ describe('Buchungen', () => {
     await createBooking(user, { portfolioId: cash, type: 'interest', occurredOn: '2026-02-01', amount: '9,38', tax: '2,35' })
     expect((await listBookings(user, cash)).map((b) => b.type)).toEqual(['interest', 'deposit'])
   })
+
+  it('gleichzeitige Verkäufe: die Depot-Sperre lässt nur einen über den Bestand', async () => {
+    const dora = await createUser('Dora')
+    const own = (await createPortfolio(dora, { name: 'Depot', kind: 'depot' })).id
+    await createBooking(dora, { portfolioId: own, type: 'buy', occurredOn: '2026-01-05', instrumentId: etf, quantity: '10', amount: '1.000' })
+    const sell = () => createBooking(dora, { portfolioId: own, type: 'sell', occurredOn: '2026-02-05', instrumentId: etf, quantity: '8', amount: '900' })
+    const results = await Promise.allSettled([sell(), sell(), sell()])
+    expect(results.filter((r) => r.status === 'fulfilled')).toHaveLength(1)
+    expect(results.filter((r) => r.status === 'rejected').every((r) => (r as PromiseRejectedResult).reason instanceof ValidationError)).toBe(true)
+  })
+
+  it('Obergrenzen je Konto: Buchungen und Depots', async () => {
+    const egon = await createUser('Egon')
+    const own = (await createPortfolio(egon, { name: 'Konto', kind: 'cash' })).id
+    // bis knapp unter die Grenze direkt einfügen (schneller als 50 000 Einzelbuchungen)
+    const rows = Array.from({ length: MAX_BOOKINGS_PER_USER }, () => ({ ownerId: egon.id, portfolioId: own, type: 'deposit' as const, occurredOn: '2026-01-02', amountCents: 1 }))
+    for (let i = 0; i < rows.length; i += 5000) await withUser(egon.id, (tx) => tx.insert(booking).values(rows.slice(i, i + 5000)))
+    await expect(createBooking(egon, { portfolioId: own, type: 'deposit', occurredOn: '2026-01-03', amount: '1' })).rejects.toThrow('Höchstens 50.000 Buchungen')
+
+    for (let i = 1; i < MAX_PORTFOLIOS_PER_USER; i++) await createPortfolio(egon, { name: `Depot ${i}`, kind: 'depot' })
+    await expect(createPortfolio(egon, { name: 'Eins zu viel', kind: 'depot' })).rejects.toThrow('Höchstens 200')
+  }, 60_000)
 })

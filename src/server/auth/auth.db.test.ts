@@ -144,6 +144,21 @@ describe('Anmeldung', () => {
   })
 })
 
+describe('Passwort-Prüfung mit Sitzung', () => {
+  it('falsche Passwörter beim Ändern zählen zur Sperre – danach auch Login und 2FA-Einrichtung gesperrt', async () => {
+    await register('orakel@example.org')
+    const login = await post('/sign-in/email', { email: 'orakel@example.org', password: PASSWORD })
+    const cookie = (login.headers.get('set-cookie') ?? '').split(';')[0] ?? ''
+    for (let i = 0; i < 10; i++) {
+      const res = await post('/change-password', { currentPassword: `falsch-${i}-falsch-falsch`, newPassword: 'ein-neues-langes-passwort' }, { cookie })
+      expect(res.status).toBe(400)
+    }
+    expect((await post('/change-password', { currentPassword: PASSWORD, newPassword: 'ein-neues-langes-passwort' }, { cookie })).status).toBe(429)
+    expect((await post('/two-factor/enable', { password: PASSWORD }, { cookie })).status).toBe(429)
+    expect((await post('/sign-in/email', { email: 'orakel@example.org', password: PASSWORD })).status).toBe(429)
+  })
+})
+
 describe('Zwei-Faktor', () => {
   it('Admins können 2FA nicht abschalten', async () => {
     await register('admin3@example.org', 'admin')

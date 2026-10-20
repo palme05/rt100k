@@ -5,6 +5,7 @@ import { redirect } from 'next/navigation'
 import { requireUser } from '@/server/auth/session'
 import { recordAudit } from '@/server/dal/audit'
 import { NotFoundError, ValidationError } from '@/server/dal/errors'
+import { parseId } from '@/server/dal/ids'
 import { acceptShare, createShareLink, leaveShare, revokeShare } from '@/server/dal/shares'
 import { consumeRateLimit } from '@/server/dal/rate-limit'
 
@@ -34,7 +35,7 @@ export async function revokeShareAction(portfolioId: string, shareId: string): P
   try {
     await revokeShare(user, shareId)
     await recordAudit({ userId: user.id, actorId: user.id, type: 'share_revoked' })
-    revalidatePath(`/app/depots/${portfolioId}`)
+    revalidatePath(`/app/depots/${parseId(portfolioId)}`)
     return { ok: true }
   } catch (error) {
     return fail(error)

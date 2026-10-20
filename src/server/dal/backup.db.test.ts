@@ -5,13 +5,14 @@ import { HOLDINGS_DE } from '@/lib/lookthrough-fixtures'
 import { createUser, vwce } from '@/test/fixtures'
 import { getDb, withUser } from '../db/client'
 import { importFile, instrument, portfolioSnapshot } from '../db/schema'
+import { eq } from 'drizzle-orm'
 import type { Actor } from './actor'
 import { saveAllocationTargets } from './allocation'
 import { BACKUP_FORMAT, bookingsCsv, exportBackup, restoreBackup, type Backup } from './backup'
 import { createBooking, listAllLedgerBookings } from './bookings'
 import { ValidationError } from './errors'
 import { listEtfBreakdowns, saveEtfBreakdown } from './etf'
-import { createPortfolio, listPortfolios } from './portfolios'
+import { createPortfolio, deletePortfolio, listPortfolios } from './portfolios'
 import { getRoadSettings, saveRoadSettings } from './road'
 
 let alice: Actor
@@ -103,6 +104,26 @@ describe('Wiederherstellen', () => {
 
     // kein zweites Mal in dasselbe Konto
     await expect(restoreBackup(carol, backup)).rejects.toThrow('Konto ohne Depots')
+  })
+
+  it('„Depots löschen → wiederherstellen“ wiederholt füllt den Speicher nicht', async () => {
+    const frank = await createUser('Frank')
+    const rows = async () => {
+      const [instruments, files] = await Promise.all([
+        withUser(frank.id, (tx) => tx.select({ id: instrument.id }).from(instrument).where(eq(instrument.ownerId, frank.id))),
+        withUser(frank.id, (tx) => tx.select({ hash: importFile.fileHash }).from(importFile).where(eq(importFile.ownerId, frank.id))),
+      ])
+      return { instruments: instruments.length, files: files.length }
+    }
+    for (let round = 0; round < 3; round++) {
+      await restoreBackup(frank, backup)
+      expect(await rows()).toEqual({ instruments: 1, files: 1 })
+      for (const p of await listPortfolios(frank)) await deletePortfolio(frank, p.id)
+    }
+    // gleichzeitig: nur einer gewinnt, der andere sieht die Depots
+    const results = await Promise.allSettled([restoreBackup(frank, backup), restoreBackup(frank, backup)])
+    expect(results.filter((r) => r.status === 'fulfilled')).toHaveLength(1)
+    expect(await listPortfolios(frank)).toHaveLength(2)
   })
 
   it('fremde Instrument-IDs im Backup werden nie übernommen', async () => {

@@ -1,5 +1,5 @@
 import 'server-only'
-import { and, asc, desc, eq } from 'drizzle-orm'
+import { and, asc, count, desc, eq } from 'drizzle-orm'
 import { z } from 'zod'
 import { viennaDay } from '@/lib/format'
 import { computeLedger, LedgerError, type LedgerBooking } from '@/lib/holdings'
@@ -134,14 +134,28 @@ const ledgerColumns = {
 }
 
 /** Depot des Nutzers in der laufenden Transaktion, sonst `NotFoundError` (auch für den Import). */
-export async function ownedPortfolio(tx: Tx, actor: Actor, portfolioId: string) {
-  const [row] = await tx
+/**
+ * Eigenes Depot oder `NotFoundError`. Mit `lock` wird die Depot-Zeile bis zum
+ * Ende der Transaktion gesperrt – gleichzeitige Buchungen desselben Depots
+ * laufen dann nacheinander und die Bestandsprüfung bleibt gültig.
+ */
+export async function ownedPortfolio(tx: Tx, actor: Actor, portfolioId: string, options: { lock?: boolean } = {}) {
+  const query = tx
     .select({ id: portfolio.id, kind: portfolio.kind })
     .from(portfolio)
     .where(and(eq(portfolio.id, portfolioId), eq(portfolio.ownerId, actor.id)))
     .limit(1)
+  const [row] = options.lock ? await query.for('update') : await query
   if (!row) throw new NotFoundError('Depot nicht gefunden.')
   return row
+}
+
+/** Obergrenze je Nutzer (Speicher im Free Tier; weit über jedem echten Bestand). */
+export const MAX_BOOKINGS_PER_USER = 50_000
+
+export async function assertBookingRoom(tx: Tx, actor: Actor, adding: number): Promise<void> {
+  const [row] = await tx.select({ n: count() }).from(booking).where(eq(booking.ownerId, actor.id))
+  if ((row?.n ?? 0) + adding > MAX_BOOKINGS_PER_USER) throw new ValidationError(`Höchstens ${MAX_BOOKINGS_PER_USER.toLocaleString('de-DE')} Buchungen je Konto.`)
 }
 
 export async function ledgerBookings(tx: Tx, actor: Actor, portfolioId: string): Promise<LedgerBooking[]> {
@@ -196,7 +210,8 @@ export async function createBooking(actor: Actor, input: unknown): Promise<Booki
   const portfolioId = parseId((input as { portfolioId?: unknown } | null)?.portfolioId)
   const data = normalizeBooking(input)
   return withUser(actor.id, async (tx) => {
-    await ownedPortfolio(tx, actor, portfolioId)
+    await ownedPortfolio(tx, actor, portfolioId, { lock: true })
+    await assertBookingRoom(tx, actor, 1)
     const instrumentName = data.instrumentId ? (await getInstrument(actor, data.instrumentId, tx)).name : null
     const existing = await ledgerBookings(tx, actor, portfolioId)
     assertConsistent([...existing, { id: 'neu', ...data }])
@@ -218,6 +233,7 @@ export async function deleteBooking(actor: Actor, id: unknown): Promise<void> {
       .where(and(eq(booking.id, bookingId), eq(booking.ownerId, actor.id)))
       .limit(1)
     if (!row) throw new NotFoundError('Buchung nicht gefunden.')
+    await ownedPortfolio(tx, actor, row.portfolioId, { lock: true })
     const remaining = (await ledgerBookings(tx, actor, row.portfolioId)).filter((b) => b.id !== bookingId)
     assertConsistent(remaining)
     await tx.delete(booking).where(and(eq(booking.id, bookingId), eq(booking.ownerId, actor.id)))

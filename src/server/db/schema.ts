@@ -627,6 +627,28 @@ export const pushSubscription = pgTable(
   ],
 ).enableRLS()
 
+/**
+ * Rate-Limit je Nutzer und Aktion (src/server/dal/rate-limit.ts). Eigene
+ * Tabelle, weil Better Auth in `rate_limit` alle Zeilen außerhalb seiner
+ * kurzen Fenster löscht.
+ */
+export const userRateLimit = pgTable(
+  'user_rate_limit',
+  {
+    ownerId: text('owner_id')
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    action: text('action').notNull(),
+    count: integer('count').notNull(),
+    windowStart: timestamp('window_start', { withTimezone: true }).notNull(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.ownerId, t.action] }),
+    check('user_rate_limit_action_check', sql`${t.action} ~ '^[a-z]{1,20}$'`),
+    pgPolicy('user_rate_limit_owner', { for: 'all', to: appRole, using: ownRows, withCheck: ownRows }),
+  ],
+).enableRLS()
+
 /** Annahmen für Road to 100k (eine Zeile je Nutzer). */
 export const roadSettings = pgTable(
   'road_settings',
