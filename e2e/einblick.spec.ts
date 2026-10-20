@@ -85,3 +85,30 @@ test('Road: Vergleich mit höherer Sparrate als zweite Kurve, Ankunft früher', 
   await expectNoOverflow(page)
   expect(problems).toEqual([])
 })
+
+test('Sparplan: aus drei Monatskäufen erkannt, fehlende Ausführung im Depot und unter „Offene Punkte“', async ({ page }) => {
+  const problems = collectProblems(page)
+  await register(page)
+  const id = await createPortfolio(page, 'Trade Republic')
+  const daysAgo = (n: number) => {
+    const d = new Date(Date.now() - n * 86_400_000)
+    return new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Vienna' }).format(d)
+  }
+  for (const [i, back] of [100, 70, 40].entries()) {
+    await page.getByLabel('Datum').fill(daysAgo(back))
+    await buyEtf(page, '1', '100,00')
+    // die Meldung des vorigen Kaufs steht noch – auf die neue Buchung warten
+    await expect(page.getByRole('region', { name: 'Buchungen' })).toContainText(`${i + 1} insgesamt`)
+  }
+  await page.reload()
+  const plans = page.getByRole('region', { name: 'Sparpläne' })
+  await expect(plans).toContainText('Vanguard')
+  await expect(plans).toContainText('! Fehlt seit')
+  await plans.getByRole('link', { name: 'jetzt buchen' }).click()
+  await expect(page).toHaveURL(new RegExp(`/app/buchen\\?depot=${id}$`))
+
+  await page.goto('/app')
+  await expect(page.getByRole('region', { name: 'Offene Punkte' })).toContainText('Sparplan fehlt: Vanguard')
+  await expectNoOverflow(page)
+  expect(problems).toEqual([])
+})
