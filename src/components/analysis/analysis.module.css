@@ -63,3 +63,32 @@
 .addKind {
   width: min(100%, 14rem);
 }
+
+/* ETF-Durchschau: drei Spalten Aufteilung, darunter Listenverwaltung und Upload */
+.coverage {
+  margin: 0 0 var(--space-4);
+  font-size: var(--text-sm);
+  color: var(--ink-2);
+}
+
+.lookthrough {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr));
+  gap: var(--space-5) var(--space-6);
+  min-width: 0;
+}
+
+.lookthroughFiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr));
+  gap: var(--space-5) var(--space-6);
+  margin-top: var(--space-6);
+  min-width: 0;
+}
+
+.upload {
+  display: grid;
+  gap: var(--space-4);
+  align-content: start;
+  min-width: 0;
+}

@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test'
 import { TR_KAUF_AT } from '../src/lib/import/fixtures'
+import { HOLDINGS_DE } from '../src/lib/lookthrough-fixtures'
 import { makePdf } from '../src/test/pdf'
 import { collectProblems, createPortfolio, expectNoOverflow, register } from './helpers/app'
 
@@ -98,4 +99,33 @@ test('Rebalancing: Zielaufteilung eingeben, Nachkauf-Vorschlag, speichern', asyn
   await expect(page.getByLabel('Ziel ETFs in Prozent')).toHaveValue('80')
   await expect(page.getByLabel('Ziel Krypto in Prozent')).toHaveValue('20')
   await expectNoOverflow(page)
+})
+
+test('ETF-Durchschau: Bestandsliste ablegen, Länder/Branchen/Titel sehen, entfernen', async ({ page }) => {
+  await register(page)
+  await createPortfolio(page, 'Trade Republic')
+  await page.goto('/app/import')
+  await page.locator('input[type=file]').setInputFiles({ name: 'kauf.pdf', mimeType: 'application/pdf', buffer: Buffer.from(makePdf(TR_KAUF_AT)) })
+  await page.getByRole('button', { name: '1 Buchung übernehmen' }).click()
+  await expect(page.getByText(/1 Buchung übernommen/)).toBeVisible()
+
+  await page.goto('/app/analyse')
+  const section = page.getByRole('region', { name: 'ETF-Durchschau' })
+  await expect(section.getByText(/Noch keine Bestandsliste hinterlegt/)).toBeVisible()
+
+  // Excel-Datei → Hinweis, nichts gespeichert
+  await section.locator('input[type=file]').setInputFiles({ name: 'positionen.xlsx', mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', buffer: Buffer.from([0x50, 0x4b, 0x03, 0x04, 0, 0]) })
+  await expect(section.getByText(/als CSV speichern/)).toBeVisible()
+
+  await section.locator('input[type=file]').setInputFiles({ name: 'positionen.csv', mimeType: 'text/csv', buffer: Buffer.from(HOLDINGS_DE) })
+  await expect(section.getByText(/übernommen: 7 Positionen, Stand 17\.10\.2026/)).toBeVisible()
+  await expect(section.getByText('100,0 % des Vermögens über Bestandslisten aufgeschlüsselt.')).toBeVisible()
+  await expect(section.getByText('USA', { exact: true })).toBeVisible()
+  await expect(section.getByText('WEITERE TITEL')).toBeVisible()
+  await expect(section.getByText(/✓ Beispiel Welt Aktien UCITS ETF, Stand 17\.10\.2026/)).toBeVisible()
+  await expectNoOverflow(page)
+
+  await section.getByRole('button', { name: /Bestandsliste für .* entfernen/ }).click()
+  await expect(section.getByText('Bestandsliste entfernt.')).toBeVisible()
+  await expect(section.getByText(/Noch keine Bestandsliste hinterlegt/)).toBeVisible()
 })

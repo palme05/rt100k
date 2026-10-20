@@ -14,9 +14,11 @@ import {
   type PeriodKey,
   type PeriodResult,
 } from '@/lib/performance'
+import { lookThrough } from '@/lib/lookthrough'
 import type { AllocationSlice } from '@/lib/valuation'
 import type { Actor } from './dal/actor'
 import { NotFoundError } from './dal/errors'
+import { listEtfBreakdowns } from './dal/etf'
 import { getInstruments, type InstrumentDto } from './dal/instruments'
 import { valuePortfolios, type PortfolioValuation } from './overview'
 import { getQuotes } from './quotes/service'
@@ -81,6 +83,26 @@ export interface AnalysisDto {
   costs: { year: string; fees: number; taxes: number }[]
   gains: { realized: number; unrealized: number; income: number; fees: number; taxes: number }
   allocation: { kind: AllocationSlice[]; currency: { key: string; label: string; value: number; share: number }[]; portfolio: { key: string; label: string; value: number; share: number }[] }
+  lookthrough: {
+    countries: Slice[]
+    sectors: Slice[]
+    top: Slice[]
+    /** Anteil des Vermögens, der über Bestandslisten aufgeschlüsselt ist (0…1) */
+    covered: number
+    etfs: { id: string; name: string; fundName: string | null; asOf: string | null; hasData: boolean }[]
+  }
+}
+
+type Slice = { key: string; label: string; value: number; share: number }
+
+/** Größte Einträge plus „Andere“; Anteile am Gesamtwert. */
+function topSlices(map: ReadonlyMap<string, number>, totalCents: number, limit: number, rest = true): Slice[] {
+  const entries = [...map.entries()].filter(([, cents]) => cents > 0).sort((a, b) => b[1] - a[1])
+  const head = entries.slice(0, limit)
+  const tail = entries.slice(limit).reduce((s, [, cents]) => s + cents, 0)
+  const out = head.map(([label, cents]) => ({ key: label, label, value: cents / 100, share: totalCents > 0 ? cents / totalCents : 0 }))
+  if (rest && tail > 0) out.push({ key: '__andere', label: 'Andere', value: tail / 100, share: totalCents > 0 ? tail / totalCents : 0 })
+  return out
 }
 
 function thin<T>(points: readonly T[]): T[] {
@@ -144,7 +166,7 @@ export async function loadAnalysis(actor: Actor, options: { benchmarkId: string 
   const today = viennaDay()
   const first = valuation.bookings.reduce((min, b) => (b.occurredOn < min ? b.occurredOn : min), today)
 
-  const benchmark = await resolveBenchmark(actor, options.benchmarkId, valuation)
+  const [benchmark, breakdowns] = await Promise.all([resolveBenchmark(actor, options.benchmarkId, valuation), listEtfBreakdowns(actor)])
   const instruments = [...valuation.instruments.values()]
   const quotes = new Map(valuation.quotes)
   if (benchmark && !quotes.has(benchmark.id)) for (const [k, q] of await getQuotes([benchmark])) quotes.set(k, q)
@@ -205,6 +227,12 @@ export async function loadAnalysis(actor: Actor, options: { benchmarkId: string 
   for (const p of valuation.portfolios) if (p.value.cashCents) currency.set('EUR', { label: 'EUR', cents: (currency.get('EUR')?.cents ?? 0) + p.value.cashCents })
   const byPortfolio = new Map(valuation.portfolios.map((p) => [p.id, { label: p.name, cents: p.value.valueCents }]))
 
+  const lt = lookThrough(
+    positions.map((p) => ({ instrumentId: p.instrumentId, name: p.name, kind: p.kind, valueCents: p.valueCents })),
+    breakdowns,
+  )
+  const heldFunds = [...new Map(positions.filter((p) => p.kind === 'etf' || p.kind === 'fund').map((p) => [p.instrumentId, p])).values()]
+
   const benchmarkOptions = instruments
     .filter((i) => !i.private && (i.symbol || i.coingeckoId || i.metal))
     .map((i) => ({ id: i.id, name: i.name }))
@@ -240,5 +268,15 @@ export async function loadAnalysis(actor: Actor, options: { benchmarkId: string 
       taxes: costs.reduce((s, c) => s + c.taxCents, 0) / 100,
     },
     allocation: { kind: valuation.allocation, currency: shares(currency), portfolio: shares(byPortfolio) },
+    lookthrough: {
+      countries: topSlices(lt.countries, lt.totalCents, 10),
+      sectors: topSlices(lt.sectors, lt.totalCents, 12),
+      top: topSlices(lt.top, lt.totalCents, 10, false),
+      covered: lt.totalCents > 0 ? lt.coveredCents / lt.totalCents : 0,
+      etfs: heldFunds.map((p) => {
+        const b = breakdowns.get(p.instrumentId)
+        return { id: p.instrumentId, name: p.name, fundName: b?.fundName ?? null, asOf: b?.asOf ?? null, hasData: Boolean(b) }
+      }),
+    },
   }
 }

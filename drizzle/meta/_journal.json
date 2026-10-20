@@ -57,6 +57,20 @@
       "when": 1792484111048,
       "tag": "0007_allocation_target_grants",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1792487290604,
+      "tag": "0008_etf_breakdown",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1792487291526,
+      "tag": "0009_etf_breakdown_grants",
+      "breakpoints": true
     }
   ]
 }

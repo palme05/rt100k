@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { z } from 'zod'
+import { LookthroughPanel } from '@/components/analysis/LookthroughPanel'
 import { PerformancePanel } from '@/components/analysis/PerformancePanel'
 import { RebalancePanel } from '@/components/analysis/RebalancePanel'
 import { IncomeChart } from '@/components/charts/IncomeChart'
@@ -17,7 +18,7 @@ import { loadAnalysis } from '@/server/analysis'
 import { requireUser } from '@/server/auth/session'
 import { getAllocationTargets } from '@/server/dal/allocation'
 import { getRoadSettings } from '@/server/dal/road'
-import { saveAllocationTargetsAction } from './actions'
+import { deleteEtfBreakdownAction, saveAllocationTargetsAction, saveEtfBreakdownAction } from './actions'
 
 export const metadata = { title: 'Analyse' }
 // Kurshistorie kommt beim ersten Aufruf von den Anbietern (danach 12 h aus dem Cache)
@@ -156,6 +157,18 @@ export default async function AnalysisPage({ searchParams }: { searchParams: Pro
           {analysis.allocation.portfolio.length > 0 ? <AllocationBars items={analysis.allocation.portfolio} /> : <Note>Noch keine Werte.</Note>}
         </Section>
 
+        <Section id="durchschau" title="ETF-Durchschau" meta="Länder, Branchen und Einzeltitel hinter deinen ETFs">
+          <LookthroughPanel
+            countries={analysis.lookthrough.countries}
+            sectors={analysis.lookthrough.sectors}
+            top={analysis.lookthrough.top}
+            covered={analysis.lookthrough.covered}
+            etfs={analysis.lookthrough.etfs}
+            save={saveEtfBreakdownAction}
+            remove={deleteEtfBreakdownAction}
+          />
+        </Section>
+
         <Section id="kalender" title="Dividendenkalender" meta="≈ erwartet, 12 Monate" span="third">
           {income.calendar.length === 0 ? (
             <Note>Noch keine Zahlungen, aus denen sich etwas erwarten lässt.</Note>
@@ -180,7 +193,6 @@ export default async function AnalysisPage({ searchParams }: { searchParams: Pro
       </Grid>
       <Note>
         Zeitgewichtete Rendite (TTWROR): unabhängig davon, wann du ein- oder auszahlst – gut für den Vergleich mit einem ETF. Geldgewichtete Rendite (IZF): berücksichtigt den Zeitpunkt deiner Zahlungen – deine persönliche Rendite.
-        Region, Branche und ETF-Durchschau folgen.
       </Note>
     </>
   )
