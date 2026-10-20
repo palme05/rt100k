@@ -56,7 +56,7 @@ export interface ReviewRow {
   draft: Draft
 }
 
-export const NEEDS_INSTRUMENT: ReadonlySet<ImportKind> = new Set(['buy', 'sell', 'dividend', 'transfer_in', 'transfer_out', 'staking', 'age'])
+export const NEEDS_INSTRUMENT: ReadonlySet<ImportKind> = new Set(['buy', 'sell', 'dividend', 'transfer_in', 'transfer_out', 'staking', 'age', 'split'])
 const NEEDS_QUANTITY: ReadonlySet<ImportKind> = new Set(['buy', 'sell', 'transfer_in', 'transfer_out', 'staking'])
 
 function centsText(cents: number): string {
@@ -104,6 +104,7 @@ export interface ValidRow {
   occurredOn: string
   instrumentId: string | null
   quantity: string | null
+  factor: string | null
   amountCents: number
   feeCents: number
   taxCents: number
@@ -127,6 +128,7 @@ export function validate(row: ReviewRow): ValidRow | string {
     occurredOn: draft.occurredOn,
     instrumentId: row.instrument?.id ?? null,
     quantity: NEEDS_QUANTITY.has(booking.kind) ? quantity : null,
+    factor: booking.kind === 'split' ? (booking.factor ?? null) : null,
     amountCents: amount,
     feeCents: fee,
     taxCents: tax,

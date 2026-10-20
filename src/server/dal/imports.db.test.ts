@@ -5,7 +5,8 @@ import { createUser, vwce } from '@/test/fixtures'
 import { getDb, withUser } from '../db/client'
 import { booking, csvMapping, importFile, instrument } from '../db/schema'
 import type { Actor } from './actor'
-import { listBookings } from './bookings'
+import { computeLedger } from '@/lib/holdings'
+import { listAllLedgerBookings, listBookings } from './bookings'
 import { NotFoundError, ValidationError } from './errors'
 import { deleteCsvMapping, findImported, ImportConflictError, importBookings, listCsvMappings, saveCsvMapping } from './imports'
 import { createPortfolio } from './portfolios'
@@ -55,6 +56,19 @@ describe('Import mit widersprüchlichem Bestand', () => {
     expect(await listBookings(carol, depot)).toEqual([])
     // ohne die widersprüchlichen Zeilen geht der Rest durch
     expect(await importBookings(carol, { portfolioId: depot, files: [], items: [items[2]] })).toEqual({ created: 1, duplicates: 0 })
+  })
+})
+
+describe('Import einer Zusammenlegung', () => {
+  it('Split mit Faktor 0,0001 macht aus 49.995 Stück 4,9995 – Anschaffungskosten bleiben', async () => {
+    const dora = await createUser('Dora')
+    const depot = (await createPortfolio(dora, { name: 'TR', kind: 'depot' })).id
+    await importBookings(dora, { portfolioId: depot, files: [], items: [buy('z1', { quantity: '49995', amountCents: 49_995 })] })
+    await importBookings(dora, { portfolioId: depot, files: [], items: [buy('z2', { type: 'split', occurredOn: '2026-04-24', quantity: null, factor: '0.0001', amountCents: 0, feeCents: 0 })] })
+    const ledger = computeLedger(await listAllLedgerBookings(dora))
+    expect(ledger.positions.get(etf)).toMatchObject({ quantity: 4_999_500_000_000n, costCents: 49_995 })
+    // ohne Faktor abgelehnt
+    await expect(importBookings(dora, { portfolioId: depot, files: [], items: [buy('z3', { type: 'split', quantity: null, factor: null, amountCents: 0 })] })).rejects.toThrow(/Verhältnis/)
   })
 })
 

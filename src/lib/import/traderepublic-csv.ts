@@ -1,3 +1,4 @@
+import { resolveCorporateActions, type CorporateRow } from './corporate'
 import { scaleDecimal, toCents, toDecimal, type NumberStyle } from './numbers'
 import { cleanName, isValidIsin } from './text'
 import { refundBooking, type CsvParser, type ImportAsset, type ImportedBooking, type ParseResult } from './types'
@@ -37,74 +38,6 @@ const TRADE_LABEL: Record<string, string> = {
 }
 /** Cash-Buchungen, die bewusst nicht übernommen werden (kein Girokonto). */
 const CASH_IGNORED = /^(?:CUSTOMER_|TRANSFER_|CARD_|DIRECT_DEBIT|PAYMENT|GIFT$|BENEFITS_SAVEBACK$|BENEFITS_)/
-
-interface CorporateRow {
-  date: string
-  type: string
-  isin: string
-  name: string
-  shares: string
-  fingerprint: string
-}
-
-const QTY_PLACES = 12
-const QTY_SCALE = 10n ** BigInt(QTY_PLACES)
-
-/** Skalierte Stückzahl → Dezimaltext ohne überflüssige Nullen. */
-function quantityText(scaled: bigint): string {
-  const whole = scaled / QTY_SCALE
-  const fraction = (scaled % QTY_SCALE).toString().padStart(QTY_PLACES, '0').replace(/0+$/, '')
-  return fraction ? `${whole}.${fraction}` : whole.toString()
-}
-
-const dayText = (date: string) => date.split('-').reverse().join('.')
-
-/**
- * Kapitalmaßnahmen und Depotüberträge. Sicher erkennbar ist nur ein Split, den
- * TR als Aus- und Einbuchung derselben ISIN am selben Tag zeigt: die
- * zusätzlichen Stück werden ohne Kosten eingebucht (gleitender Durchschnitt
- * bleibt richtig). Alles andere listen wir zum Buchen von Hand auf.
- */
-function corporateActions(rows: readonly CorporateRow[]): { bookings: ImportedBooking[]; manual: string[] } {
-  const groups = new Map<string, { pos: bigint; neg: bigint; rows: CorporateRow[] }>()
-  for (const r of rows) {
-    const key = `${r.date}|${r.isin}`
-    const g = groups.get(key) ?? { pos: 0n, neg: 0n, rows: [] }
-    const scaled = scaleDecimal(r.shares, QTY_PLACES)
-    if (scaled > 0n) g.pos += scaled
-    else g.neg -= scaled
-    g.rows.push(r)
-    groups.set(key, g)
-  }
-  const bookings: ImportedBooking[] = []
-  const manual: string[] = []
-  for (const g of groups.values()) {
-    const first = g.rows[0]!
-    if (g.pos > 0n && g.neg > 0n && g.pos > g.neg) {
-      const ratio = Number((g.pos * 1000n) / g.neg) / 1000
-      bookings.push({
-        kind: 'transfer_in',
-        occurredOn: first.date,
-        asset: { kind: 'security', isin: first.isin, symbol: null, name: first.name },
-        quantity: quantityText(g.pos - g.neg),
-        amountCents: 0,
-        feeCents: 0,
-        taxCents: 0,
-        netCents: null,
-        confidence: 'mittel',
-        warnings: [`Split o. Ä. (etwa ${String(ratio).replace('.', ',')} : 1) – zusätzliche Stück ohne Kosten eingebucht, bitte prüfen.`],
-        fingerprint: `trcsv|split|${g.rows.map((r) => r.fingerprint).join('|')}`,
-        note: 'Split (Transaktionsexport)',
-      })
-      continue
-    }
-    for (const r of g.rows) {
-      const sign = r.shares.startsWith('-') ? '' : '+'
-      manual.push(`${r.type} · ${r.name} · ${dayText(r.date)} · ${sign}${r.shares.replace('.', ',')} Stück`)
-    }
-  }
-  return { bookings, manual }
-}
 
 function numberStyle(raw: string): NumberStyle {
   // Dezimalpunkt laut Format; ein einzelnes Komma ohne Punkt deutet auf deutsche Zahlen
@@ -251,7 +184,7 @@ export const parseTradeRepublicCsv: CsvParser = (rows) => {
     if (category === 'CORPORATE_ACTION' || category === 'DELIVERY') {
       if (assetClass === 'BOND' || type.includes('MATURITY')) skip('Anleihen (bitte von Hand erfassen)')
       else if (!isValidIsin(symbol) || !shares || shares === '0') skip('Kapitalmaßnahmen ohne ISIN oder Stückzahl')
-      else corporate.push({ date, type: type || category, isin: symbol, name: cleanName(get(r, 'name') ?? symbol), shares, fingerprint })
+      else corporate.push({ date, type: type || category, category, isin: symbol, name: cleanName(get(r, 'name') ?? symbol), shares, fingerprint })
       continue
     }
     if (type === 'TILG' || type === 'FINAL_MATURITY' || type === 'REDEMPTION') {
@@ -347,7 +280,7 @@ export const parseTradeRepublicCsv: CsvParser = (rows) => {
     skip('Zeilen unbekannter Art')
   }
 
-  const actions = corporateActions(corporate)
+  const actions = resolveCorporateActions(bookings, corporate)
   bookings.push(...actions.bookings)
   const notices = [...skipped.entries()].map(([reason, count]) => `${count} × nicht übernommen: ${reason}`)
   if (actions.manual.length > 0) {
