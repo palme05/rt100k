@@ -2,6 +2,11 @@
 # 7 Tage alt sind (kompromittierte Releases werden meist schneller entdeckt).
 minimumReleaseAge: 10080
 
+# pdf.js bringt optional eine native Canvas-Bibliothek fürs Rendern mit; rt100k liest
+# nur Text, also weg damit (weniger Binärcode, weniger Angriffsfläche).
+ignoredOptionalDependencies:
+  - '@napi-rs/canvas'
+
 # Install-Skripte nur für explizit freigegebene Pakete ausführen.
 onlyBuiltDependencies:
   - esbuild
