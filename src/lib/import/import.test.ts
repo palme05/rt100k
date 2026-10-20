@@ -229,7 +229,9 @@ describe('Trade Republic Transaktionsexport (CSV)', () => {
     const { result } = parseCsvText(F.TR_CSV_EXPORT)
     expect(result).toMatchObject({ source: 'traderepublic', document: 'Transaktionsexport (CSV)' })
     const b = result!.bookings
-    expect(b.map((x) => x.kind)).toEqual(['buy', 'buy', 'buy', 'interest', 'buy', 'dividend', 'sell', 'tax_refund'])
+    expect(b.map((x) => x.kind)).toEqual(['buy', 'buy', 'buy', 'interest', 'buy', 'dividend', 'sell', 'tax_refund', 'split'])
+    // Split-Zeile von Apple (+2 bei Bestand 2) → Faktor 2
+    expect(b[8]).toMatchObject({ kind: 'split', occurredOn: '2026-06-20', factor: '2', asset: { isin: 'US0378331005' }, confidence: 'mittel' })
     expect(b[0]).toMatchObject({ occurredOn: '2026-01-02', asset: { kind: 'security', isin: 'IE00B4L5Y983' }, quantity: '1.2345678901', amountCents: 12_497, feeCents: 0, note: 'Sparplan', confidence: 'hoch' })
     expect(b[1]).toMatchObject({ asset: { isin: 'US0378331005', name: 'Apple' }, quantity: '2', amountCents: 36_100, feeCents: 100, netCents: -36_200, note: null })
     // Buchungstag laut Spalte „date“, nicht die UTC-Zeit
@@ -249,7 +251,7 @@ describe('Trade Republic Transaktionsexport (CSV)', () => {
     const notices = parseCsvText(F.TR_CSV_EXPORT).result!.notices.join(' | ')
     expect(notices).toMatch(/3 × nicht übernommen: Ein-\/Auszahlungen, Karte und Überweisungen/)
     expect(notices).toMatch(/1 × nicht übernommen: Anleihen/)
-    expect(notices).toMatch(/1 × Kapitalmaßnahme oder Depotübertrag – bitte von Hand buchen.*SPLIT · Apple · 20\.06\.2026 · \+2 Stück/)
+    expect(notices).not.toMatch(/Kapitalmaßnahme oder Depotübertrag/)
     expect(notices).toMatch(/Junior/)
     expect(notices).toMatch(/Unbekannte Arten: MYSTERY_EVENT/)
   })
@@ -262,24 +264,53 @@ describe('Trade Republic Transaktionsexport (CSV)', () => {
     expect(result!.bookings[1]).toMatchObject({ amountCents: 1_234, taxCents: 339, note: 'Ausschüttung' })
   })
 
-  it('Split als Aus- und Einbuchung derselben ISIN: zusätzliche Stück ohne Kosten; Tilgung und Übertrag von Hand', () => {
+  describe('Kapitalmaßnahmen mit mitgerechnetem Bestand', () => {
     const head = F.TR_CSV_EXPORT.split('\n')[0]
     const row = (cells: string[]) => cells.map((c) => `"${c}"`).join(',')
-    const csv = [
-      head,
-      row(['2021-01-08T10:00:00Z', '2021-01-08', 'DEFAULT', 'TRADING', 'BUY', 'STOCK', 'NIO (ADR)', 'US62914V1061', '15', '47.00', '-705.00', '-1.00', '', 'EUR', '', '', '', '', 's1', '', '', '', '']),
-      row(['2022-03-01T06:00:00Z', '2022-03-01', 'DEFAULT', 'CORPORATE_ACTION', 'SPLIT', 'STOCK', 'NIO (ADR)', 'US62914V1061', '-15', '', '', '', '', 'EUR', '', '', '', '', 's2', '', '', '', '']),
-      row(['2022-03-01T06:00:01Z', '2022-03-01', 'DEFAULT', 'CORPORATE_ACTION', 'SPLIT', 'STOCK', 'NIO (ADR)', 'US62914V1061', '45', '', '', '', '', 'EUR', '', '', '', '', 's3', '', '', '', '']),
-      row(['2022-05-02T06:00:00Z', '2022-05-02', 'DEFAULT', 'DELIVERY', 'TRANSFER_IN', 'FUND', 'Weltfonds', 'IE00B4L5Y983', '3', '', '', '', '', 'EUR', '', '', '', '', 's4', '', '', '', '']),
-      row(['2023-06-01T06:00:00Z', '2023-06-01', 'DEFAULT', 'CASH', 'TILG', 'BOND', 'Anleihe', 'DE0001102580', '', '', '100.00', '', '', 'EUR', '', '', '', '', 's5', '', '', '', '']),
-    ].join('\n')
-    const r = parseCsvText(csv).result!
-    expect(r.bookings.map((b) => b.kind)).toEqual(['buy', 'transfer_in'])
-    expect(r.bookings[1]).toMatchObject({ occurredOn: '2022-03-01', quantity: '30', amountCents: 0, confidence: 'mittel', note: 'Split (Transaktionsexport)' })
-    expect(r.bookings[1]!.warnings[0]).toMatch(/etwa 3 : 1/)
-    const notices = r.notices.join(' | ')
-    expect(notices).toMatch(/TRANSFER_IN · Weltfonds · 02\.05\.2022 · \+3 Stück/)
-    expect(notices).toMatch(/1 × nicht übernommen: Anleihen-Tilgungen/)
+    const trade = (id: string, date: string, isin: string, shares: string, amount: string, type = 'BUY') =>
+      row([`${date}T10:00:00Z`, date, 'DEFAULT', 'TRADING', type, 'STOCK', 'Testaktie', isin, shares, '', amount, '-1.00', '', 'EUR', '', '', '', '', id, '', '', '', ''])
+    const action = (id: string, date: string, isin: string, shares: string, type = 'SPLIT', category = 'CORPORATE_ACTION') =>
+      row([`${date}T06:00:00Z`, date, 'DEFAULT', category, type, 'STOCK', 'Testaktie', isin, shares, '', '', '', '', 'EUR', '', '', '', '', id, '', '', '', ''])
+    const parse = (...lines: string[]) => parseCsvText([head, ...lines].join('\n')).result!
+    const OLD = 'FR0000051732'
+    const NEW = 'FR0000120271'
+
+    it('Split als Aus- und Einbuchung derselben ISIN → Faktor 3', () => {
+      const r = parse(trade('a', '2021-01-08', OLD, '15', '-705.00'), action('b', '2022-03-01', OLD, '-15'), action('c', '2022-03-01', OLD, '45'))
+      expect(r.bookings.map((b) => b.kind)).toEqual(['buy', 'split'])
+      expect(r.bookings[1]).toMatchObject({ occurredOn: '2022-03-01', factor: '3', amountCents: 0, note: 'Split' })
+      expect(r.bookings[1]!.warnings[0]).toMatch(/Split 3 : 1 – Bestand 15 → 45 Stück/)
+    })
+
+    it('Zusammenlegung 10.000 : 1 – als Paar, als eine Zeile und mit neuer ISIN', () => {
+      const buy = trade('a', '2024-02-01', OLD, '49995', '-499.95')
+      const pair = parse(buy, action('b', '2025-04-24', OLD, '-49995'), action('c', '2025-04-24', OLD, '4.9995'))
+      expect(pair.bookings[1]).toMatchObject({ kind: 'split', factor: '0.0001', note: 'Zusammenlegung' })
+      expect(pair.bookings[1]!.warnings[0]).toMatch(/Zusammenlegung 1 : 10\.000/)
+
+      const single = parse(buy, action('b', '2025-04-24', OLD, '-49990.0005', 'REVERSE_SPLIT'))
+      expect(single.bookings[1]).toMatchObject({ kind: 'split', factor: '0.0001' })
+
+      // neue ISIN: Übertrag aus der alten, in die neue – Anschaffungskosten wandern mit
+      const exchange = parse(buy, action('b', '2025-04-24', OLD, '-49995', 'REVERSE_SPLIT'), action('c', '2025-04-24', NEW, '4.9995', 'REVERSE_SPLIT'), trade('d', '2025-06-02', NEW, '-4.9995', '30.00', 'SELL'))
+      expect(exchange.bookings.map((b) => b.kind)).toEqual(['buy', 'sell', 'transfer_out', 'transfer_in'])
+      expect(exchange.bookings[2]).toMatchObject({ asset: { isin: OLD }, quantity: '49995', note: `Umtausch in ${NEW}` })
+      expect(exchange.bookings[3]).toMatchObject({ asset: { isin: NEW }, quantity: '4.9995', amountCents: 49_995 })
+      expect(exchange.notices.join(' ')).not.toMatch(/von Hand/)
+    })
+
+    it('Depotübertrag ein: ohne Kosten, nicht vorausgewählt; Abgang ohne Gegenbuchung von Hand; Tilgung gemeldet', () => {
+      const r = parse(
+        action('a', '2022-05-02', OLD, '3', 'TRANSFER_IN', 'DELIVERY'),
+        action('b', '2023-01-02', NEW, '-7', 'DELISTING'),
+        row(['2023-06-01T06:00:00Z', '2023-06-01', 'DEFAULT', 'CASH', 'TILG', 'BOND', 'Anleihe', 'DE0001102580', '', '', '100.00', '', '', 'EUR', '', '', '', '', 'c', '', '', '', '']),
+      )
+      expect(r.bookings).toHaveLength(1)
+      expect(r.bookings[0]).toMatchObject({ kind: 'transfer_in', quantity: '3', amountCents: 0, confidence: 'niedrig', note: 'Depotübertrag' })
+      const notices = r.notices.join(' | ')
+      expect(notices).toMatch(/1 × Kapitalmaßnahme oder Depotübertrag – bitte von Hand buchen.*DELISTING · Testaktie · 02\.01\.2023 · -7 Stück/)
+      expect(notices).toMatch(/1 × nicht übernommen: Anleihen-Tilgungen/)
+    })
   })
 
   it('Vorzeichen-Widersprüche und Fremdwährung werden nicht übernommen', () => {

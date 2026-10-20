@@ -19,6 +19,7 @@ export type ImportKind =
   | 'staking'
   | 'age'
   | 'tax_refund'
+  | 'split'
 
 export const IMPORT_KIND_LABEL: Record<ImportKind, string> = {
   buy: 'Kauf',
@@ -34,6 +35,7 @@ export const IMPORT_KIND_LABEL: Record<ImportKind, string> = {
   staking: 'Staking/Prämie',
   age: 'Ausschüttungsgleicher Ertrag',
   tax_refund: 'Steuergutschrift',
+  split: 'Split/Zusammenlegung',
 }
 
 export interface ImportAsset {
@@ -53,6 +55,8 @@ export interface ImportedBooking {
   asset: ImportAsset | null
   /** Stückzahl als Dezimaltext mit Punkt (`4.827186`) */
   quantity: string | null
+  /** Nur Split: neue Stück je altem Stück (`3`, `0.0001`) */
+  factor?: string | null
   /** Kurswert bzw. Bruttoertrag in EUR-Cent (Bedeutung je Typ: src/lib/holdings.ts) */
   amountCents: number
   feeCents: number
