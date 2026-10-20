@@ -1,10 +1,10 @@
 import Link from 'next/link'
+import { ASSET_KIND_SLOT, DonutChart } from '@/components/charts/DonutChart'
 import { HistoryChart } from '@/components/charts/HistoryChart'
 import { Markets } from '@/components/markets/Markets'
 import { Amount } from '@/components/privacy/privacy'
 import { RouteSummary } from '@/components/road/RouteSummary'
 import { SaveOfflineSnapshot } from '@/components/shell/pwa'
-import { AllocationBars } from '@/components/ui/AllocationBars'
 import button from '@/components/ui/button.module.css'
 import { DataTable, NameCell, Td, Th } from '@/components/ui/DataTable'
 import { Message } from '@/components/ui/forms'
@@ -137,7 +137,7 @@ export default async function OverviewPage() {
         </Section>
 
         <Section id="aufteilung" title="Aufteilung" meta="nach Anlageklasse" span="third">
-          {valuation.allocation.length > 0 ? <AllocationBars items={valuation.allocation} /> : <Note>Noch keine Werte.</Note>}
+          {valuation.allocation.length > 0 ? <DonutChart title="Aufteilung nach Anlageklasse" items={valuation.allocation} slots={ASSET_KIND_SLOT} /> : <Note>Noch keine Werte.</Note>}
         </Section>
 
         <Section

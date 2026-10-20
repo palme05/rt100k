@@ -1,0 +1,130 @@
+/* Tortendiagramm (Ring) mit Legende. Breit: Ring links, Legende rechts; schmal untereinander. */
+
+.root {
+  container-type: inline-size;
+  min-width: 0;
+}
+
+.layout {
+  display: grid;
+  gap: var(--space-5);
+  justify-items: center;
+}
+
+@container (min-width: 30rem) {
+  .layout {
+    grid-template-columns: 11rem minmax(0, 1fr);
+    align-items: center;
+    justify-items: stretch;
+  }
+}
+
+.svg {
+  display: block;
+  width: 100%;
+  max-width: 11rem;
+  height: auto;
+  overflow: visible;
+  border-radius: 50%;
+}
+
+.svg:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+/* 2 px Lücke zwischen den Segmenten in der Farbe des Untergrunds */
+.segment {
+  stroke: var(--bg);
+  stroke-width: 2;
+  stroke-linejoin: round;
+  cursor: pointer;
+  transition: opacity 120ms ease;
+}
+
+.dim {
+  opacity: 0.32;
+}
+
+.cat1 { fill: var(--cat-1); }
+.cat2 { fill: var(--cat-2); }
+.cat3 { fill: var(--cat-3); }
+.cat4 { fill: var(--cat-4); }
+.cat5 { fill: var(--cat-5); }
+.cat6 { fill: var(--cat-6); }
+.cat7 { fill: var(--cat-7); }
+.cat8 { fill: var(--cat-8); }
+.rest { fill: var(--cat-rest); }
+
+.centerLabel {
+  font-size: 12px;
+  fill: var(--ink-3);
+}
+
+.centerValue {
+  font-size: 20px;
+  font-weight: var(--weight-semibold);
+  fill: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.centerSub {
+  font-size: 12px;
+  fill: var(--ink-2);
+  font-variant-numeric: tabular-nums;
+}
+
+.legend {
+  display: grid;
+  gap: var(--space-2);
+  width: 100%;
+  min-width: 0;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.item {
+  display: grid;
+  grid-template-columns: 10px minmax(0, 1fr) auto auto;
+  column-gap: var(--space-3);
+  align-items: baseline;
+  padding: 0.15rem var(--space-2);
+  margin-inline: calc(-1 * var(--space-2));
+  border-radius: var(--radius-sm);
+}
+
+.itemActive {
+  background: var(--wash);
+}
+
+.swatch {
+  align-self: center;
+}
+
+.label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pct {
+  font-weight: var(--weight-medium);
+  font-variant-numeric: tabular-nums;
+  min-width: 3.25rem;
+  text-align: right;
+}
+
+.amt {
+  font-size: var(--text-sm);
+  color: var(--ink-3);
+  font-variant-numeric: tabular-nums;
+  min-width: 4.75rem;
+  text-align: right;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .segment {
+    transition: none;
+  }
+}

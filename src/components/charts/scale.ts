@@ -74,3 +74,18 @@ export function columnPath(x: number, width: number, yTop: number, yBase: number
 export function approxTextWidth(text: string, fontSize: number, factor = 0.6): number {
   return text.length * fontSize * factor
 }
+
+/**
+ * Ringsegment von `start` bis `end` (Anteile 0…1, im Uhrzeigersinn ab 12 Uhr)
+ * um (cx, cy). Ein voller Ring besteht aus zwei Hälften – ein einzelner Bogen
+ * über 360° ist in SVG nicht darstellbar.
+ */
+export function ringPath(cx: number, cy: number, outer: number, inner: number, start: number, end: number): string {
+  if (end - start >= 1 - 1e-9) return `${ringPath(cx, cy, outer, inner, 0, 0.5)} ${ringPath(cx, cy, outer, inner, 0.5, 1)}`
+  const point = (radius: number, at: number) => {
+    const angle = at * 2 * Math.PI - Math.PI / 2
+    return `${(cx + radius * Math.cos(angle)).toFixed(2)},${(cy + radius * Math.sin(angle)).toFixed(2)}`
+  }
+  const large = end - start > 0.5 ? 1 : 0
+  return `M${point(outer, start)}A${outer},${outer} 0 ${large} 1 ${point(outer, end)}L${point(inner, end)}A${inner},${inner} 0 ${large} 0 ${point(inner, start)}Z`
+}

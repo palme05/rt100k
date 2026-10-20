@@ -28,6 +28,7 @@ Einzige Quelle: [`src/styles/tokens.css`](../src/styles/tokens.css). Komponenten
 | | `--accent-wash` / `--accent-band` | 9 % / 13 % | Fläche unter der Vermögenslinie / Prognosekorridor |
 | Zweitfarbe | `--second` / `--second-wash` | `#2f5f8f` / `#c9d6e4` | Einzahlungen (gestrichelt), Erträge, Anteils-Balken / Prognose-Säulen |
 | Bedeutung | `--pos` / `--neg` | `#1b7745` / `#c1372f` | Gewinn / Verlust, immer mit Pfeil |
+| Kategorien | `--cat-1` … `--cat-8`, `--cat-rest` | Blau, Bernstein, Pflaume, Aqua, Himbeere, Himmelblau, Siena, Rosa; Rest `#d4d3cc` | Segmente in Tortendiagrammen (Reihenfolge geprüft, siehe „Diagramme“) |
 | Effekte | `--scrim`, `--shadow-raise`, `--shadow-pop`, `--shadow-tip` | | Palette-Hintergrund, Segment, Palette, Tooltip |
 
 **Schrift:** Instrument Sans Variable (OFL, selbst gehostet über `@fontsource-variable/instrument-sans`). Eine Familie für alles.
@@ -65,7 +66,8 @@ Alle unter `src/components/`. Seiten setzen sich nur daraus zusammen, eigene CSS
 | `HeroSummary`, `KeyStats`, `Stats` | `ui/Summary.tsx` | Gesamtbetrag mit Kennzahlen, Kennzahlen-Raster |
 | `Trend` | `ui/Trend.tsx` | Veränderung mit Pfeil, Vorzeichen, Farbe |
 | `Rows`, `Row` | `ui/Rows.tsx` | Listen „Bezeichnung … Wert“ (optional Datum, Untertitel) |
-| `AllocationBars`, `WeightBar` | `ui/AllocationBars.tsx` | Anteile als einfarbige Balken |
+| `WeightBar` | `ui/AllocationBars.tsx` | Kleiner Gewichtsbalken in Tabellenzellen |
+| `DonutChart` | `charts/DonutChart.tsx` | Anteile als Ring mit Legende (Name, Prozent, Betrag); Segment per Zeiger, Antippen oder Pfeiltasten hervorheben |
 | `DataTable`, `Th`, `Td`, `NameCell` | `ui/DataTable.tsx` | Tabellen (Zahlen rechts, Name links, `hideSm`; `NameCell` nimmt weiteren Inhalt wie Status und Bearbeiten auf, `Th left` für die passende Kopfzeile) |
 | `Segmented` | `ui/Segmented.tsx` | Zeitraum-/Ansichtsumschalter (`aria-pressed`) |
 | `LineChart`, `ColumnChart`, `Sparkline`, `Legend` | `charts/charts.tsx` | Diagramm-Grundbausteine |
@@ -98,12 +100,15 @@ Reine Logik liegt in `src/lib/` (Prognose, Kennzahlen, Monate, Road, Import-Pars
 Grundlage sind die Dataviz-Regeln: Form nach Aufgabe wählen, Farbe zuletzt.
 
 - **Töne statt freier Farben:** `tone: 'accent' | 'second' | 'ink' | 'muted' | 'median'`. Vermögen = `accent` mit Fläche, Einzahlungen = `second` gestrichelt, Ist-Verlauf in Prognosen = `ink`, Median = `median` (gestrichelt), Korridor = `band`.
-- **Höchstens drei Reihen pro Diagramm.** Ab zwei Reihen immer eine `Legend`. Säulen haben eine Farbe, Prognose-Säulen die helle Variante.
+- **Höchstens drei Reihen pro Linien- oder Säulendiagramm.** Ab zwei Reihen immer eine `Legend`. Säulen haben eine Farbe, Prognose-Säulen die helle Variante.
 - **Eine y-Achse**, keine Doppelachsen. Geldachsen starten bei 0. Meilensteine als Haarlinien mit Label links, das Ziel in Akzent.
 - **Linien 2 px**, Einzahlungen 1,5 px gestrichelt, Raster 1 px `--rule`. Direkte Labels sparsam: höchster Wert bei Säulen, Ziel-Linie.
 - **Interaktion ist Pflicht:** Crosshair + Tooltip (Zeiger, Touch, Pfeiltasten, Shift = 12 Schritte, Home/End, Esc), Hover-Fläche größer als die Marke, Live-Region für Screenreader, „Als Tabelle anzeigen“ unter jedem Diagramm.
 - **Keine Inline-Styles** (CSP): Positionen nur über SVG-Attribute, Farben über Klassen.
-- Nominale Kategorien (Anlageklassen) bekommen **keine** eigenen Farben: Balkenlänge + Prozentzahl + Betrag reichen.
+- **Anteile als Tortendiagramm (Ring)** – Entscheidung des Betreibers vom 20.10.2026 (vorher einfarbige Balken). Der Ring zeigt die Verteilung auf einen Blick, die Legende daneben die genauen Werte (Name, Prozent, Betrag über `Amount`); sie ersetzt die Tabellenansicht. 2 px Lücke zwischen den Segmenten.
+- **Kategorie-Farben** `--cat-1` … `--cat-8`: Reihenfolge mit dem Dataviz-Validator gegen `--bg` geprüft – benachbarte Segmente auch bei Farbsehschwäche unterscheidbar (ΔE ≥ 12, beim Ringschluss ≥ 10), ohne Gewinn-Grün, Verlust-Rot und Akzent-Orange. Mehr als acht Einträge wiederholen die Farben; was nicht einzeln gezeigt wird, ist ein graues Reststück (`--cat-rest`).
+- **Farbe folgt dem Eintrag, nicht dem Rang:** jede Anlageklasse hat ihren festen Platz (`ASSET_KIND_SLOT`: ETFs Blau, Edelmetalle Bernstein, Anleihen Pflaume, Aktien Aqua, Krypto Himbeere, Fonds Himmelblau, Cash Siena, Sonstiges Rosa) – auch als Block in der ETF-Durchschau. Länder, Branchen und Einzeltitel nehmen die übrigen Plätze der Reihe nach (`assignSlots`).
+- Texte und Zahlen stehen in Tinte, nie in der Segmentfarbe; die Farbe trägt nur der Punkt in der Legende.
 
 ## Barrierefreiheit
 
@@ -129,5 +134,5 @@ Die Richtung lebt vom warmen Papierton und der feinen Linienführung. Ein dunkle
 | Pfeil + Vorzeichen bei jeder Veränderung | Gewinn/Verlust nur über Grün/Rot |
 | Beträge immer über `Amount` | Beträge als rohe Strings rendern (umgeht den Privatsphäre-Modus) |
 | `≈` und „Schätzung“ bei Prognosen und Steuer | Prognosen wie Ist-Werte darstellen |
-| Anteile als einfarbige Balken | Tortendiagramm mit sechs Farben |
+| Anteile als Ring mit Legende (Name, Prozent, Betrag) | Tortendiagramm ohne Legende oder mit Farben nach Rang |
 | Tabellenansicht unter jedem Diagramm | Information nur im Tooltip |
