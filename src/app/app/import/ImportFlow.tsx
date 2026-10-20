@@ -8,11 +8,12 @@ import { Grid, Note, Section } from '@/components/ui/layout'
 import { Progress } from '@/components/ui/Progress'
 import { assetRefOf, assetKey, PREPARE_MAX_ASSETS, PREPARE_MAX_KEYS, type AssetRef } from '@/lib/import/assets'
 import { applyMapping, type CsvMapping } from '@/lib/import/generic'
+import { unassignedTask } from '@/lib/import/tasks'
 import { IMPORT_SOURCE_LABEL } from '@/lib/import/types'
 import { commitImportAction, prepareImportAction, saveImportTasksAction } from './actions'
 import styles from './import.module.css'
 import { MappingEditor } from './MappingEditor'
-import { defaultSelected, guessPortfolio, rowsFrom, validate, type FileEntry, type PortfolioOption, type ReviewRow, type SavedMapping, type ValidRow } from './model'
+import { defaultSelected, guessPortfolio, NEEDS_INSTRUMENT, rowsFrom, validate, type FileEntry, type PortfolioOption, type ReviewRow, type SavedMapping, type ValidRow } from './model'
 import { ImportFileError, readImportFile } from './process'
 import { ReviewTable } from './ReviewTable'
 
@@ -197,7 +198,10 @@ export function ImportFlow({ portfolios, mappings: initialMappings }: { portfoli
       }
       setProgress(null)
       // Was der Import nicht selbst buchen konnte, bleibt als Aufgabe in der Übersicht
-      const tasks = [...new Set(files.filter((f) => f.tasks.length > 0 && rows.some((r) => r.fileId === f.id && committed.has(r.key))).flatMap((f) => f.tasks))].slice(0, 50)
+      const fromFiles = files.filter((f) => f.tasks.length > 0 && rows.some((r) => r.fileId === f.id && committed.has(r.key))).flatMap((f) => f.tasks)
+      // nicht zugeordnete Wertpapiere (z. B. unbekannte ISIN) gehen sonst verloren
+      const unassigned = rows.filter((r) => !committed.has(r.key) && !r.duplicate && !r.instrument && NEEDS_INSTRUMENT.has(r.booking.kind)).map((r) => unassignedTask(r.booking))
+      const tasks = [...new Set([...fromFiles, ...unassigned])].slice(0, 50)
       if (tasks.length > 0) await saveImportTasksAction(tasks)
       const conflictRows = rows.filter((r) => !committed.has(r.key) && r.selected && inConflict(r))
       if (conflictRows.length > 0) {
