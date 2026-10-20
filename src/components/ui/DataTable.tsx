@@ -36,8 +36,12 @@ export function Th({ children, hideSm = false }: { children: React.ReactNode; hi
   )
 }
 
-export function Td({ children, hideSm = false }: { children: React.ReactNode; hideSm?: boolean }) {
-  return <td className={hideSm ? styles.hideSm : undefined}>{children}</td>
+export function Td({ children, hideSm = false, colSpan }: { children: React.ReactNode; hideSm?: boolean; colSpan?: number }) {
+  return (
+    <td className={hideSm ? styles.hideSm : undefined} colSpan={colSpan}>
+      {children}
+    </td>
+  )
 }
 
 /** Erste Zelle: Name, darunter Zusatz; optional als Link über die ganze Zelle. */

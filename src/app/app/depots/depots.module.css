@@ -108,3 +108,9 @@
   margin: 0;
   color: var(--ink-2);
 }
+
+.headActions {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}

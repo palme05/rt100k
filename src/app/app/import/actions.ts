@@ -1,0 +1,55 @@
+'use server'
+
+import { revalidatePath } from 'next/cache'
+import { requireUser } from '@/server/auth/session'
+import { NotFoundError, ValidationError } from '@/server/dal/errors'
+import { deleteCsvMapping, importBookings, saveCsvMapping, type CsvMappingDto } from '@/server/dal/imports'
+import { prepareImport, type PreparedImport } from '@/server/imports'
+
+type Result<T> = ({ ok: true } & T) | { ok: false; error: string }
+
+function fail(error: unknown): { ok: false; error: string } {
+  if (error instanceof ValidationError || error instanceof NotFoundError) return { ok: false, error: error.message }
+  if (error instanceof Error && error.name === 'ZodError') return { ok: false, error: 'Ungültige Import-Daten.' }
+  throw error
+}
+
+/** Instrumente zuordnen, Duplikate und schon importierte Dateien melden. */
+export async function prepareImportAction(input: unknown): Promise<Result<PreparedImport>> {
+  const user = await requireUser()
+  try {
+    return { ok: true, ...(await prepareImport(user, input)) }
+  } catch (error) {
+    return fail(error)
+  }
+}
+
+export async function commitImportAction(input: unknown): Promise<Result<{ created: number; duplicates: number }>> {
+  const user = await requireUser()
+  try {
+    const result = await importBookings(user, input)
+    revalidatePath('/app', 'layout')
+    return { ok: true, ...result }
+  } catch (error) {
+    return fail(error)
+  }
+}
+
+export async function saveMappingAction(name: unknown, mapping: unknown): Promise<Result<{ mapping: CsvMappingDto }>> {
+  const user = await requireUser()
+  try {
+    return { ok: true, mapping: await saveCsvMapping(user, { name, mapping }) }
+  } catch (error) {
+    return fail(error)
+  }
+}
+
+export async function deleteMappingAction(id: unknown): Promise<Result<object>> {
+  const user = await requireUser()
+  try {
+    await deleteCsvMapping(user, id)
+    return { ok: true }
+  } catch (error) {
+    return fail(error)
+  }
+}
