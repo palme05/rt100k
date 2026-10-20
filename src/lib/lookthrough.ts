@@ -35,11 +35,13 @@ export const MAX_LABEL = 60
 const TOP = 10
 export const CASH_LABEL = 'Cash und Derivate'
 
-const COLUMN: Record<'weight' | 'name' | 'sector' | 'country' | 'assetClass', RegExp> = {
-  weight: /^(weight|weighting|gewichtung|gewicht|anteil|% of (net )?assets|% des fondsvermögens)\b/i,
-  name: /^(name|security name|holding|wertpapier|bezeichnung|titel|constituent)\b/i,
+const COLUMN: Record<'weight' | 'name' | 'sector' | 'country' | 'region' | 'assetClass', RegExp> = {
+  weight: /^(weight|weighting|gewichtung|gewicht|anteil|% of (net )?assets|% des fondsvermögens|% of (the )?market value|% des marktwert(e)?s|% marktwert|marktwert(anteil)? ?(in )?%|% of fund|% of portfolio|portfolio %|fund %)(\b|$)/i,
+  name: /^(name|security name|holdings?( name)?|wertpapiere?|bezeichnung|titel|constituent)\b/i,
   sector: /^(sector|sektor|branche|industry)\b/i,
   country: /^(location|standort|country|land|domicile|sitzland|country of risk)\b/i,
+  // Vanguard nennt das Land „Region“ – nur genutzt, wenn es keine Länderspalte gibt
+  region: /^(region|market|markt)$/i,
   assetClass: /^(asset class|anlageklasse|asset type|wertpapierart)\b/i,
 }
 
@@ -79,15 +81,15 @@ const COUNTRY: Record<string, string> = {
 }
 
 const SECTOR: Record<string, string> = {
-  'information technology': 'IT', informationstechnologie: 'IT', it: 'IT',
+  'information technology': 'IT', informationstechnologie: 'IT', it: 'IT', technology: 'IT', technologie: 'IT',
   financials: 'Finanzen', finanzen: 'Finanzen', finanzwesen: 'Finanzen', finanzdienstleistungen: 'Finanzen',
   'health care': 'Gesundheit', healthcare: 'Gesundheit', gesundheitsversorgung: 'Gesundheit', gesundheitswesen: 'Gesundheit', gesundheit: 'Gesundheit',
   'consumer discretionary': 'Zyklischer Konsum', 'nicht-basiskonsumgüter': 'Zyklischer Konsum', 'zyklische konsumgüter': 'Zyklischer Konsum',
   'consumer staples': 'Basiskonsum', basiskonsumgüter: 'Basiskonsum', 'nichtzyklische konsumgüter': 'Basiskonsum',
   industrials: 'Industrie', industrie: 'Industrie',
-  communication: 'Kommunikation', 'communication services': 'Kommunikation', kommunikation: 'Kommunikation', kommunikationsdienste: 'Kommunikation',
+  communication: 'Kommunikation', 'communication services': 'Kommunikation', kommunikation: 'Kommunikation', kommunikationsdienste: 'Kommunikation', telecommunications: 'Kommunikation', telekommunikation: 'Kommunikation',
   energy: 'Energie', energie: 'Energie',
-  materials: 'Rohstoffe', materialien: 'Rohstoffe', rohstoffe: 'Rohstoffe', grundstoffe: 'Rohstoffe',
+  materials: 'Rohstoffe', 'basic materials': 'Rohstoffe', materialien: 'Rohstoffe', rohstoffe: 'Rohstoffe', grundstoffe: 'Rohstoffe',
   utilities: 'Versorger', versorger: 'Versorger', versorgungsbetriebe: 'Versorger',
   'real estate': 'Immobilien', immobilien: 'Immobilien',
 }
@@ -115,13 +117,21 @@ function weightMicro(raw: string, comma: boolean): number | null {
   return negative ? -Number(v) : Number(v)
 }
 
-/** Stand der Liste aus den Kopfzeilen (falls angegeben). */
+const MONTHS: Record<string, number> = { jan: 1, jän: 1, feb: 2, mar: 3, mär: 3, apr: 4, may: 5, mai: 5, jun: 6, jul: 7, aug: 8, sep: 9, oct: 10, okt: 10, nov: 11, dec: 12, dez: 12 }
+
+/** Stand der Liste aus den Kopfzeilen (falls angegeben): „17.10.2026“, „2026-10-17“, „30 Sep 2026“, „30. September 2026“. */
 function findDate(rows: readonly string[][]): string | null {
   for (const row of rows) {
     for (const cell of row) {
       const m = /(\d{1,2}\.\d{1,2}\.\d{4}|\d{4}-\d{2}-\d{2})/.exec(cell)
       const day = m ? parseDate(m[1]!) : null
       if (day) return day
+      const named = /\b(\d{1,2})\.? ([a-zä]{3})[a-zä]*\.? (\d{4})\b/i.exec(cell)
+      const month = named ? MONTHS[named[2]!.toLowerCase()] : undefined
+      if (named && month) {
+        const iso = `${named[3]}-${String(month).padStart(2, '0')}-${named[1]!.padStart(2, '0')}`
+        if (parseDate(iso)) return iso
+      }
     }
   }
   return null
@@ -145,6 +155,11 @@ export function parseHoldingsCsv(text: string): Breakdown {
   } catch (error) {
     throw new HoldingsFileError(error instanceof CsvError ? error.message : 'Die Datei ist keine lesbare CSV-Datei.')
   }
+  return parseHoldingsRows(rows)
+}
+
+/** Bestandsliste als Zeilen (aus CSV oder dem ersten Blatt einer XLSX-Datei) → zusammengefasste Gewichte. */
+export function parseHoldingsRows(rows: readonly string[][]): Breakdown {
   const headerIndex = rows.slice(0, 40).findIndex((r) => r.some((c) => COLUMN.weight.test(clean(c))) && r.some((c) => COLUMN.name.test(clean(c))))
   if (headerIndex < 0) throw new HoldingsFileError('In der Datei fehlen die Spalten für Name und Gewichtung – ist es die Bestandsliste (Positionen/Holdings) des ETF?')
   const header = rows[headerIndex]!.map(clean)
@@ -152,7 +167,7 @@ export function parseHoldingsCsv(text: string): Breakdown {
   const iWeight = col('weight')
   const iName = col('name')
   const iSector = col('sector')
-  const iCountry = col('country')
+  const iCountry = col('country') >= 0 ? col('country') : col('region')
   const iClass = col('assetClass')
 
   const data = rows.slice(headerIndex + 1).filter((r) => r.length > iWeight && clean(r[iName] ?? '') !== '')
@@ -216,8 +231,8 @@ export interface Lookthrough {
   totalCents: number
 }
 
-const NO_FILE = 'ETF ohne Bestandsliste'
-const KIND_BUCKET: Record<LookthroughPosition['kind'], string> = {
+export const NO_FILE = 'ETF ohne Bestandsliste'
+export const KIND_BUCKET: Record<LookthroughPosition['kind'], string> = {
   stock: 'Einzelaktien (ohne Zuordnung)',
   etf: NO_FILE,
   fund: NO_FILE,

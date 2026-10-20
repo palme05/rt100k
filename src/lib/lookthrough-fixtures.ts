@@ -28,3 +28,34 @@ export const HOLDINGS_EN = [
   'AAA,ALPHA COMPUTER INC,Information Technology,Equity,"6,000,000.00",60.00,"6,000,000.00",1,1,United States,NASDAQ,USD',
   'ZZZ,ZETA MINING LTD,Materials,Equity,"4,000,000.00",40.00,"4,000,000.00",1,1,Australia,ASX,AUD',
 ].join('\n')
+
+/**
+ * Wie ein XLSX-Download „Positionen“ eines großen Indexanbieters: Kopfzeilen
+ * mit Fondsname und Stand, Land in der Spalte „Region“, Gewichte als Prozent
+ * (eine Zelle in Exponentialschreibweise, wie Excel kleine Zahlen speichert).
+ */
+export const HOLDINGS_XLSX_EN: (string | number | { n: string } | null)[][] = [
+  ['Beispiel ESG Global All Cap UCITS ETF'],
+  ['Holding details'],
+  ['As at 30 Sep 2026'],
+  [],
+  ['Ticker', 'Holding name', '% of market value', 'Sector', 'Region', 'Market value', 'Shares'],
+  ['AAA', 'Alpha Computer Inc.', 5.5, 'Technology', 'United States', 5_500_000, 20_000],
+  ['BBB', 'Beta Software Corp.', 4.5, 'Technology', 'United States', 4_500_000, 10_000],
+  ['CCC', 'Gamma Bank plc', 3, 'Financials', 'United Kingdom', 3_000_000, 300_000],
+  ['DDD', 'Delta Pharma AG', 2, 'Health Care', 'Switzerland', 2_000_000, 8_000],
+  ['EEE', 'Epsilon Motors', { n: '9.95E-1' }, 'Consumer Discretionary', 'Japan', 995_000, 5_000],
+  ['REST', 'Further holdings', 84, 'Industrials', 'United States', 84_000_000, 1],
+  [null, 'Cash', { n: '5E-3' }, null, null, 5_000, null],
+  [],
+  ['Source: Beispiel-Anbieter. For information only.'],
+]
+
+/** Deutsch: „% des Marktwerts“ als Anteil (Zelle im Prozentformat speichert 0,055). */
+export const HOLDINGS_XLSX_DE: (string | number | { n: string } | null)[][] = [
+  ['Beispiel ESG Global All Cap UCITS ETF'],
+  ['Stand: 30. September 2026'],
+  ['Ticker', 'Wertpapiere', '% des Marktwerts', 'Sektor', 'Region', 'Marktwert', 'Anteile'],
+  ['AAA', 'Alpha Computer Inc.', 0.6, 'Technologie', 'Vereinigte Staaten', 6_000_000, 1],
+  ['ZZZ', 'Zeta Mining Ltd.', 0.4, 'Rohstoffe', 'Australien', 4_000_000, 1],
+]
