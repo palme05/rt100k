@@ -460,3 +460,28 @@
     rotate: 360deg;
   }
 }
+
+/* ── Seitenwechsel: Balken oben, solange die nächste Seite lädt ───────── */
+
+.navProgress {
+  position: fixed;
+  top: env(safe-area-inset-top, 0px);
+  left: 0;
+  right: 0;
+  z-index: 60;
+  height: 2px;
+  background: var(--accent);
+  transform-origin: left center;
+  pointer-events: none;
+  animation: navProgress 1.4s cubic-bezier(0.2, 0.7, 0.3, 1) 120ms both;
+}
+
+@keyframes navProgress {
+  from {
+    transform: scaleX(0);
+  }
+
+  to {
+    transform: scaleX(0.9);
+  }
+}

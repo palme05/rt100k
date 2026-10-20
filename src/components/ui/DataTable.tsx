@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { LinkPending } from '../shell/LinkPending'
 import styles from './table.module.css'
 
 /** Tabelle mit horizontalem Scrollen auf schmalen Bildschirmen. */
@@ -59,6 +60,7 @@ export function NameCell({ name, sub, href, children }: { name: string; sub?: Re
       {href ? (
         <Link className={styles.link} href={href}>
           {content}
+          <LinkPending />
         </Link>
       ) : (
         content
