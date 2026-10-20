@@ -150,6 +150,12 @@ describe('Trade Republic', () => {
     }
   })
 
+  it('Vermögensübersicht: eigener Hinweis mit Weg zum Transaktionsexport', () => {
+    const r = parsePdfLines(F.TR_VERMOEGEN)
+    expect(r).toMatchObject({ source: 'traderepublic', document: 'Vermögensübersicht', bookings: [] })
+    expect(r!.notices[0]).toMatch(/Bestandsliste ohne Kaufpreise.*Transaktionsexport \(CSV\)/)
+  })
+
   it('stimmt die Summe nicht, sinkt die Konfidenz mit Warnung', () => {
     const tampered = F.TR_KAUF_AT.map((l) => (l.endsWith('-1.000,90 EUR') && l.startsWith('AT') ? l.replace('-1.000,90', '-1.010,90') : l))
     const b = only(parsePdfLines(tampered))
@@ -218,6 +224,58 @@ describe('Bitpanda', () => {
   })
 })
 
+describe('Trade Republic Transaktionsexport (CSV)', () => {
+  it('liest Sparplan, Kauf, Saveback, Krypto, Verkauf mit KESt, Dividende, Zinsen und Steuergutschrift', () => {
+    const { result } = parseCsvText(F.TR_CSV_EXPORT)
+    expect(result).toMatchObject({ source: 'traderepublic', document: 'Transaktionsexport (CSV)' })
+    const b = result!.bookings
+    expect(b.map((x) => x.kind)).toEqual(['buy', 'buy', 'buy', 'interest', 'buy', 'dividend', 'sell', 'tax_refund'])
+    expect(b[0]).toMatchObject({ occurredOn: '2026-01-02', asset: { kind: 'security', isin: 'IE00B4L5Y983' }, quantity: '1.2345678901', amountCents: 12_497, feeCents: 0, note: 'Sparplan', confidence: 'hoch' })
+    expect(b[1]).toMatchObject({ asset: { isin: 'US0378331005', name: 'Apple' }, quantity: '2', amountCents: 36_100, feeCents: 100, netCents: -36_200, note: null })
+    // Buchungstag laut Spalte „date“, nicht die UTC-Zeit
+    expect(b[2]).toMatchObject({ occurredOn: '2026-03-16', note: 'Saveback', amountCents: 879 })
+    expect(b[3]).toMatchObject({ kind: 'interest', amountCents: 321, taxCents: 88, netCents: 233, asset: null })
+    expect(b[4]).toMatchObject({ asset: { kind: 'crypto', symbol: 'BTC', isin: null }, quantity: '0.0005', amountCents: 4_500, feeCents: 100, confidence: 'mittel' })
+    expect(b[5]).toMatchObject({ kind: 'dividend', amountCents: 52, taxCents: 8, quantity: null })
+    // Verkauf: Stück ohne Minus, KESt als Steuer, Erlös brutto
+    expect(b[6]).toMatchObject({ occurredOn: '2026-07-15', quantity: '1', amountCents: 21_000, feeCents: 100, taxCents: 765, netCents: 20_135 })
+    expect(b[7]).toMatchObject({ kind: 'tax_refund', amountCents: 420, asset: null })
+    // eindeutige Fingerabdrücke aus der Transaktions-ID
+    expect(new Set(b.map((x) => x.fingerprint)).size).toBe(b.length)
+    expect(b[0]!.fingerprint).toMatch(/^trcsv\|/)
+  })
+
+  it('übernimmt kein Girokonto, keine Anleihen, kein Juniorkonto; meldet Unbekanntes', () => {
+    const notices = parseCsvText(F.TR_CSV_EXPORT).result!.notices.join(' | ')
+    expect(notices).toMatch(/3 × nicht übernommen: Ein-\/Auszahlungen, Karte und Überweisungen/)
+    expect(notices).toMatch(/1 × nicht übernommen: Anleihen/)
+    expect(notices).toMatch(/1 × nicht übernommen: Kapitalmaßnahmen/)
+    expect(notices).toMatch(/Junior/)
+    expect(notices).toMatch(/Unbekannte Arten: MYSTERY_EVENT/)
+  })
+
+  it('erkennt auch die Semikolon-Fassung mit value_date (Trennzeichen im Text)', () => {
+    const { result } = parseCsvText(F.TR_CSV_EXPORT_SEMICOLON)
+    expect(result?.source).toBe('traderepublic')
+    expect(result!.bookings.map((x) => x.kind)).toEqual(['buy', 'dividend'])
+    expect(result!.bookings[0]).toMatchObject({ occurredOn: '2026-09-01', amountCents: 22_400, feeCents: 100 })
+    expect(result!.bookings[1]).toMatchObject({ amountCents: 1_234, taxCents: 339, note: 'Ausschüttung' })
+  })
+
+  it('Vorzeichen-Widersprüche und Fremdwährung werden nicht übernommen', () => {
+    const head = F.TR_CSV_EXPORT.split('\n')[0]
+    const bad = [
+      head,
+      '"2026-01-05T10:00:00Z","2026-01-05","DEFAULT","TRADING","SELL","STOCK","Apple","US0378331005","1.0","200.00","200.00","-1.00","","EUR","","","","","x1","","","",""',
+      '"2026-01-06T10:00:00Z","2026-01-06","DEFAULT","TRADING","BUY","STOCK","Apple","US0378331005","1.0","200.00","-200.00","","","USD","","","","","x2","","","",""',
+      '"2026-01-07T10:00:00Z","2026-01-07","DEFAULT","TRADING","BUY","STOCK","Kaputt","US0378331006","1.0","200.00","-200.00","","","EUR","","","","","x3","","","",""',
+    ].join('\n')
+    const r = parseCsvText(bad).result!
+    expect(r.bookings).toEqual([])
+    expect(r.notices.join(' ')).toMatch(/widersprüchlichem Vorzeichen.*USD.*ohne gültige ISIN|widersprüchlichem Vorzeichen/)
+  })
+})
+
 describe('Generischer CSV-Import', () => {
   it('schlägt eine Zuordnung vor und übernimmt gültige Zeilen', () => {
     const rows = parseCsv(F.GENERIC_CSV)
@@ -263,9 +321,9 @@ describe('Registry und Datenschutz', () => {
 
   it('kein Ergebnis enthält Namen, Adressen, IBAN oder Depotnummern', () => {
     const results = [F.TR_KAUF_AT, F.TR_SPARPLAN_2026, F.TR_BUY_EN, F.TR_VERKAUF_AT, F.TR_CRYPTO_SPARPLAN, F.TR_DIVIDENDE_USD, F.TR_ZINSEN_AT, F.FLATEX_KAUF_AT, F.FLATEX_VERKAUF_VERLUST_AT, F.TR_VERKAUF_VERLUST_AT, F.FLATEX_SAMMEL_AT, F.FLATEX_DIVIDENDE_USD, F.FLATEX_AGE].map(parsePdfLines)
-    results.push(parseCsvText(F.BITPANDA_CSV).result)
+    results.push(parseCsvText(F.BITPANDA_CSV).result, parseCsvText(F.TR_CSV_EXPORT).result, parseCsvText(F.TR_CSV_EXPORT_SEMICOLON).result)
     const json = JSON.stringify(results)
-    for (const secret of ['Erika', 'Beispiel', 'Jane', 'Example Street', 'AT000000000000000000', 'DE00000000000000000000', '0000000000', '00000000-0000']) expect(json).not.toContain(secret)
+    for (const secret of ['Erika', 'Beispiel', 'Jane', 'Example Street', 'AT000000000000000000', 'DE00000000000000000000', '0000000000', '00000000-0000', 'Bäckerei', 'Beleg 4711', 'Miete', '5462']) expect(json).not.toContain(secret)
   })
 
   it('Import-Schlüssel sind Hashes, stabil und quellenabhängig', async () => {

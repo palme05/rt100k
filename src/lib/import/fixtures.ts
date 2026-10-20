@@ -201,6 +201,7 @@ export const TR_ZINSEN_AT = [
 
 export const TR_KONTOAUSZUG = [TR_DE, 'Erika Beispiel', 'KONTOAUSZUG', 'ZEITRAUM 01.09.2026 - 30.09.2026', `${IBAN_DE}`, 'Kartentransaktion 12,30 EUR']
 
+export const TR_VERMOEGEN = [TR_DE, 'Erika Beispiel', 'VERMÖGENSÜBERSICHT', 'zum 30.09.2026', 'STÜCK WERTPAPIER KURS KURSWERT']
 export const TR_STORNO = [TR_AT, 'Erika Beispiel SEITE 1 von 1', 'STORNO DIVIDENDE', 'ÜBERSICHT', 'Storno der Dividende vom 15.07.2026.']
 
 const FLATEX_HEAD = ['flatexDEGIRO Bank SE', 'Kundenservice', 'Gadollaplatz 1', '8010 Graz', 'Mail: info@flatex.at', 'flatexDEGIRO Bank SE - Gadollaplatz 1 - A-8010 Graz']
@@ -344,6 +345,39 @@ export const BITPANDA_CSV = [
   '"T00000006","2026-06-15T12:00:00+02:00","buy","outgoing","50.00","EUR","0.45000000","XAU","111.11","EUR","Metal","28","0.00000000","XAU","-","-","0.00"',
   '"T00000007","2026-07-01T08:00:00+02:00","buy","outgoing","40.00","EUR","0.20000000","AAPL","200.00","EUR","Stock (derivative)","99","0.00000000","AAPL","-","-","0.00"',
   '"T00000008","2026-07-02T08:00:00+02:00","withdrawal","outgoing","100.00","EUR","-","EUR","-","-","Fiat","-","0.00000000","EUR","-","-","0.00"',
+].join('\n')
+
+/**
+ * Trade-Republic-Transaktionsexport (CSV, seit April 2026) – erfunden nach den
+ * öffentlich beschriebenen 23 Spalten. Keine echten Personen, Konten oder Beträge.
+ */
+const TR_CSV_HEAD = '"datetime","date","account_type","category","type","asset_class","name","symbol","shares","price","amount","fee","tax","currency","original_amount","original_currency","fx_rate","description","transaction_id","counterparty_name","counterparty_iban","payment_reference","mcc_code"'
+const trRow = (cells: readonly string[]) => cells.map((c) => `"${c}"`).join(',')
+const trId = (n: number) => `5f1e0b7a-1c2d-4e3f-8a9b-${(0x3c4d5e6f7a10 + n).toString(16)}`
+export const TR_CSV_EXPORT = [
+  TR_CSV_HEAD,
+  trRow(['2026-01-02T09:00:00.000Z', '2026-01-02', 'DEFAULT', 'CASH', 'CUSTOMER_INBOUND', '', '', '', '', '', '1000.00', '', '', 'EUR', '', '', '', 'Einzahlung', trId(1), 'Erika Beispiel', '', '', '']),
+  trRow(['2026-01-02T07:30:00.120Z', '2026-01-02', 'DEFAULT', 'TRADING', 'SAVINGS_PLAN_EXECUTED', 'FUND', 'Core MSCI World USD (Acc)', 'IE00B4L5Y983', '1.2345678901', '101.230000', '-124.97', '0.00', '', 'EUR', '', '', '', '', trId(2), '', '', '', '']),
+  trRow(['2026-03-10T14:05:12.000Z', '2026-03-10', 'DEFAULT', 'TRADING', 'BUY', 'STOCK', 'Apple', 'US0378331005', '2.0000000000', '180.500000', '-361.00', '-1.00', '', 'EUR', '', '', '', '', trId(3), '', '', '', '']),
+  trRow(['2026-03-15T18:22:40.000Z', '2026-03-15', 'DEFAULT', 'CASH', 'CARD_TRANSACTION', '', '', '', '', '', '-12.50', '', '', 'EUR', '', '', '', 'Kartenzahlung', trId(4), 'Bäckerei Muster', '', 'Beleg 4711', '5462']),
+  trRow(['2026-03-15T18:22:41.000Z', '2026-03-16', 'DEFAULT', 'TRADING', 'SAVEBACK', 'FUND', 'FTSE All-World USD (Acc)', 'IE00BK5BQT80', '0.0732000000', '120.100000', '-8.79', '', '', 'EUR', '', '', '', '', trId(5), '', '', '', '']),
+  trRow(['2026-04-01T00:10:00.000Z', '2026-04-01', 'DEFAULT', 'CASH', 'INTEREST_PAYMENT', '', '', '', '', '', '3.21', '', '-0.88', 'EUR', '', '', '', '', trId(6), '', '', '', '']),
+  trRow(['2026-04-01T08:00:00.000Z', '2026-04-01', 'DEFAULT', 'TRADING', 'SAVINGS_PLAN_EXECUTED', 'CRYPTO', 'Bitcoin', 'XF000BTC0017', '0.0005000000', '90000.000000', '-45.00', '-1.00', '', 'EUR', '', '', '', '', trId(7), '', '', '', '']),
+  trRow(['2026-05-14T10:00:00.000Z', '2026-05-14', 'DEFAULT', 'CASH', 'DIVIDEND', 'STOCK', 'Apple', 'US0378331005', '2.0000000000', '', '0.52', '', '-0.08', 'EUR', '0.60', 'USD', '1.1538', '', trId(8), '', '', '', '']),
+  trRow(['2026-06-20T09:00:00.000Z', '2026-06-20', 'DEFAULT', 'CORPORATE_ACTION', 'SPLIT', 'STOCK', 'Apple', 'US0378331005', '2.0000000000', '', '', '', '', 'EUR', '', '', '', '', trId(9), '', '', '', '']),
+  trRow(['2026-07-14T22:40:55.000Z', '2026-07-15', 'DEFAULT', 'TRADING', 'SELL', 'STOCK', 'Apple', 'US0378331005', '-1.0000000000', '210.000000', '210.00', '-1.00', '-7.65', 'EUR', '', '', '', '', trId(10), '', '', '', '']),
+  trRow(['2026-08-01T06:00:00.000Z', '2026-08-01', 'DEFAULT', 'CASH', 'TAX_OPTIMIZATION', '', '', '', '', '', '0.00', '', '4.20', 'EUR', '', '', '', '', trId(11), '', '', '', '']),
+  trRow(['2026-08-05T09:00:00.000Z', '2026-08-05', 'DEFAULT', 'TRADING', 'BUY', 'BOND', 'Bundesanleihe 2030', 'DE0001102580', '1.0000000000', '99.500000', '-995.00', '-1.00', '', 'EUR', '', '', '', '', trId(12), '', '', '', '']),
+  trRow(['2026-08-06T09:00:00.000Z', '2026-08-06', 'JUNIOR', 'TRADING', 'BUY', 'FUND', 'Core MSCI World USD (Acc)', 'IE00B4L5Y983', '1.0000000000', '110.000000', '-110.00', '-1.00', '', 'EUR', '', '', '', '', trId(13), '', '', '', '']),
+  trRow(['2026-08-07T09:00:00.000Z', '2026-08-07', 'DEFAULT', 'CASH', 'TRANSFER_OUT', '', '', '', '', '', '-200.00', '', '', 'EUR', '', '', '', 'Überweisung', trId(14), 'Erika Beispiel', '', 'Miete', '']),
+  trRow(['2026-08-08T09:00:00.000Z', '2026-08-08', 'DEFAULT', 'CASH', 'MYSTERY_EVENT', '', '', 'IE00B4L5Y983', '', '', '1.00', '', '', 'EUR', '', '', '', '', trId(15), '', '', '', '']),
+].join('\n')
+
+/** Neuere Fassung: Semikolon, ohne Uhrzeit, `value_date` statt `mcc_code`. */
+export const TR_CSV_EXPORT_SEMICOLON = [
+  '"datetime";"date";"account_type";"category";"type";"asset_class";"name";"symbol";"shares";"price";"amount";"fee";"tax";"currency";"original_amount";"original_currency";"fx_rate";"description";"transaction_id";"value_date";"counterparty_name";"counterparty_iban";"payment_reference"',
+  '"2026-09-01T00:00:00.000000Z";"2026-09-01";"DEFAULT";"TRADING";"BUY";"FUND";"Core MSCI World USD (Acc)";"IE00B4L5Y983";"2.0000000000";"112.000000";"-224.00";"-1.00";"";"EUR";"";"";"";"Kauf; Sparrate";"5f1e0b7a-1c2d-4e3f-8a9b-3c4d5e6f7b01";"2026-09-03";"";"";""',
+  '"2026-09-15T00:00:00.000000Z";"2026-09-15";"DEFAULT";"CASH";"DISTRIBUTION";"FUND";"FTSE All-World USD (Dist)";"IE00B3RBWM25";"";"";"12.34";"";"-3.39";"EUR";"";"";"";"";"5f1e0b7a-1c2d-4e3f-8a9b-3c4d5e6f7b02";"2026-09-15";"";"";""',
 ].join('\n')
 
 export const GENERIC_CSV = [

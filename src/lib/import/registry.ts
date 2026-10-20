@@ -2,6 +2,7 @@ import { parseBitpanda } from './bitpanda'
 import { parseCsv } from './csv'
 import { parseFlatex } from './flatex'
 import { parseTradeRepublic } from './traderepublic'
+import { parseTradeRepublicCsv } from './traderepublic-csv'
 import type { CsvParser, ParseResult, PdfParser } from './types'
 
 /**
@@ -9,7 +10,7 @@ import type { CsvParser, ParseResult, PdfParser } from './types'
  * erkennt sein Dokument selbst (Rückgabe `null`, wenn es nicht seines ist).
  */
 export const PDF_PARSERS: readonly PdfParser[] = [parseTradeRepublic, parseFlatex]
-export const CSV_PARSERS: readonly CsvParser[] = [parseBitpanda]
+export const CSV_PARSERS: readonly CsvParser[] = [parseBitpanda, parseTradeRepublicCsv]
 
 export function parsePdfLines(lines: readonly string[]): ParseResult | null {
   for (const parse of PDF_PARSERS) {
