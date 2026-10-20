@@ -3,8 +3,8 @@ import { createUser, vwce } from '@/test/fixtures'
 import type { Actor } from './actor'
 import { booking } from '../db/schema'
 import { withUser } from '../db/client'
-import { createBooking, deleteBooking, listBookings, MAX_BOOKINGS_PER_USER } from './bookings'
-import { ValidationError } from './errors'
+import { createBooking, deleteBooking, getBooking, listBookings, MAX_BOOKINGS_PER_USER, updateBooking } from './bookings'
+import { NotFoundError, ValidationError } from './errors'
 import { createPortfolio, MAX_PORTFOLIOS_PER_USER } from './portfolios'
 
 let user: Actor
@@ -106,4 +106,55 @@ describe('Buchungen', () => {
     for (let i = 1; i < MAX_PORTFOLIOS_PER_USER; i++) await createPortfolio(egon, { name: `Depot ${i}`, kind: 'depot' })
     await expect(createPortfolio(egon, { name: 'Eins zu viel', kind: 'depot' })).rejects.toThrow('Höchstens 200')
   }, 60_000)
+})
+
+describe('Buchung bearbeiten', () => {
+  it('ändert Datum, Stück und Betrag – Depot und Quelle bleiben', async () => {
+    const owner = await createUser('Edith')
+    const d = (await createPortfolio(owner, { name: 'TR', kind: 'depot' })).id
+    const b = await createBooking(owner, { portfolioId: d, type: 'buy', occurredOn: '2026-03-02', instrumentId: etf, quantity: '5', amount: '500,00' })
+    const updated = await updateBooking(owner, b.id, { type: 'buy', occurredOn: '2026-03-03', instrumentId: etf, quantity: '6,5', amount: '650,00', fee: '1,00', note: 'korrigiert' })
+    expect(updated).toMatchObject({ id: b.id, portfolioId: d, occurredOn: '2026-03-03', quantity: '6.500000000000', amountCents: 65_000, feeCents: 100, note: 'korrigiert', source: 'manual' })
+    expect(await getBooking(owner, b.id)).toMatchObject({ amountCents: 65_000, instrumentName: expect.stringContaining('Vanguard') })
+  })
+
+  it('lehnt Änderungen ab, nach denen der Bestand negativ wäre – nichts wird geändert', async () => {
+    const owner = await createUser('Fritz')
+    const d = (await createPortfolio(owner, { name: 'TR', kind: 'depot' })).id
+    const buy = await createBooking(owner, { portfolioId: d, type: 'buy', occurredOn: '2026-03-02', instrumentId: etf, quantity: '5', amount: '500,00' })
+    await createBooking(owner, { portfolioId: d, type: 'sell', occurredOn: '2026-04-02', instrumentId: etf, quantity: '4', amount: '420,00' })
+    await expect(updateBooking(owner, buy.id, { type: 'buy', occurredOn: '2026-03-02', instrumentId: etf, quantity: '3', amount: '300,00' })).rejects.toThrow(/negativ/)
+    // Kauf nach dem Verkauf verschoben → ebenfalls negativ
+    await expect(updateBooking(owner, buy.id, { type: 'buy', occurredOn: '2026-05-01', instrumentId: etf, quantity: '5', amount: '500,00' })).rejects.toBeInstanceOf(ValidationError)
+    expect(await getBooking(owner, buy.id)).toMatchObject({ quantity: '5.000000000000', occurredOn: '2026-03-02' })
+  })
+
+  it('prüft die Eingaben wie beim Anlegen', async () => {
+    const owner = await createUser('Gina')
+    const d = (await createPortfolio(owner, { name: 'TR', kind: 'depot' })).id
+    const b = await createBooking(owner, { portfolioId: d, type: 'buy', occurredOn: '2026-03-02', instrumentId: etf, quantity: '5', amount: '500,00' })
+    await expect(updateBooking(owner, b.id, { type: 'buy', occurredOn: '2999-01-01', instrumentId: etf, quantity: '5', amount: '500,00' })).rejects.toThrow(/Zukunft/)
+    await expect(updateBooking(owner, b.id, { type: 'buy', occurredOn: '2026-03-02', instrumentId: etf, quantity: '', amount: '500,00' })).rejects.toThrow(/Stückzahl/)
+  })
+
+  it('fremde oder ungültige Buchung → nicht gefunden, nichts geändert', async () => {
+    const owner = await createUser('Hanna')
+    const other = await createUser('Ingo')
+    const d = (await createPortfolio(owner, { name: 'TR', kind: 'depot' })).id
+    const b = await createBooking(owner, { portfolioId: d, type: 'buy', occurredOn: '2026-03-02', instrumentId: etf, quantity: '5', amount: '500,00' })
+    await expect(getBooking(other, b.id)).rejects.toBeInstanceOf(NotFoundError)
+    await expect(getBooking(other, 'kein-id')).rejects.toBeInstanceOf(NotFoundError)
+    await expect(updateBooking(other, b.id, { type: 'buy', occurredOn: '2026-03-02', instrumentId: etf, quantity: '1', amount: '1,00' })).rejects.toBeInstanceOf(NotFoundError)
+    expect(await getBooking(owner, b.id)).toMatchObject({ quantity: '5.000000000000', amountCents: 50_000 })
+  })
+
+  it('mit einem privaten Instrument eines anderen Nutzers → nicht gefunden', async () => {
+    const owner = await createUser('Jana')
+    const other = await createUser('Kurt')
+    const d = (await createPortfolio(owner, { name: 'TR', kind: 'depot' })).id
+    const b = await createBooking(owner, { portfolioId: d, type: 'buy', occurredOn: '2026-03-02', instrumentId: etf, quantity: '5', amount: '500,00' })
+    const { instrument } = await import('../db/schema')
+    const [foreign] = await withUser(other.id, (tx) => tx.insert(instrument).values({ ownerId: other.id, kind: 'other', name: 'Fremdes Bild', currency: 'EUR' }).returning({ id: instrument.id }))
+    await expect(updateBooking(owner, b.id, { type: 'buy', occurredOn: '2026-03-02', instrumentId: foreign!.id, quantity: '5', amount: '500,00' })).rejects.toBeInstanceOf(NotFoundError)
+  })
 })

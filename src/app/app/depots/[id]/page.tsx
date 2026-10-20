@@ -1,12 +1,12 @@
 import { notFound } from 'next/navigation'
+import { BookingList } from '@/components/bookings/BookingList'
 import { Amount } from '@/components/privacy/privacy'
 import { WeightBar } from '@/components/ui/AllocationBars'
 import { DataTable, NameCell, Td, Th } from '@/components/ui/DataTable'
+import { Message } from '@/components/ui/forms'
 import { BackLink, Grid, Muted, Note, Section } from '@/components/ui/layout'
-import { Row, Rows } from '@/components/ui/Rows'
 import { HeroSummary } from '@/components/ui/Summary'
 import { Trend } from '@/components/ui/Trend'
-import { dayLabel } from '@/lib/display'
 import { formatDate, formatTime, viennaDay } from '@/lib/format'
 import { formatQuantity, quantityFromDb } from '@/lib/quantity'
 import { requireUser } from '@/server/auth/session'
@@ -16,10 +16,9 @@ import { getPortfolio } from '@/server/dal/portfolios'
 import { listShares } from '@/server/dal/shares'
 import { valuePortfolios } from '@/server/overview'
 import { quoteInEur } from '@/server/quotes/service'
-import { updatePortfolioAction } from '../actions'
+import { deleteBookingAction, updatePortfolioAction } from '../actions'
 import { PortfolioForm } from '../PortfolioForm'
 import { BookingForm } from './BookingForm'
-import { DeleteBookingButton } from './DeleteBookingButton'
 import { DeleteImportsForm } from './DeleteImportsForm'
 import { DeletePortfolioForm } from './DeletePortfolioForm'
 import { ShareSettings } from './ShareSettings'
@@ -53,9 +52,10 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   }
 }
 
-export default async function PortfolioPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function PortfolioPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const user = await requireUser()
   const { id } = await params
+  const geaendert = (await searchParams).geaendert === '1'
   let portfolio
   try {
     portfolio = await getPortfolio(user, id)
@@ -120,7 +120,7 @@ export default async function PortfolioPage({ params }: { params: Promise<{ id: 
                   const max = Math.max(...value.positions.map((x) => x.weight))
                   return (
                     <tr key={p.instrumentId}>
-                      <NameCell name={p.name} sub={`${formatQuantity(p.quantity)} ${p.kind === 'metal' ? 'g' : 'Stück'}`} />
+                      <NameCell name={p.name} sub={`${formatQuantity(p.quantity)} ${p.kind === 'metal' ? 'g' : 'Stück'}`} href={`/app/wertpapier/${p.instrumentId}`} />
                       <Td hideSm>
                         {p.priced && q ? (
                           <>
@@ -159,31 +159,28 @@ export default async function PortfolioPage({ params }: { params: Promise<{ id: 
         </Section>
 
         <Section id="buchungen" title="Buchungen" meta={`${bookings.length} insgesamt`} span="half">
-          {bookings.length === 0 ? (
-            <Note>Noch keine Buchungen.</Note>
-          ) : (
-            <Rows>
-              {bookings.slice(0, 100).map((b) => {
-                const qty = b.quantity ? `${formatQuantity(quantityFromDb(b.quantity))} Stk. · ` : ''
-                const sign = SIGN[b.type] ?? 0
-                return (
-                  <Row
-                    key={b.id}
-                    date={dayLabel(b.occurredOn, false)}
-                    label={b.instrumentName ?? TYPE_LABEL[b.type] ?? b.type}
-                    sub={
-                      <>
-                        {qty}
-                        {TYPE_LABEL[b.type]}
-                        {b.occurredOn.slice(0, 4) !== viennaDay().slice(0, 4) ? ` · ${b.occurredOn.slice(0, 4)}` : ''} · <DeleteBookingButton id={b.id} label={`${TYPE_LABEL[b.type]} vom ${dayLabel(b.occurredOn)}`} />
-                      </>
-                    }
-                    value={b.amountCents ? <Amount value={(sign === 0 ? b.amountCents : sign * b.amountCents) / 100} signed={sign !== 0} /> : '–'}
-                  />
-                )
-              })}
-            </Rows>
-          )}
+          {geaendert ? <Message tone="success">Änderung gespeichert.</Message> : null}
+          <BookingList
+            remove={deleteBookingAction}
+            items={bookings.map((b) => {
+              const sign = SIGN[b.type] ?? 0
+              const metal = b.instrumentId ? valuation.instruments.get(b.instrumentId)?.kind === 'metal' : false
+              return {
+                id: b.id,
+                occurredOn: b.occurredOn,
+                type: b.type,
+                typeLabel: TYPE_LABEL[b.type] ?? b.type,
+                instrumentId: b.instrumentId,
+                instrumentName: b.instrumentName,
+                quantityText: b.quantity ? `${formatQuantity(quantityFromDb(b.quantity))} ${metal ? 'g' : 'Stk.'}` : '',
+                amount: b.amountCents ? (sign === 0 ? b.amountCents : sign * b.amountCents) / 100 : null,
+                signed: sign !== 0,
+                note: b.note,
+                imported: b.source === 'import',
+                editHref: `/app/depots/${portfolio.id}/buchung/${b.id}`,
+              }
+            })}
+          />
         </Section>
 
         <Section id="freigaben" title="Freigaben" meta="nur lesen" span="half">
