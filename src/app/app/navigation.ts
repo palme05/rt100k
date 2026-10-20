@@ -8,6 +8,7 @@ export function appNav(isAdmin: boolean): NavItem[] {
     { href: APP_BASE, label: 'Übersicht' },
     { href: `${APP_BASE}/depots`, label: 'Depots', activePrefix: `${APP_BASE}/depots` },
     { href: `${APP_BASE}/analyse`, label: 'Analyse' },
+    { href: `${APP_BASE}/steuer`, label: 'Steuer' },
     { href: `${APP_BASE}/road`, label: 'Road to 100k' },
     ...(isAdmin ? [{ href: `${APP_BASE}/admin`, label: 'Admin' }] : []),
   ]
@@ -20,6 +21,7 @@ export const APP_HOTKEYS: Readonly<Record<string, string>> = {
   s: `${APP_BASE}/sicherheit`,
   i: `${APP_BASE}/import`,
   a: `${APP_BASE}/analyse`,
+  t: `${APP_BASE}/steuer`,
 }
 
 export function appCommands(portfolios: readonly { id: string; name: string }[], isAdmin: boolean): Command[] {
@@ -27,6 +29,7 @@ export function appCommands(portfolios: readonly { id: string; name: string }[],
     { id: 'dash', group: 'Ansicht', label: 'Übersicht', href: APP_BASE, hint: 'G D' },
     { id: 'depots', group: 'Ansicht', label: 'Depots und Konten', href: `${APP_BASE}/depots`, hint: 'G K' },
     { id: 'analyse', group: 'Ansicht', label: 'Analyse: Rendite, Risiko, Dividenden', href: `${APP_BASE}/analyse`, hint: 'G A' },
+    { id: 'steuer', group: 'Ansicht', label: 'Steuer: KESt-Schätzung, Verlustausgleich, E 1kv', href: `${APP_BASE}/steuer`, hint: 'G T' },
     { id: 'road', group: 'Ansicht', label: 'Road to 100k', href: `${APP_BASE}/road`, hint: 'G R' },
     { id: 'new-depot', group: 'Aktion', label: 'Neues Depot anlegen', href: `${APP_BASE}/depots/neu` },
     { id: 'import', group: 'Aktion', label: 'Abrechnungen importieren (PDF/CSV)', href: `${APP_BASE}/import`, hint: 'G I' },

@@ -51,6 +51,7 @@
 .navLink {
   display: inline-flex;
   align-items: center;
+  white-space: nowrap;
   font-size: var(--text-md);
   color: var(--ink-3);
   border-bottom: 2px solid transparent;
@@ -88,10 +89,14 @@
     padding-block: 0.6rem 0;
   }
 
+  /* Fünf Punkte und mehr: enger, notfalls innerhalb der Leiste wischen (nie die Seite) */
   .nav {
     order: 3;
     width: 100%;
     min-height: 2.5rem;
+    gap: var(--space-4);
+    overflow-x: auto;
+    scrollbar-width: none;
   }
 
   /* Suche ist am Handy über die Navigation erreichbar, Kürzel gibt es dort nicht */
