@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { isActive, quickAddTarget, type NavItem } from './AppHeader'
 import { Icon } from './icons'
 import styles from './shell.module.css'
@@ -15,6 +15,27 @@ import styles from './shell.module.css'
 export function TabBar({ nav, quickAdd }: { nav: readonly NavItem[]; quickAdd?: string | undefined }) {
   const pathname = usePathname()
   const add = quickAddTarget(pathname, quickAdd)
+  const [fabHidden, setFabHidden] = useState(false)
+
+  // „+“ beim Runterscrollen ausblenden (verdeckt sonst Werte), beim Hochscrollen wieder zeigen
+  useEffect(() => {
+    let last = window.scrollY
+    let frame = 0
+    const onScroll = () => {
+      cancelAnimationFrame(frame)
+      frame = requestAnimationFrame(() => {
+        const y = window.scrollY
+        if (Math.abs(y - last) < 8) return
+        setFabHidden(y > last && y > 80)
+        last = y
+      })
+    }
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => {
+      window.removeEventListener('scroll', onScroll)
+      cancelAnimationFrame(frame)
+    }
+  }, [])
   const dialog = useRef<HTMLDialogElement>(null)
   const [open, setOpen] = useState(false)
   const dragFrom = useRef<number | null>(null)
@@ -30,7 +51,7 @@ export function TabBar({ nav, quickAdd }: { nav: readonly NavItem[]; quickAdd?: 
   return (
     <>
       {add ? (
-        <Link href={add} className={styles.fab} aria-label="Neue Buchung">
+        <Link href={add} className={fabHidden ? `${styles.fab} ${styles.fabHidden}` : styles.fab} aria-label="Neue Buchung" tabIndex={fabHidden ? -1 : undefined} aria-hidden={fabHidden || undefined}>
           <Icon name="plus" size={26} />
         </Link>
       ) : null}
