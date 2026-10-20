@@ -1,7 +1,7 @@
 import { addDays, minusYears } from './days'
 import { computeLedger, LedgerError, sortBookings, type LedgerBooking } from './holdings'
 import { applyBasisPoints, type Cents } from './money'
-import { mulDiv, QTY_ONE, quantityFromDb, valueCents } from './quantity'
+import { mulDiv, QTY_ONE, quantityFromDb, RATE_DECIMALS, valueCents } from './quantity'
 
 /**
  * Steuer-Schätzung Österreich (Phase 5) als reine Funktionen. Regeln und
@@ -220,6 +220,25 @@ export function taxYears(portfolios: readonly TaxPortfolio[], today: string): nu
   const years = new Set<number>([Number(today.slice(0, 4))])
   for (const p of portfolios) for (const b of p.bookings) years.add(Number(b.occurredOn.slice(0, 4)))
   return [...years].sort((a, b) => b - a)
+}
+
+/** Nachkommastellen für „AGE je Anteil“ laut OeKB-Meldung */
+export const AGE_PER_UNIT_DECIMALS = 8
+
+/** Bestand eines Wertpapiers am Ende eines Tages (Buchungen bis einschließlich `day`). */
+export function quantityOn(bookings: readonly LedgerBooking[], instrumentId: string, day: string): bigint {
+  return computeLedger(bookings.filter((b) => b.occurredOn <= day)).positions.get(instrumentId)?.quantity ?? 0n
+}
+
+/**
+ * AGE in Euro-Cent aus einer OeKB-Meldung: Betrag je Anteil × Anteile am
+ * Meldedatum, bei Fremdwährung geteilt durch den Kurs (Einheiten je 1 €).
+ */
+export function ageFromReport(quantity: bigint, perUnitScaled: bigint, rateScaled: bigint | null): number {
+  const unit = 10n ** BigInt(AGE_PER_UNIT_DECIMALS)
+  if (rateScaled === null) return Number(mulDiv(quantity, perUnitScaled * 100n, QTY_ONE * unit))
+  if (rateScaled <= 0n) throw new RangeError('Devisenkurs muss positiv sein.')
+  return Number(mulDiv(quantity * perUnitScaled, 100n * 10n ** BigInt(RATE_DECIMALS), QTY_ONE * unit * rateScaled))
 }
 
 interface AverageState {

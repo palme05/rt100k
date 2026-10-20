@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { LedgerBooking } from './holdings'
-import { PRICE_ONE } from './quantity'
-import { e1kvLines, estimateTaxYear, taxFreeFrom, taxYears, type TaxHint, type TaxInstrument, type TaxPortfolio } from './tax'
+import { parseScaled, PRICE_ONE, RATE_DECIMALS } from './quantity'
+import { ageFromReport, e1kvLines, estimateTaxYear, quantityOn, taxFreeFrom, taxYears, type TaxHint, type TaxInstrument, type TaxPortfolio } from './tax'
 
 let n = 0
 function b(type: LedgerBooking['type'], occurredOn: string, fields: Partial<LedgerBooking> = {}): LedgerBooking {
@@ -234,6 +234,20 @@ describe('Hinweise', () => {
 
   it('Wertpapier-Altbestand vor 2011', () => {
     expect(hint(run([portfolio('d', [buy('2010-06-01', 'us', '1', 1_000), sell('2026-02-01', 'us', '1', 9_000)])]).hints, 'securities-legacy')).toEqual({ kind: 'securities-legacy', instrumentIds: ['us'] })
+  })
+})
+
+describe('AGE aus OeKB-Meldung', () => {
+  it('Anteile am Meldedatum × Betrag je Anteil, Fremdwährung über den Kurs je Euro', () => {
+    const bookings = [buy('2025-02-01', 'etf', '75', 750_000), sell('2025-08-01', 'etf', '25', 260_000), buy('2025-09-15', 'etf', '10', 100_000)]
+    expect(quantityOn(bookings, 'etf', '2025-09-14')).toBe(50n * 10n ** 12n)
+    expect(quantityOn(bookings, 'etf', '2025-09-15')).toBe(60n * 10n ** 12n)
+    expect(quantityOn(bookings, 'etf', '2025-01-31')).toBe(0n)
+    const perUnit = parseScaled('1,6943', 8)!
+    expect(ageFromReport(60n * 10n ** 12n, perUnit, null)).toBe(10_166)
+    // 60 × 1,6943 USD ÷ 1,0850 USD/EUR = 93,694… €
+    expect(ageFromReport(60n * 10n ** 12n, perUnit, parseScaled('1,0850', RATE_DECIMALS))).toBe(9_369)
+    expect(() => ageFromReport(1n, perUnit, 0n)).toThrow(RangeError)
   })
 })
 
