@@ -4,9 +4,14 @@ import { Row, Rows } from '@/components/ui/Rows'
 import { auditLabel } from '@/lib/audit-labels'
 import { formatDate, formatTime } from '@/lib/format'
 import { requireUser } from '@/server/auth/session'
+import { isLastAdmin } from '@/server/dal/account'
 import { listAuditEvents, recentNewDeviceLogin } from '@/server/dal/audit'
 import { listPasskeys } from '@/server/dal/credentials'
+import { listPortfolios } from '@/server/dal/portfolios'
 import { listSessions } from '@/server/dal/sessions'
+import { SignOutButton } from '../SignOutButton'
+import { DataSettings } from './DataSettings'
+import { DeleteAccount } from './DeleteAccount'
 import { PasskeySettings } from './PasskeySettings'
 import { PasswordSettings } from './PasswordSettings'
 import { SessionList } from './SessionList'
@@ -17,11 +22,13 @@ export const metadata = { title: 'Konto und Sicherheit' }
 export default async function SecurityPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const user = await requireUser({ allowMissingAdmin2fa: true })
   const params = await searchParams
-  const [passkeys, sessions, events, recentNewDevice] = await Promise.all([
+  const [passkeys, sessions, events, recentNewDevice, portfolios, lastAdmin] = await Promise.all([
     listPasskeys(user),
     listSessions(user),
     listAuditEvents(user, 30),
     recentNewDeviceLogin(user),
+    listPortfolios(user),
+    isLastAdmin(user),
   ])
   const when = (iso: string) => `${formatDate(new Date(iso))}, ${formatTime(new Date(iso))}`
   const mustSetup2fa = user.role === 'admin' && !user.twoFactorEnabled
@@ -49,7 +56,7 @@ export default async function SecurityPage({ searchParams }: { searchParams: Pro
         <Section id="zwei-faktor" title="Zwei-Faktor-Anmeldung" meta={user.role === 'admin' ? 'Pflicht für Admins' : 'empfohlen'} span="half">
           <TwoFactorSettings enabled={user.twoFactorEnabled} isAdmin={user.role === 'admin'} />
         </Section>
-        <Section id="sitzungen" title="Angemeldete Geräte" meta="Sitzungen laufen nach 7 Tagen ohne Nutzung ab" span="half">
+        <Section id="sitzungen" title="Angemeldete Geräte" meta="Sitzungen laufen nach 7 Tagen ohne Nutzung ab" span="half" actions={<SignOutButton />}>
           <SessionList sessions={sessions} />
         </Section>
         <Section id="passwort" title="Passwort" span="half">
@@ -67,6 +74,12 @@ export default async function SecurityPage({ searchParams }: { searchParams: Pro
               />
             ))}
           </Rows>
+        </Section>
+        <Section id="daten" title="Daten und Backup" span="half">
+          <DataSettings canRestore={portfolios.length === 0} />
+        </Section>
+        <Section id="konto-loeschen" title="Konto löschen" span="half">
+          <DeleteAccount lastAdmin={lastAdmin} />
         </Section>
       </Grid>
     </>

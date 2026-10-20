@@ -60,7 +60,8 @@ Meldeweg für Sicherheitslücken: siehe [`/SECURITY.md`](../SECURITY.md).
 ### Daten (Phase 2–6)
 - [x] TLS erzwungen (`sslmode=require&channel_binding=require`, node-postgres prüft das Zertifikat)
 - [x] IBAN/Depot-/Kundennummern/Adressen beim Import verwerfen: Parser lesen nur Buchungsfelder, an den Server gehen nur Buchungen, Instrument-Kennungen und SHA-256-Hashes (Test „kein Ergebnis enthält Namen, Adressen, IBAN oder Depotnummern“)
-- [ ] Konto löschen entfernt alle Daten (Phase 6; Fremdschlüssel kaskadieren bereits)
+- [x] Konto löschen entfernt alle Daten (Phase 6b: Passwort + Wort LÖSCHEN, Fehlversuche zählen zur Login-Sperre, letzter Admin geschützt; DB- und E2E-Test)
+- [x] Vollständiger Export (JSON/CSV) und Wiederherstellen eines Backups nur in ein leeres Konto (Phase 6b)
 - [x] Keine Beträge, Tokens, Session-IDs in Logs (nur Fehlerklassen)
 - [x] Audit-Log (Logins, Fehlversuche, neue Geräte, Sitzungen, 2FA, Passkeys, Passwort, Einladungen, Depot-Löschung), für den Nutzer einsehbar, nur anhängbar, 2 Jahre
 
@@ -213,6 +214,19 @@ Meldeweg für Sicherheitslücken: siehe [`/SECURITY.md`](../SECURITY.md).
 | CSP der App unverändert (`worker-src 'self'`, `manifest-src 'self'` waren schon gesetzt) | ✅ |
 
 **Restrisiko:** Wer das entsperrte Handy hat, sieht offline den letzten Stand – dieselbe Gefährdung wie die ohnehin angemeldete App. Nach dem Abmelden ist er weg.
+
+## Security-Check Phase 6b – Export, Backup, Konto löschen (20.10.2026)
+
+| Prüfung | Ergebnis |
+|---|---|
+| Export `GET /app/konto/export` (JSON/CSV): `requireUser()`, nur eigene Zeilen (`withUser` + `owner_id`), `private, no-store`, Audit-Eintrag „Daten exportiert“; nie enthalten: Passwort-Hash, TOTP-Geheimnis, Backup-Codes, Passkeys, Sitzungen | ✅ (DB-Test „keine Geheimnisse“, Negativ-Test Bobs Export) |
+| CSV der Buchungen mit Formel-Schutz (Depotname `=HYPERLINK(…)`) | ✅ (DB- und E2E-Test) |
+| Wiederherstellen `POST /app/konto/wiederherstellen`: `requireUser()`, Origin muss die eigene Seite sein, nur `application/json` (CSRF), höchstens 10 MB (Body wird begrenzt gelesen), nur in ein Konto **ohne** Depots, eine Transaktion (alles oder nichts) | ✅ (E2E: fremde Origin 403, Formular 415, ungültig 400, anonym → Anmeldung) |
+| Backup gilt als nicht vertrauenswürdig: zod mit Obergrenzen (200 Depots, 5 000 Instrumente, 50 000 Buchungen), jede Buchung durch `normalizeBooking` (wie das Formular), Bestände je Depot müssen aufgehen, keine Steuerzeichen in Namen | ✅ (DB-Tests) |
+| Allgemeine Stammdaten werden beim Wiederherstellen nur **gefunden**, nie angelegt (sonst könnte ein Backup Namen/Symbole für alle verfälschen); Unbekanntes wird privates Instrument ohne Kursanbieter-Kennung | ✅ (DB-Test: Anzahl allgemeiner Instrumente unverändert) |
+| Fremde IDs im Backup (z. B. Bobs privater Fonds) werden nie übernommen – IDs werden neu vergeben | ✅ (DB-Test) |
+| Konto löschen (Server Action): `requireUser()`, Passwort über Better Auth `verifyPassword`, Fehlversuche → Login-Sperre, Wort „LÖSCHEN“; Buchungen zuerst, dann der Nutzer (Kaskade über alle Tabellen); letzter Admin geschützt; danach Anmeldeseite (löscht auch den Offline-Stand) | ✅ (DB- und E2E-Test) |
+| Abmelden jetzt auch am Handy (Konto-Seite), löscht den Offline-Stand | ✅ |
 
 ## Notfallplan
 
