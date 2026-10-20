@@ -57,15 +57,15 @@ Im Cloud-Container richtet `.claude/hooks/session-start.sh` beim Start alles ein
 
 ## Struktur
 
-- `src/lib/` – reine Logik mit Tests (Geld, Stückzahlen, Bestände, Bewertung, Verlauf, Format, Monate, Tage, Prognose, Road, Kennzahlen, Performance, Rebalancing, ETF-Durchschau, Steuer AT `tax.ts`, CSV-Export mit Formel-Schutz, Börsenzeiten, CSP) und `import/` (Parser Trade Republic/flatex/Bitpanda/CSV, pdf.js-Textextraktion, synthetische Testdokumente in `fixtures.ts`)
-- `src/server/` – nur Server: `db` (Schema, Client, withUser), `dal` (Data-Access-Schicht), `auth` (Better Auth, Session, Einladungs-Registrierung, Sperre), `quotes` (Kursanbieter, Parser, Kurshistorie, Cache), `cron`, `imports.ts` (Import vorbereiten), `analysis.ts` (Analyse), `tax.ts` (Steuer-Cockpit, CSV), `overview.ts`, `road.ts`
-- `src/app/` – Seiten: `/anmelden`, `/einladung/[token]`, `/app` (Übersicht, `depots`, `import`, `analyse`, `steuer` inkl. `steuer/export`, `road`, `sicherheit` inkl. Daten/Backup/Konto löschen, `konto/export` und `konto/wiederherstellen`, `rueckblick`, `freigabe/[token]`, `geteilt/[id]`, `admin`), API: `/api/auth`, `/api/cron/daily`, `/api/status`
-- `src/components/` – Komponentenbibliothek „Strecke“ (`shell`, `ui`, `charts`, `road`, `privacy`, `command`, `markets`, `hooks`, `import`, `analysis`, `tax`, `review`, `share`); Regeln in [`docs/DESIGN.md`](docs/DESIGN.md)
+- `src/lib/` – reine Logik mit Tests (Geld, Stückzahlen, Bestände, Bewertung, Verlauf, Format, Monate, Tage, Prognose, Road, Kennzahlen, Performance, Rebalancing, ETF-Durchschau, Steuer AT `tax.ts`, CSV-Export mit Formel-Schutz, Börsenzeiten, CSP, Offline-Stand `offline.ts`, Monatsrückblick `review.ts`, Hinweis-Regeln `notify.ts`, Push-Ziele `push.ts`) und `import/` (Parser Trade Republic/flatex/Bitpanda/CSV, pdf.js-Textextraktion, synthetische Testdokumente in `fixtures.ts`)
+- `src/server/` – nur Server: `db` (Schema, Client, withUser), `dal` (Data-Access-Schicht), `auth` (Better Auth, Session, Einladungs-Registrierung, Sperre), `quotes` (Kursanbieter, Parser, Kurshistorie, Cache), `cron`, `imports.ts` (Import vorbereiten), `analysis.ts` (Analyse), `tax.ts` (Steuer-Cockpit, CSV), `overview.ts`, `road.ts`, `review.ts` (Monatsrückblick), `shared.ts` (geteilte Depots), `notifications.ts` (Hinweise im Tageslauf), `push.ts` (VAPID, Push-Ping)
+- `src/app/` – Seiten: `/anmelden`, `/einladung/[token]`, `/app` (Übersicht, `depots`, `import`, `analyse`, `steuer` inkl. `steuer/export`, `road`, `sicherheit` inkl. Daten/Backup/Konto löschen, `konto/export` und `konto/wiederherstellen`, `rueckblick`, `freigabe/[token]`, `geteilt/[id]`, `hinweise`, `admin`), API: `/api/auth`, `/api/cron/daily`, `/api/status`
+- `src/components/` – Komponentenbibliothek „Strecke“ (`shell`, `ui`, `charts`, `road`, `privacy`, `command`, `markets`, `hooks`, `import`, `analysis`, `tax`, `review`, `share`, `notify`); Regeln in [`docs/DESIGN.md`](docs/DESIGN.md)
 - `src/styles/tokens.css` – Design-Tokens
-- `drizzle/` – versionierte Migrationen (0000 Rollen/Funktion, 0001 Tabellen+RLS, 0002 Rechte, … 0006/0007 Zielaufteilung, 0008/0009 ETF-Durchschau, 0010 Buchungsarten AGE und Steuergutschrift, 0011/0012 Freigaben inkl. Funktionen zum Annehmen)
+- `drizzle/` – versionierte Migrationen (0000 Rollen/Funktion, 0001 Tabellen+RLS, 0002 Rechte, … 0006/0007 Zielaufteilung, 0008/0009 ETF-Durchschau, 0010 Buchungsarten AGE und Steuergutschrift, 0011/0012 Freigaben inkl. Funktionen zum Annehmen, 0013/0014 Hinweise, Kursalarme, Push-Abos)
 - `scripts/` – Migrationen, Einladung, E2E-DB, App-Icons (`icons.ts`)
-- `public/` – PWA: `sw.js` (Service Worker, nur Offline-Seite), `offline.js`/`offline.css`, `icons/`; Manifest in `src/app/manifest.ts`
-- `e2e/` – Playwright (Anmeldung, 2FA, Einladungen, Depots, Import, Analyse, Steuer, PWA, Konto, Rückblick, Freigaben, Zugriff, Security)
+- `public/` – PWA: `sw.js` (Service Worker, nur Offline-Seite und Push-Mitteilung), `offline.js`/`offline.css`, `icons/`; Manifest in `src/app/manifest.ts`
+- `e2e/` – Playwright (Anmeldung, 2FA, Einladungen, Depots, Import, Analyse, Steuer, PWA, Konto, Rückblick, Freigaben, Hinweise, Zugriff, Security)
 
 **UI-Regeln:** Seiten nur aus `src/components/` zusammensetzen. Keine Hex-Werte außerhalb von `tokens.css`. Beträge immer über `Amount`/`AmountSplit` (Privatsphäre-Modus).
 

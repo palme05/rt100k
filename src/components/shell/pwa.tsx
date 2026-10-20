@@ -31,6 +31,20 @@ export async function clearOfflineSnapshot(): Promise<void> {
   await caches.delete(SNAPSHOT_CACHE).catch(() => false)
 }
 
+/** Push-Abo dieses Geräts beenden (beim Abmelden – das Gerät soll nicht mehr für dieses Konto klingeln). */
+export async function unsubscribePush(remove: (endpoint: string) => Promise<unknown>): Promise<void> {
+  if (typeof window === 'undefined' || !('serviceWorker' in navigator)) return
+  try {
+    const reg = await navigator.serviceWorker.getRegistration()
+    const sub = await reg?.pushManager?.getSubscription()
+    if (!sub) return
+    await remove(sub.endpoint).catch(() => {})
+    await sub.unsubscribe()
+  } catch {
+    // nicht kritisch – das Abo läuft sonst beim nächsten Fehlschlag aus
+  }
+}
+
 export function ClearOfflineSnapshot() {
   useEffect(() => {
     void clearOfflineSnapshot()

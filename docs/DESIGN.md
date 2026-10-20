@@ -58,7 +58,7 @@ Alle unter `src/components/`. Seiten setzen sich nur daraus zusammen, eigene CSS
 
 | Komponente | Datei | Zweck |
 |---|---|---|
-| `AppShell`, `AppHeader` | `shell/` | Rahmen, Navigation, Tastenkürzel (`g d`, `g r`), Palette |
+| `AppShell`, `AppHeader` | `shell/` | Rahmen, Navigation, Tastenkürzel (`g d`, `g r`, `g h` …), Palette |
 | `CommandPalette`, `useGoHotkeys` | `command/` | Suche/Navigation per Tastatur (Pfeile, Enter, Esc) |
 | `PrivacyProvider`, `Amount`, `AmountSplit`, `PrivacyToggle` | `privacy/` | Beträge, die im Privatsphäre-Modus verschwinden |
 | `Grid`, `Section`, `SectionHead`, `PageHead`, `BackLink`, `TextLink`, `Note`, `Disclaimer`, `Muted` | `ui/layout.tsx` | Seitenaufbau und Text |
@@ -82,6 +82,11 @@ Alle unter `src/components/`. Seiten setzen sich nur daraus zusammen, eigene CSS
 | `FileDrop` | `ui/FileDrop.tsx` | Dateiauswahl per Ziehen oder Tippen (Mehrfachauswahl, Tastatur, Hinweistext); liest nichts selbst |
 | `QrCode` | `ui/QrCode.tsx` | QR-Code als SVG-Pfad (2FA-Einrichtung), CSP-konform |
 | `AuthFrame` | `shell/AuthFrame.tsx` | Schmale Spalte für Anmeldung, 2FA, Einladung |
+| `PwaRegister`, `SaveOfflineSnapshot`, `ClearOfflineSnapshot` | `shell/pwa.tsx` | Service Worker anmelden, letzten Stand fürs Offline-Lesen ablegen bzw. löschen (unsichtbar) |
+| `NotificationBell` | `shell/NotificationBell.tsx` | Glocke im Kopf mit Zahl der ungelesenen Hinweise (Zahl als Text, Name im `aria-label`) |
+| `Masthead`, `Highlights`, `IssueList` | `review/ReviewParts.tsx` | Monatsrückblick als Ausgabe: Kopf mit Schlagzeile, Highlights mit Zeichen, Archiv der Ausgaben |
+| `AcceptShare`, `LeaveShare` | `share/` | Freigabe annehmen bzw. verlassen (Bestätigung im Formular) |
+| `PriceAlerts`, `PushSettings`, `MarkRead` | `notify/` | Kursalarme anlegen/löschen, Mitteilungen auf diesem Gerät ein/aus (Zustand als Text), Hinweise beim Ansehen als gelesen markieren |
 
 Reine Logik liegt in `src/lib/` (Prognose, Kennzahlen, Monate, Road, Import-Parser) und ist unit-getestet.
 
