@@ -6,7 +6,7 @@ import { getDb } from '../db/client'
 import { fxDaily, priceDaily } from '../db/schema'
 import type { InstrumentDto } from '../dal/instruments'
 import { providerFetch } from './fetch'
-import { METAL_FUTURES, METALS, parseCoinGeckoPrices, parseCoinGeckoSearch, parseEcbXml, parseYahooChart, parseYahooSearch, perGram, type FxRates } from './parsers'
+import { METAL_FUTURES, METALS, parseCoinGeckoPrices, parseCoinGeckoSearch, parseEcbXml, parseYahooChart, parseYahooSearch, perGram, yahooSymbolsFromFigi, type FxRates } from './parsers'
 import type { InstrumentCandidate, Quote } from './types'
 
 /**
@@ -190,6 +190,47 @@ export function quoteInEur(quote: Quote, fx: FxRates | null): bigint | null {
   return rate ? toEurMicros(quote.priceMicros, rate) : null
 }
 
+const ISIN = /^[A-Z]{2}[A-Z0-9]{9}\d$/
+const FIGI_TTL_MS = 60 * 60 * 1000
+const figiMemo = new Map<string, { at: number; symbols: Promise<string[]> }>()
+
+/**
+ * OpenFIGI: ISIN → Ticker je Börse, wenn Yahoo die ISIN nicht kennt. Nur das
+ * Symbol wird übernommen – Name, Art und Währung bestätigt danach Yahoo.
+ * Sparsam: je ISIN höchstens ein Abruf pro Stunde und Instanz (Limits ohne
+ * Schlüssel sind niedrig); optional `OPENFIGI_API_KEY`.
+ */
+function figiSymbols(isin: string): Promise<string[]> {
+  const now = Date.now()
+  const cached = figiMemo.get(isin)
+  if (cached && now - cached.at < FIGI_TTL_MS) return cached.symbols
+  if (figiMemo.size > 500) figiMemo.clear()
+  const key = process.env.OPENFIGI_API_KEY
+  const symbols = providerFetch('OpenFIGI', 'https://api.openfigi.com/v3/mapping', {
+    revalidate: 30 * 86_400,
+    method: 'POST',
+    body: JSON.stringify([{ idType: 'ID_ISIN', idValue: isin }]),
+    headers: { 'content-type': 'application/json', ...(key ? { 'x-openfigi-apikey': key } : {}) },
+  })
+    .then((json) => yahooSymbolsFromFigi(json))
+    .catch(() => [] as string[])
+  figiMemo.set(isin, { at: now, symbols })
+  return symbols
+}
+
+async function yahooSearch(q: string): Promise<InstrumentCandidate[]> {
+  return providerFetch('Yahoo', `https://query1.finance.yahoo.com/v1/finance/search?q=${encodeURIComponent(q)}&quotesCount=8&newsCount=0&listsCount=0`, { revalidate: 3600 })
+    .then(parseYahooSearch)
+    .catch(() => [] as InstrumentCandidate[])
+}
+
+/** Yahoo-Treffer über die von OpenFIGI genannten Ticker (nur exakte Symbole). */
+async function figiFallback(isin: string): Promise<InstrumentCandidate[]> {
+  const symbols = await figiSymbols(isin)
+  const found = await Promise.all(symbols.map(async (s) => (await yahooSearch(s)).filter((c) => c.provider === 'yahoo' && c.key === s)))
+  return found.flat()
+}
+
 /** Instrumentsuche über alle Anbieter (ISIN, Name, Symbol). */
 export async function searchInstruments(query: string): Promise<InstrumentCandidate[]> {
   const q = query.trim().slice(0, 60)
@@ -204,16 +245,17 @@ export async function searchInstruments(query: string): Promise<InstrumentCandid
     ]
     return all.filter((c) => `${c.name} ${c.key} ${c.detail}`.toLowerCase().includes(q.toLowerCase()) || (q === 'IE00BK5BQT80' && c.key === 'VWCE.DE'))
   }
-  const [yahoo, coins] = await Promise.all([
-    providerFetch('Yahoo', `https://query1.finance.yahoo.com/v1/finance/search?q=${encodeURIComponent(q)}&quotesCount=8&newsCount=0&listsCount=0`, { revalidate: 3600 })
-      .then(parseYahooSearch)
-      .catch(() => [] as InstrumentCandidate[]),
-    /^[A-Z]{2}[A-Z0-9]{9}\d$/.test(q)
+  const isin = ISIN.test(q)
+  const [found, coins] = await Promise.all([
+    yahooSearch(q),
+    isin
       ? Promise.resolve([] as InstrumentCandidate[])
       : providerFetch('CoinGecko', `https://api.coingecko.com/api/v3/search?query=${encodeURIComponent(q)}`, { revalidate: 3600 })
           .then(parseCoinGeckoSearch)
           .catch(() => [] as InstrumentCandidate[]),
   ])
+  // Yahoo kennt manche ISINs nicht (v. a. europäische ETFs) – dann über OpenFIGI zum Ticker
+  const yahoo = isin && !found.some((c) => c.provider === 'yahoo') ? await figiFallback(q) : found
   return [...yahoo, ...coins.slice(0, 4), ...metals]
 }
 
