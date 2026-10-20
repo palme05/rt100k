@@ -321,6 +321,16 @@ Unabhängiges Review (eigener Prüfdurchlauf, nur lesend) aller Route-Handler, S
 | Gemerkte Datei-Prüfsummen werden nur gelöscht, wenn im ganzen Konto keine importierte Buchung mehr übrig ist | ✅ (DB-Test) |
 | Audit-Eintrag `imports_deleted` mit Depot-ID und Anzahl – keine Beträge | ✅ |
 
+## Nachtrag: Tortendiagramme und XLSX-Bestandslisten (20.10.2026)
+
+| Prüfung | Ergebnis |
+|---|---|
+| XLSX wird wie CSV nur im Browser gelesen, an den Server gehen weiter nur die zusammengefassten Gewichte (gleiche Server Action, gleiche zod-Prüfung) | ✅ |
+| Eigener XLSX-Leser ohne Bibliothek (`src/lib/xlsx.ts`): höchstens 5 MB Datei, 5.000 Archiv-Einträge, 40 MB je entpacktem Teil – gezählt beim Entpacken, nicht der Angabe im Archiv geglaubt (Zip-Bomben) | ✅ (Unit-Test mit präparierter Datei) |
+| XML ohne DTD/Entitäten-Auflösung (nur die fünf vordefinierten und Zeichenreferenzen) – kein XXE, keine „Billion Laughs“; Formeln werden nie ausgewertet, nur der gespeicherte Wert gelesen | ✅ |
+| Altes `.xls` (OLE2) wird abgewiesen statt geraten | ✅ |
+| Tortendiagramm ohne Inline-Styles (Farben über Klassen, CSP unverändert); Beträge in der Mitte und in der Legende folgen dem Privatsphäre-Modus | ✅ (E2E: Tastatur, Live-Region, kein seitliches Scrollen) |
+
 ## Notfallplan
 
 **Bei Verdacht auf Secret-Leak** (Commit, Log, Screenshot):

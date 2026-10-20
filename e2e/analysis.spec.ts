@@ -1,7 +1,8 @@
 import { expect, test } from '@playwright/test'
 import { TR_KAUF_AT } from '../src/lib/import/fixtures'
-import { HOLDINGS_DE } from '../src/lib/lookthrough-fixtures'
+import { HOLDINGS_DE, HOLDINGS_XLSX_EN } from '../src/lib/lookthrough-fixtures'
 import { makePdf } from '../src/test/pdf'
+import { makeXlsx } from '../src/test/xlsx'
 import { collectProblems, createPortfolio, expectNoOverflow, register } from './helpers/app'
 
 test('Analyse ohne Buchungen zeigt den Einstieg', async ({ page }) => {
@@ -29,6 +30,14 @@ test('Analyse: Rendite je Zeitraum, Vergleichswert, Erträge, Aufteilung', async
   await expect(page.getByRole('group', { name: /Kumulierte Rendite/ })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Nach Anlageklasse' })).toBeVisible()
   await expect(page.getByRole('region', { name: 'Nach Anlageklasse' }).getByText('ETFs')).toBeVisible()
+  // Tortendiagramm per Tastatur: Segment wählen → Name und Anteil in der Mitte und für Screenreader
+  const donut = page.getByRole('group', { name: /Zusammensetzung nach Anlageklasse/ })
+  await donut.focus()
+  await page.keyboard.press('ArrowRight')
+  await expect(donut).toContainText('100,0 %')
+  await expect(page.getByRole('region', { name: 'Nach Anlageklasse' }).locator('[aria-live]')).toContainText('ETFs: 100,0 %')
+  await page.keyboard.press('Escape')
+  await expect(donut).toContainText('Gesamt')
   await expectNoOverflow(page)
 
   // Vergleichswert wählen → Linie und Legende
@@ -128,4 +137,10 @@ test('ETF-Durchschau: Bestandsliste ablegen, Länder/Branchen/Titel sehen, entfe
   await section.getByRole('button', { name: /Bestandsliste für .* entfernen/ }).click()
   await expect(section.getByText('Bestandsliste entfernt.')).toBeVisible()
   await expect(section.getByText(/Noch keine Bestandsliste hinterlegt/)).toBeVisible()
+
+  // Excel-Download (XLSX, synthetisch) wird direkt gelesen – Land aus „Region“
+  await section.locator('input[type=file]').setInputFiles({ name: 'holdings.xlsx', mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', buffer: Buffer.from(makeXlsx(HOLDINGS_XLSX_EN)) })
+  await expect(section.getByText(/übernommen: 7 Positionen, Stand 30\.09\.2026/)).toBeVisible()
+  await expect(section.getByText('Further holdings')).toBeVisible()
+  await expect(section.getByText('Japan', { exact: true })).toBeVisible()
 })

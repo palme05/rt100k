@@ -3,9 +3,9 @@ import { z } from 'zod'
 import { LookthroughPanel } from '@/components/analysis/LookthroughPanel'
 import { PerformancePanel } from '@/components/analysis/PerformancePanel'
 import { RebalancePanel } from '@/components/analysis/RebalancePanel'
+import { ASSET_KIND_SLOT, DonutChart } from '@/components/charts/DonutChart'
 import { IncomeChart } from '@/components/charts/IncomeChart'
 import { Amount } from '@/components/privacy/privacy'
-import { AllocationBars } from '@/components/ui/AllocationBars'
 import button from '@/components/ui/button.module.css'
 import { DataTable, NameCell, Td, Th } from '@/components/ui/DataTable'
 import { Grid, Note, PageHead, Section } from '@/components/ui/layout'
@@ -146,15 +146,15 @@ export default async function AnalysisPage({ searchParams }: { searchParams: Pro
         </Section>
 
         <Section id="klasse" title="Nach Anlageklasse" span="third">
-          {analysis.allocation.kind.length > 0 ? <AllocationBars items={analysis.allocation.kind} /> : <Note>Noch keine Werte.</Note>}
+          {analysis.allocation.kind.length > 0 ? <DonutChart title="Zusammensetzung nach Anlageklasse" items={analysis.allocation.kind} slots={ASSET_KIND_SLOT} /> : <Note>Noch keine Werte.</Note>}
         </Section>
 
         <Section id="waehrung" title="Nach Handelswährung" span="third">
-          {analysis.allocation.currency.length > 0 ? <AllocationBars items={analysis.allocation.currency} /> : <Note>Noch keine Werte.</Note>}
+          {analysis.allocation.currency.length > 0 ? <DonutChart title="Zusammensetzung nach Handelswährung" items={analysis.allocation.currency} /> : <Note>Noch keine Werte.</Note>}
         </Section>
 
         <Section id="depot" title="Nach Depot" span="third">
-          {analysis.allocation.portfolio.length > 0 ? <AllocationBars items={analysis.allocation.portfolio} /> : <Note>Noch keine Werte.</Note>}
+          {analysis.allocation.portfolio.length > 0 ? <DonutChart title="Zusammensetzung nach Depot" items={analysis.allocation.portfolio} /> : <Note>Noch keine Werte.</Note>}
         </Section>
 
         <Section id="durchschau" title="ETF-Durchschau" meta="Länder, Branchen und Einzeltitel hinter deinen ETFs">
