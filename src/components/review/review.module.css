@@ -1,0 +1,58 @@
+/* Monatsrückblick als „Ausgabe“: große Schlagzeile, nummerierte Highlights. Nur Tokens. */
+
+.masthead {
+  display: grid;
+  gap: var(--space-2);
+  padding-block: var(--space-6) var(--space-4);
+  border-bottom: 1px solid var(--rule-strong);
+}
+
+.issue {
+  font-size: var(--text-sm);
+  color: var(--ink-3);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  margin: 0;
+}
+
+.headline {
+  font-size: var(--text-2xl);
+  font-weight: var(--weight-medium);
+  line-height: 1.1;
+  margin: 0;
+  text-wrap: balance;
+}
+
+.dek {
+  margin: 0;
+  color: var(--ink-2);
+}
+
+.highlights {
+  margin: 0;
+  padding-left: 1.4rem;
+  display: grid;
+  gap: var(--space-3);
+  max-width: 46rem;
+}
+
+.highlights li::marker {
+  color: var(--accent);
+  font-weight: var(--weight-semibold);
+}
+
+.months {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-4);
+  font-size: var(--text-sm);
+}
+
+.months a {
+  color: var(--ink-3);
+}
+
+.months a[aria-current='page'] {
+  color: var(--ink);
+  font-weight: var(--weight-semibold);
+}

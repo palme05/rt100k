@@ -22,6 +22,7 @@ export const APP_HOTKEYS: Readonly<Record<string, string>> = {
   i: `${APP_BASE}/import`,
   a: `${APP_BASE}/analyse`,
   t: `${APP_BASE}/steuer`,
+  m: `${APP_BASE}/rueckblick`,
 }
 
 export function appCommands(portfolios: readonly { id: string; name: string }[], isAdmin: boolean): Command[] {
@@ -30,6 +31,7 @@ export function appCommands(portfolios: readonly { id: string; name: string }[],
     { id: 'depots', group: 'Ansicht', label: 'Depots und Konten', href: `${APP_BASE}/depots`, hint: 'G K' },
     { id: 'analyse', group: 'Ansicht', label: 'Analyse: Rendite, Risiko, Dividenden', href: `${APP_BASE}/analyse`, hint: 'G A' },
     { id: 'steuer', group: 'Ansicht', label: 'Steuer: KESt-Schätzung, Verlustausgleich, E 1kv', href: `${APP_BASE}/steuer`, hint: 'G T' },
+    { id: 'rueckblick', group: 'Ansicht', label: 'Monatsrückblick', href: `${APP_BASE}/rueckblick`, hint: 'G M' },
     { id: 'road', group: 'Ansicht', label: 'Road to 100k', href: `${APP_BASE}/road`, hint: 'G R' },
     { id: 'new-depot', group: 'Aktion', label: 'Neues Depot anlegen', href: `${APP_BASE}/depots/neu` },
     { id: 'import', group: 'Aktion', label: 'Abrechnungen importieren (PDF/CSV)', href: `${APP_BASE}/import`, hint: 'G I' },
