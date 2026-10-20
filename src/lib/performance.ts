@@ -20,6 +20,7 @@ import { annualize, annualizedVolatility, drawdowns, sharpeRatio } from './retur
  * | Übertrag ein/aus        | Marktwert am Tag      | Marktwert am Tag            |
  * | Prämie/Staking, Split   | –                     | –  (Wertzuwachs = Rendite)  |
  * | Gebühr, Steuer          | Betrag                | –                           |
+ * | AGE (thesaurierend)     | KESt darauf           | –  (kein Geld fließt zu)    |
  * | Ein-/Auszahlung (Cash)  | Einzahlung            | Auszahlung                  |
  * Zinsen, Gebühren und Steuern ohne Instrument bleiben bei Cash-Konten im
  * Konto (verändern den Wert, kein Zahlungsstrom) – wie in `computeLedger`.
@@ -194,6 +195,9 @@ export function dailySeries(portfolios: readonly PerfPortfolio[], prices: PriceH
           if (kind !== 'cash') break
           cash[b.portfolio]! -= b.amountCents + b.feeCents
           outflow += b.amountCents
+          break
+        case 'age':
+          inflow += extra
           break
         case 'fee':
         case 'tax':

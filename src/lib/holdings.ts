@@ -21,7 +21,12 @@ import { mulDiv, QTY_DECIMALS, quantityFromDb } from './quantity'
  * | deposit      | –          | –     | Einzahlung (Cash-Konten)              |
  * | withdrawal   | –          | –     | Auszahlung (Cash-Konten)              |
  * | fee / tax    | optional   | –     | Gebühr bzw. Steuer                    |
+ * | age          | ja         | –     | ausschüttungsgleicher Ertrag (AGE)    |
  * feeCents und taxCents gelten zusätzlich bei jeder Buchung.
+ *
+ * AGE (thesaurierende Fonds) fließen nicht zu und ändern weder Bestand noch
+ * Einstand der wirtschaftlichen Sicht; steuerlich erhöhen sie die
+ * Anschaffungskosten – das rechnet die Steuer-Engine (src/lib/tax.ts).
  */
 
 export type LedgerBookingType =
@@ -37,6 +42,7 @@ export type LedgerBookingType =
   | 'transfer_out'
   | 'split'
   | 'staking'
+  | 'age'
 
 export interface LedgerBooking {
   id: string
@@ -96,12 +102,13 @@ const ORDER: Record<LedgerBookingType, number> = {
   staking: 3,
   split: 4,
   dividend: 5,
-  interest: 6,
-  sell: 7,
-  transfer_out: 8,
-  fee: 9,
-  tax: 10,
-  withdrawal: 11,
+  age: 6,
+  interest: 7,
+  sell: 8,
+  transfer_out: 9,
+  fee: 10,
+  tax: 11,
+  withdrawal: 12,
 }
 
 export function sortBookings<T extends LedgerBooking>(bookings: readonly T[]): T[] {
@@ -205,6 +212,13 @@ export function computeLedger(bookings: readonly LedgerBooking[]): Ledger {
         p.feesCents += b.feeCents
         p.taxCents += b.taxCents
         ledger.incomeCents += b.amountCents
+        break
+      }
+      case 'age': {
+        // nur die KESt darauf zählt hier; Anschaffungskosten erhöht die Steuer-Engine
+        const p = position(b)
+        p.feesCents += b.feeCents
+        p.taxCents += b.taxCents
         break
       }
       case 'interest': {

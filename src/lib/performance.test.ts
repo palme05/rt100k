@@ -120,6 +120,17 @@ describe('Tagesreihe und zeitgewichtete Rendite', () => {
     expect(analyzePeriod(s.days, null)!.twr).toBeCloseTo(0.1, 10)
   })
 
+  it('AGE: kein Zufluss außer der von außen bezahlten KESt', () => {
+    const prices: PriceHistory = new Map([['etf', series({ '2026-01-08': 100, '2026-01-09': 100 })]])
+    const s = dailySeries(
+      [depot(b('buy', '2026-01-08', { instrumentId: 'etf', quantity: '1', amountCents: 10_000 }), b('age', '2026-01-09', { instrumentId: 'etf', amountCents: 500, taxCents: 138 }))],
+      prices,
+      '2026-01-09',
+    )
+    expect(s.days[1]).toMatchObject({ valueCents: 10_000, inflowCents: 138, outflowCents: 0 })
+    expect(s.income).toEqual([])
+  })
+
   it('Cash-Konto: Ein- und Auszahlungen sind Ströme, Zinsen und Gebühren Rendite', () => {
     const s = dailySeries(
       [

@@ -30,6 +30,7 @@ export interface CsvMapping {
 export const MAPPING_FIELDS = ['date', 'kind', 'isin', 'name', 'symbol', 'quantity', 'amount', 'fee', 'tax'] as const
 
 const KIND_WORDS: [RegExp, ImportKind][] = [
+  [/aussch[üu]ttungsgleich|\bage\b|thesaurierung/i, 'age'],
   [/verkauf|\bsell\b|\bsale\b|\bsold\b/i, 'sell'],
   [/kauf|\bbuy\b|purchase|sparplan|savings plan/i, 'buy'],
   [/dividend|aussch[üu]ttung|distribution|ertrag/i, 'dividend'],
@@ -98,7 +99,7 @@ function dateWithFormat(raw: string, format: DateFormat): string | null {
   return parseDate(`${d}.${m}.${y}`)
 }
 
-const NEEDS_ASSET: ReadonlySet<ImportKind> = new Set(['buy', 'sell', 'dividend', 'transfer_in', 'transfer_out', 'staking'])
+const NEEDS_ASSET: ReadonlySet<ImportKind> = new Set(['buy', 'sell', 'dividend', 'transfer_in', 'transfer_out', 'staking', 'age'])
 
 export function applyMapping(rows: readonly (readonly string[])[], mapping: CsvMapping): ParseResult {
   const bookings: ImportedBooking[] = []

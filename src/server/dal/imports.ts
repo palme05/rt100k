@@ -143,7 +143,7 @@ export const csvMappingSchema = z.object({
   date: column,
   dateFormat: z.enum(['dmy', 'ymd', 'mdy']),
   kind: column.nullable(),
-  fixedKind: z.enum(['buy', 'sell', 'dividend', 'interest', 'tax', 'fee', 'deposit', 'withdrawal', 'transfer_in', 'transfer_out', 'staking']).nullable(),
+  fixedKind: z.enum(['buy', 'sell', 'dividend', 'interest', 'tax', 'fee', 'deposit', 'withdrawal', 'transfer_in', 'transfer_out', 'staking', 'age']).nullable(),
   isin: column.nullable(),
   name: column.nullable(),
   symbol: column.nullable(),

@@ -138,11 +138,49 @@ function parseIncome(lines: readonly string[], title: string): ParseResult {
   const kestCents = cents(text, AMOUNT(String.raw`Einbeh\. *Steuer`)) ?? 0
   if (!occurredOn) return { source: 'flatex', document: title, bookings: [], notices: [`${id.name}: Zahltag nicht lesbar.`] }
 
-  // Thesaurierende Fonds: kein Geld fließt, belastet wird nur die KESt auf ausschüttungsgleiche Erträge
+  // Thesaurierende Fonds: kein Geld fließt; gebucht wird der ausschüttungsgleiche Ertrag (AGE)
+  // mit der darauf belasteten KESt – AGE erhöhen steuerlich die Anschaffungskosten.
   if (/thesaurierend/i.test(text) && !/aussch.ttend/i.test(text)) {
     if (netCents === null || netCents >= 0 || kestCents <= 0) {
       return { source: 'flatex', document: title, bookings: [], notices: [`${id.name}: Ertragsmitteilung ohne Steuerbelastung – nichts zu buchen.`] }
     }
+    const asset = { kind: 'security' as const, isin: id.isin, symbol: null, name: id.name }
+    const fingerprint = `flatex|age|${head.nr}|${occurredOn}|${id.isin}`
+    const thes = first(text, new RegExp(String.raw`Bruttothesaurierung *: *(?<amount>${NUM}) *(?<cur>${CURRENCY})`))?.groups
+    const fxRaw = first(text, new RegExp(String.raw`Devisenkurs *:? *(?<rate>${NUM})`))?.groups?.rate
+    const thesDecimal = thes ? toDecimal(thes.amount ?? '', STYLE) : null
+    const fxRate = fxRaw ? toDecimal(fxRaw, STYLE) : null
+    const ageCents = !thes || !thesDecimal ? null : thes.cur === 'EUR' ? toCents(thesDecimal, 'en') : fxRate ? foreignToEurCents(thesDecimal, fxRate) : null
+    const consistent = -netCents === kestCents
+    if (ageCents && ageCents > 0) {
+      // KESt sollte 27,5 % der AGE sein (± 1 Cent Rundung pro Umrechnung)
+      const plausible = Math.abs(Math.round(ageCents * 0.275) - kestCents) <= 2
+      return {
+        source: 'flatex',
+        document: title,
+        notices: [],
+        bookings: [
+          {
+            kind: 'age',
+            occurredOn,
+            asset,
+            quantity: null,
+            amountCents: ageCents,
+            feeCents: 0,
+            taxCents: kestCents,
+            netCents,
+            confidence: consistent && plausible ? 'hoch' : 'mittel',
+            warnings: [
+              ...(consistent ? [] : ['Steuerbetrag und Endbetrag passen nicht zusammen – bitte prüfen.']),
+              ...(plausible ? [] : ['Die KESt ist nicht 27,5 % des ausschüttungsgleichen Ertrags – bitte mit der Meldung auf my.oekb.at vergleichen.']),
+            ],
+            fingerprint,
+            note: 'Ausschüttungsgleicher Ertrag (thesaurierender Fonds)',
+          },
+        ],
+      }
+    }
+    // Ohne lesbaren Ertrag nur die Steuer buchen (Anschaffungskosten dann bitte selbst ergänzen)
     return {
       source: 'flatex',
       document: title,
@@ -151,15 +189,15 @@ function parseIncome(lines: readonly string[], title: string): ParseResult {
         {
           kind: 'tax',
           occurredOn,
-          asset: { kind: 'security', isin: id.isin, symbol: null, name: id.name },
+          asset,
           quantity: null,
           amountCents: -netCents,
           feeCents: 0,
           taxCents: 0,
           netCents,
-          confidence: -netCents === kestCents ? 'hoch' : 'mittel',
-          warnings: -netCents === kestCents ? [] : ['Steuerbetrag und Endbetrag passen nicht zusammen – bitte prüfen.'],
-          fingerprint: `flatex|age|${head.nr}|${occurredOn}|${id.isin}`,
+          confidence: 'mittel',
+          warnings: ['Ausschüttungsgleicher Ertrag nicht lesbar – nur die KESt übernommen; den Ertrag bitte als AGE-Buchung ergänzen.'],
+          fingerprint,
           note: 'KESt auf ausschüttungsgleiche Erträge (thesaurierender Fonds)',
         },
       ],
