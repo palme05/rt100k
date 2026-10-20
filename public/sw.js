@@ -3,6 +3,7 @@
  * - cacht nur die Offline-Seite (Skript, Stil, Icon), nie App-Seiten oder API-Antworten
  * - Seitenaufrufe gehen immer ins Netz; nur wenn es fehlt, kommt die Offline-Seite
  * - den „letzten Stand“ schreibt die App in einen eigenen Cache und löscht ihn beim Abmelden
+ * - Push kommt ohne Inhalt; die Mitteilung zeigt nur „Neue Hinweise“, nie Beträge
  * Namen passend zu src/lib/offline.ts.
  */
 const STATIC_CACHE = 'rt100k-static-v1'
@@ -83,4 +84,29 @@ self.addEventListener('fetch', (event) => {
   if (ASSETS.includes(url.pathname)) {
     event.respondWith(caches.match(request).then((hit) => hit || fetch(request)))
   }
+})
+
+// Web Push: der Server schickt nur einen Ping ohne Inhalt (src/server/push.ts)
+self.addEventListener('push', (event) => {
+  event.waitUntil(
+    self.registration.showNotification('rt100k', {
+      body: 'Neue Hinweise in rt100k.',
+      icon: '/icons/icon-192.png',
+      badge: '/icons/icon-192.png',
+      tag: 'rt100k-hinweise',
+      lang: 'de-AT',
+    }),
+  )
+})
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close()
+  const target = new URL('/app/hinweise', self.location.origin).href
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windows) => {
+      const open = windows.find((w) => new URL(w.url).origin === self.location.origin)
+      if (open) return open.navigate(target).then((w) => (w || open).focus())
+      return self.clients.openWindow(target)
+    }),
+  )
 })

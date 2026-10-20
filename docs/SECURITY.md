@@ -244,6 +244,22 @@ Meldeweg für Sicherheitslücken: siehe [`/SECURITY.md`](../SECURITY.md).
 
 **Restrisiken:** Wer den Link vor dem Empfänger öffnet, bekommt die Freigabe – deshalb einmalig und kurz gültig, sichtbar in der Liste des Besitzers und jederzeit widerrufbar. Der Link steht im Pfad und kann in Server-Logs auftauchen (wie Einladungslinks).
 
+## Security-Check Phase 6e – Hinweise, Kursalarme, Web Push (20.10.2026)
+
+| Prüfung | Ergebnis |
+|---|---|
+| Neue Tabellen `notification`, `price_alert`, `push_subscription` mit `owner_id` und RLS, Rechte in eigener Migration (`0014`); alle Abfragen mit `withUser` **und** `owner_id`-Filter | ✅ (DB-Tests: fremde Hinweise/Alarme/Abos unsichtbar, ohne Kontext leer, fremde `owner_id` nicht schreibbar, Löschen fremder Alarme → `NotFoundError`) |
+| Hinweise entstehen nur im täglichen Lauf (Cron mit `CRON_SECRET`), je Nutzer in dessen RLS-Kontext; doppelte Ereignisse über `dedupe_key` ausgeschlossen; Aufbewahrung 1 Jahr | ✅ (DB-Test: zweiter Lauf erzeugt nichts) |
+| Links in Hinweisen per CHECK auf `/app/…` beschränkt (kein offener Redirect, kein `javascript:`) | ✅ (DB-Test mit `https://evil.example`) |
+| Kursalarm: Instrument über `getInstrument` (fremde private Instrumente → `NotFoundError`), nur mit laufendem Kurs, Kurs per `parseScaled` (kein Float), höchstens 50 je Nutzer | ✅ (DB- und E2E-Test) |
+| Push-Abo: zod-Prüfung von Endpunkt und Schlüsseln; **Endpunkt nur bei bekannten Push-Diensten** (FCM, Mozilla, Apple, Windows) – sonst könnte der Server beliebige URLs (z. B. `169.254.169.254`) anfragen; `redirect: 'error'`, 5 s Timeout, abgelaufene Abos (404/410) werden gelöscht | ✅ (Unit- und DB-Tests) |
+| Push ohne Inhalt: die Mitteilung zeigt nur „Neue Hinweise in rt100k“ – keine Beträge, Namen oder Depots auf dem Sperrbildschirm; Klick öffnet `/app/hinweise` (Anmeldung nötig) | ✅ |
+| VAPID-Signatur (ES256) mit `node:crypto`, keine neue Abhängigkeit; Schlüssel per HKDF aus `BETTER_AUTH_SECRET` mit eigenem Zweck, privater Schlüssel verlässt den Server nie | ✅ (Unit-Test prüft die Signatur) |
+| Abmelden beendet das Push-Abo dieses Geräts (Server und Browser); beim Kontowechsel auf einem Gerät wird ein vorhandenes Abo dem angemeldeten Konto zugeordnet | ✅ |
+| Server Actions mit `requireUser()`; IDs nur aus dem Formular als Eingabe, nie als Berechtigung | ✅ |
+
+**Restrisiken:** Läuft eine Sitzung ab, ohne dass jemand abmeldet, bleibt das Push-Abo bestehen; das Gerät bekommt weiter einen inhaltslosen Ping für das alte Konto, bis jemand dort Mitteilungen ausschaltet oder sich abmeldet. Die Push-Dienste (Google, Mozilla, Apple, Microsoft) sehen, wann ein Gerät einen Ping bekommt – aber keinen Inhalt.
+
 ## Notfallplan
 
 **Bei Verdacht auf Secret-Leak** (Commit, Log, Screenshot):
