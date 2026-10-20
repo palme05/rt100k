@@ -170,7 +170,14 @@ describe('flatex', () => {
 
   it('thesaurierender Fonds: KESt auf ausschüttungsgleiche Erträge als Steuerbuchung', () => {
     const b = only(parsePdfLines(F.FLATEX_AGE))
-    expect(b).toMatchObject({ kind: 'tax', occurredOn: '2026-01-09', asset: { isin: 'IE00B4L5Y983' }, amountCents: 2292, confidence: 'hoch' })
+    // 90,00 USD / 1,08 = 83,33 € AGE, darauf 27,5 % KESt = 22,92 €
+    expect(b).toMatchObject({ kind: 'age', occurredOn: '2026-01-09', asset: { isin: 'IE00B4L5Y983' }, amountCents: 8333, taxCents: 2292, netCents: -2292, confidence: 'hoch', warnings: [] })
+  })
+
+  it('AGE ohne lesbare Thesaurierung: nur die KESt, mit Hinweis', () => {
+    const b = only(parsePdfLines(F.FLATEX_AGE.filter((l) => !l.includes('Bruttothesaurierung'))))
+    expect(b).toMatchObject({ kind: 'tax', amountCents: 2292, confidence: 'mittel' })
+    expect(b.warnings[0]).toMatch(/AGE-Buchung ergänzen/)
   })
 
   it('Kontoauszug wird nicht importiert', () => {

@@ -301,6 +301,7 @@ export const BOOKING_TYPES = [
   'transfer_out',
   'split',
   'staking',
+  'age',
 ] as const
 export type BookingType = (typeof BOOKING_TYPES)[number]
 
@@ -342,7 +343,7 @@ export const booking = pgTable(
     index('booking_instrument_idx').on(t.instrumentId),
     check(
       'booking_type_check',
-      sql`${t.type} in ('buy', 'sell', 'dividend', 'interest', 'fee', 'tax', 'deposit', 'withdrawal', 'transfer_in', 'transfer_out', 'split', 'staking')`,
+      sql`${t.type} in ('buy', 'sell', 'dividend', 'interest', 'fee', 'tax', 'deposit', 'withdrawal', 'transfer_in', 'transfer_out', 'split', 'staking', 'age')`,
     ),
     check('booking_amounts_check', sql`${t.amountCents} >= 0 and ${t.feeCents} >= 0 and ${t.taxCents} >= 0`),
     check('booking_quantity_check', sql`${t.quantity} is null or ${t.quantity} > 0`),

@@ -56,7 +56,7 @@ export interface ReviewRow {
   draft: Draft
 }
 
-export const NEEDS_INSTRUMENT: ReadonlySet<ImportKind> = new Set(['buy', 'sell', 'dividend', 'transfer_in', 'transfer_out', 'staking'])
+export const NEEDS_INSTRUMENT: ReadonlySet<ImportKind> = new Set(['buy', 'sell', 'dividend', 'transfer_in', 'transfer_out', 'staking', 'age'])
 const NEEDS_QUANTITY: ReadonlySet<ImportKind> = new Set(['buy', 'sell', 'transfer_in', 'transfer_out', 'staking'])
 
 function centsText(cents: number): string {

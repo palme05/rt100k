@@ -63,6 +63,13 @@ describe('Buchungen', () => {
     expect((error as ValidationError).field).toBe(field)
   })
 
+  it('AGE: mit Wertpapier und Betrag, ohne Stückzahl; KESt als Steuer', async () => {
+    const b = await createBooking(user, { portfolioId: depot, type: 'age', occurredOn: '2026-01-09', instrumentId: etf, quantity: '5', amount: '83,33', tax: '22,92' })
+    expect(b).toMatchObject({ type: 'age', quantity: null, amountCents: 8_333, taxCents: 2_292 })
+    await expect(createBooking(user, { portfolioId: depot, type: 'age', occurredOn: '2026-01-09', amount: '83,33' })).rejects.toBeInstanceOf(ValidationError)
+    await expect(createBooking(user, { portfolioId: depot, type: 'age', occurredOn: '2026-01-09', instrumentId: etf, amount: '0' })).rejects.toBeInstanceOf(ValidationError)
+  })
+
   it('Ein- und Auszahlungen auf Cash-Konten', async () => {
     const cash = (await createPortfolio(user, { name: 'Tagesgeld', kind: 'cash' })).id
     await createBooking(user, { portfolioId: cash, type: 'deposit', occurredOn: '2026-01-02', amount: '5.000' })

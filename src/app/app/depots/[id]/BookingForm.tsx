@@ -23,10 +23,11 @@ const LABEL: Record<string, string> = {
   transfer_out: 'Depotübertrag – Ausgang',
   split: 'Split / Reverse Split',
   staking: 'Staking-Ertrag',
+  age: 'Ausschüttungsgleicher Ertrag (AGE)',
 }
 
 const TYPES: Record<Kind, string[]> = {
-  depot: ['buy', 'sell', 'dividend', 'interest', 'fee', 'tax', 'transfer_in', 'transfer_out', 'split'],
+  depot: ['buy', 'sell', 'dividend', 'age', 'interest', 'fee', 'tax', 'transfer_in', 'transfer_out', 'split'],
   krypto: ['buy', 'sell', 'staking', 'fee', 'transfer_in', 'transfer_out'],
   sachwert: ['buy', 'sell', 'transfer_in', 'transfer_out', 'fee'],
   cash: ['deposit', 'withdrawal', 'interest', 'tax', 'fee'],
@@ -39,13 +40,14 @@ const AMOUNT_LABEL: Record<string, string> = {
   interest: 'Zinsen (brutto)',
   transfer_in: 'Übernommene Anschaffungskosten',
   staking: 'Anschaffungskosten (meist 0)',
+  age: 'AGE laut Meldung (my.oekb.at)',
   deposit: 'Betrag',
   withdrawal: 'Betrag',
   fee: 'Betrag',
   tax: 'Betrag',
 }
 
-const NEEDS_INSTRUMENT = new Set(['buy', 'sell', 'transfer_in', 'transfer_out', 'staking', 'split', 'dividend'])
+const NEEDS_INSTRUMENT = new Set(['buy', 'sell', 'transfer_in', 'transfer_out', 'staking', 'split', 'dividend', 'age'])
 const OPTIONAL_INSTRUMENT = new Set(['interest', 'fee', 'tax'])
 const NEEDS_QUANTITY = new Set(['buy', 'sell', 'transfer_in', 'transfer_out', 'staking'])
 const NO_AMOUNT = new Set(['split', 'transfer_out'])
@@ -155,7 +157,7 @@ export function BookingForm({ portfolioId, kind, held, today }: { portfolioId: s
             <Field id={`${id}-fee`} label="Gebühren in €" hint="optional" error={err('fee')}>
               <Input id={`${id}-fee`} name="fee" inputMode="decimal" {...describedBy(`${id}-fee`, true, err('fee'))} />
             </Field>
-            {type === 'sell' || type === 'dividend' || type === 'interest' ? (
+            {type === 'sell' || type === 'dividend' || type === 'interest' || type === 'age' ? (
               <Field id={`${id}-tax`} label="Einbehaltene Steuer in €" hint="KESt, Quellensteuer – optional" error={err('tax')}>
                 <Input id={`${id}-tax`} name="tax" inputMode="decimal" {...describedBy(`${id}-tax`, true, err('tax'))} />
               </Field>

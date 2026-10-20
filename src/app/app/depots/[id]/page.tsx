@@ -35,6 +35,7 @@ const TYPE_LABEL: Record<string, string> = {
   transfer_out: 'Übertrag aus',
   split: 'Split',
   staking: 'Staking',
+  age: 'AGE',
 }
 const SIGN: Record<string, 1 | -1 | 0> = { buy: -1, sell: 1, dividend: 1, interest: 1, fee: -1, tax: -1, deposit: 1, withdrawal: -1, transfer_in: 0, transfer_out: 0, split: 0, staking: 0 }
 

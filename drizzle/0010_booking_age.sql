@@ -1,0 +1,2 @@
+ALTER TABLE "booking" DROP CONSTRAINT "booking_type_check";--> statement-breakpoint
+ALTER TABLE "booking" ADD CONSTRAINT "booking_type_check" CHECK ("booking"."type" in ('buy', 'sell', 'dividend', 'interest', 'fee', 'tax', 'deposit', 'withdrawal', 'transfer_in', 'transfer_out', 'split', 'staking', 'age'));

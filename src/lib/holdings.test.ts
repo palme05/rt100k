@@ -86,6 +86,16 @@ describe('gleitender Durchschnittspreis', () => {
     expect(ledger.positions.get('etf')!.quantity).toBe(qty('1'))
   })
 
+  it('AGE ändern weder Bestand noch wirtschaftlichen Einstand, die KESt darauf zählt als Steuer', () => {
+    const ledger = computeLedger([
+      b({ type: 'buy', occurredOn: '2025-03-01', quantity: '75', amountCents: 750_000 }),
+      b({ type: 'age', occurredOn: '2026-01-09', amountCents: 8_333, taxCents: 2_292 }),
+    ])
+    const p = ledger.positions.get('etf')!
+    expect(p).toMatchObject({ quantity: qty('75'), costCents: 750_000, incomeCents: 0, taxCents: 2_292 })
+    expect(ledger).toMatchObject({ incomeCents: 0, taxCents: 2_292, realizedCents: 0 })
+  })
+
   it('Depotübertrag nimmt den Einstand mit, ohne Gewinn', () => {
     const ledger = computeLedger([
       b({ type: 'transfer_in', occurredOn: '2026-01-02', quantity: '10', amountCents: 90_000 }),

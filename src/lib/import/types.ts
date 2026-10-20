@@ -17,6 +17,7 @@ export type ImportKind =
   | 'transfer_in'
   | 'transfer_out'
   | 'staking'
+  | 'age'
 
 export const IMPORT_KIND_LABEL: Record<ImportKind, string> = {
   buy: 'Kauf',
@@ -30,6 +31,7 @@ export const IMPORT_KIND_LABEL: Record<ImportKind, string> = {
   transfer_in: 'Übertrag ein',
   transfer_out: 'Übertrag aus',
   staking: 'Staking/Prämie',
+  age: 'Ausschüttungsgleicher Ertrag',
 }
 
 export interface ImportAsset {
