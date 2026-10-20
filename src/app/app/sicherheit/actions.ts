@@ -1,6 +1,6 @@
 'use server'
 
-import { headers } from 'next/headers'
+import { cookies, headers } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { isAPIError } from 'better-auth/api'
@@ -10,7 +10,9 @@ import { requireUser } from '@/server/auth/session'
 import { deleteAccount } from '@/server/dal/account'
 import { recordAudit } from '@/server/dal/audit'
 import { ValidationError } from '@/server/dal/errors'
+import { consumeRateLimit } from '@/server/dal/rate-limit'
 import { revokeSession } from '@/server/dal/sessions'
+import { parseTheme, THEME_COOKIE } from '@/lib/theme'
 
 export async function revokeSessionAction(sessionId: string): Promise<void> {
   const user = await requireUser({ allowMissingAdmin2fa: true })
@@ -61,4 +63,13 @@ export async function deleteAccountAction(_prev: { error: string | null }, formD
     throw error
   }
   redirect('/anmelden?geloescht=1')
+}
+
+/** Darstellung (System/Hell/Dunkel) als Cookie für dieses Gerät – gilt ab dem nächsten Seitenaufbau, sofort per Attribut. */
+export async function setThemeAction(value: string): Promise<void> {
+  const user = await requireUser({ allowMissingAdmin2fa: true })
+  await consumeRateLimit(user, 'write')
+  const theme = parseTheme(value)
+  ;(await cookies()).set(THEME_COOKIE, theme, { path: '/', maxAge: 400 * 86_400, sameSite: 'lax', httpOnly: true, secure: process.env.NODE_ENV === 'production' })
+  revalidatePath('/', 'layout')
 }

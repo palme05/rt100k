@@ -9,6 +9,19 @@
   color-scheme: light;
 }
 
+/* wie das dunkle Design in src/styles/tokens.css */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #131416;
+    --ink: #ecebe6;
+    --ink-2: #bdbcb5;
+    --ink-3: #97968f;
+    --rule: #2b2d31;
+    --rule-strong: #3d4045;
+    color-scheme: dark;
+  }
+}
+
 * {
   box-sizing: border-box;
 }
