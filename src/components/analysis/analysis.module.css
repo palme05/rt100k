@@ -1,0 +1,14 @@
+/* Analyse: Kopfzeile über dem Renditediagramm (Legende links, Vergleich rechts). Nur Tokens. */
+
+.chartHead {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3) var(--space-5);
+  align-items: end;
+  justify-content: space-between;
+  margin-top: var(--space-5);
+}
+
+.benchmark {
+  width: min(100%, 20rem);
+}

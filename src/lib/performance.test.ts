@@ -53,6 +53,8 @@ describe('Tagesreihe und zeitgewichtete Rendite', () => {
     expect(p.twr).toBeCloseTo((100_000 / 100_100) * 1.1 - 1, 10)
     expect(p.gainCents).toBe(9_900)
     expect(p.limited).toBe(false)
+    // Rückgang zählt ab dem eingezahlten Betrag, auch wenn schon der erste Tag fällt
+    expect(p.maxDrawdown).toBeCloseTo(100_000 / 100_100 - 1, 10)
   })
 
   it('TTWROR ist unabhängig vom Zeitpunkt der Einzahlungen, der IZF nicht', () => {
@@ -186,6 +188,7 @@ describe('Tagesreihe und zeitgewichtete Rendite', () => {
     const ytd = analyzePeriod(s.days, '2026-01-01')!
     expect(ytd).toMatchObject({ from: '2026-01-01', startValueCents: 100_000, endValueCents: 110_250, gainCents: 10_250 })
     expect(ytd.twr).toBeCloseTo(0.1025, 10)
+    expect(ytd.index[0]).toEqual({ day: '2025-12-31', value: 0 })
     expect(ytd.volatility).toBeNull()
     expect(ytd.twrAnnual).toBeNull()
     expect(analyzePeriod(s.days, '2027-01-01')).toBeNull()
