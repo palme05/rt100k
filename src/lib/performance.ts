@@ -304,7 +304,8 @@ export function analyzePeriod(days: readonly DayValue[], from: string | null, to
   let growth = 1
   let inflow = 0
   let outflow = 0
-  const index: PeriodResult['index'] = limited ? [{ day: days[base]!.day, value: 0 }] : []
+  // Startpunkt 0 % am Ausgangstag (fehlt nur, wenn der Zeitraum mit der ersten Buchung beginnt)
+  const index: PeriodResult['index'] = base >= 0 ? [{ day: days[base]!.day, value: 0 }] : []
   const monthly = new Map<string, number>()
   const cashflows: { day: string; cents: number }[] = before > 0 ? [{ day: days[base]!.day, cents: -before }] : []
   const start = base + 1
@@ -349,7 +350,8 @@ export function analyzePeriod(days: readonly DayValue[], from: string | null, to
     irrAnnual: months >= 12 && irrPeriod !== null ? (1 + irrPeriod) ** (365 / span) - 1 : null,
     irrPeriod,
     volatility,
-    maxDrawdown: drawdowns(index.map((p) => 1 + p.value)).max,
+    // Rückgang ab dem Ausgangswert (Index 1), auch wenn der erste Tag schon fällt
+    maxDrawdown: drawdowns([1, ...index.map((p) => 1 + p.value)]).max,
     sharpe: twrAnnual !== null && volatility ? sharpeRatio(twrAnnual, volatility, 0) : null,
     index,
     monthly: monthlyReturns,
