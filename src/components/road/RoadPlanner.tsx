@@ -143,6 +143,20 @@ export function RoadPlanner({
               value={settings.monthlyContribution}
               onChange={(v) => update('monthlyContribution', v)}
             />
+            {data.savingsPlans ? (
+              <p className={styles.hint} aria-live="polite">
+                {Math.round(data.savingsPlans.monthly) === Math.round(settings.monthlyContribution) ? (
+                  `✓ entspricht ${data.savingsPlans.count === 1 ? 'deinem erkannten Sparplan' : `deinen ${data.savingsPlans.count} erkannten Sparplänen`}`
+                ) : (
+                  <>
+                    {data.savingsPlans.count === 1 ? 'Erkannter Sparplan' : `${data.savingsPlans.count} erkannte Sparpläne`}: {money(data.savingsPlans.monthly)} im Monat{' '}
+                    <button type="button" className={styles.inlineButton} onClick={() => update('monthlyContribution', data.savingsPlans!.monthly)}>
+                      übernehmen
+                    </button>
+                  </>
+                )}
+              </p>
+            ) : null}
             <Slider
               id={`${ids}-return`}
               label="Erwartete Rendite p. a."
