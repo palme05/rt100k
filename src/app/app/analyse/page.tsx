@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { z } from 'zod'
 import { PerformancePanel } from '@/components/analysis/PerformancePanel'
+import { RebalancePanel } from '@/components/analysis/RebalancePanel'
 import { IncomeChart } from '@/components/charts/IncomeChart'
 import { Amount } from '@/components/privacy/privacy'
 import { AllocationBars } from '@/components/ui/AllocationBars'
@@ -11,8 +12,12 @@ import { Row, Rows } from '@/components/ui/Rows'
 import { Stats } from '@/components/ui/Summary'
 import { Trend } from '@/components/ui/Trend'
 import { share } from '@/lib/display'
+import { ASSET_KIND_LABEL } from '@/lib/valuation'
 import { loadAnalysis } from '@/server/analysis'
 import { requireUser } from '@/server/auth/session'
+import { getAllocationTargets } from '@/server/dal/allocation'
+import { getRoadSettings } from '@/server/dal/road'
+import { saveAllocationTargetsAction } from './actions'
 
 export const metadata = { title: 'Analyse' }
 // Kurshistorie kommt beim ersten Aufruf von den Anbietern (danach 12 h aus dem Cache)
@@ -23,7 +28,7 @@ const params = z.object({ vergleich: z.uuid().optional().catch(undefined) })
 export default async function AnalysisPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const user = await requireUser()
   const { vergleich } = params.parse(await searchParams)
-  const analysis = await loadAnalysis(user, { benchmarkId: vergleich ?? null })
+  const [analysis, targets, road] = await Promise.all([loadAnalysis(user, { benchmarkId: vergleich ?? null }), getAllocationTargets(user), getRoadSettings(user)])
 
   if (!analysis) {
     return (
@@ -149,6 +154,16 @@ export default async function AnalysisPage({ searchParams }: { searchParams: Pro
 
         <Section id="depot" title="Nach Depot" span="third">
           {analysis.allocation.portfolio.length > 0 ? <AllocationBars items={analysis.allocation.portfolio} /> : <Note>Noch keine Werte.</Note>}
+        </Section>
+
+        <Section id="rebalancing" title="Rebalancing" meta="Zielaufteilung nach Anlageklasse">
+          <RebalancePanel
+            classes={analysis.allocation.kind.map((k) => ({ key: k.key, label: k.label, value: k.value }))}
+            labels={ASSET_KIND_LABEL}
+            targets={targets}
+            defaultAmount={road.monthlyContributionCents / 100}
+            save={saveAllocationTargetsAction}
+          />
         </Section>
       </Grid>
       <Note>

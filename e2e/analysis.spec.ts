@@ -27,7 +27,7 @@ test('Analyse: Rendite je Zeitraum, Vergleichswert, Erträge, Aufteilung', async
   await expect(page.getByRole('group', { name: 'Zeitraum' }).getByRole('button', { name: 'Max' })).toBeVisible()
   await expect(page.getByRole('group', { name: /Kumulierte Rendite/ })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Nach Anlageklasse' })).toBeVisible()
-  await expect(page.getByText('ETFs')).toBeVisible()
+  await expect(page.getByRole('region', { name: 'Nach Anlageklasse' }).getByText('ETFs')).toBeVisible()
   await expectNoOverflow(page)
 
   // Vergleichswert wählen → Linie und Legende
@@ -56,4 +56,36 @@ test('Analyse: Dividende erscheint in Erträgen und Prognose', async ({ page }) 
   await expect(page.getByRole('heading', { name: 'Dividenden und Zinsen' })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Gebühren und Steuern' })).toBeVisible()
   await expect(page.getByRole('table', { name: 'Gebühren und Steuern je Jahr' })).toContainText('2026')
+})
+
+test('Rebalancing: Zielaufteilung eingeben, Nachkauf-Vorschlag, speichern', async ({ page }) => {
+  await register(page)
+  await createPortfolio(page, 'Trade Republic')
+  await page.goto('/app/import')
+  await page.locator('input[type=file]').setInputFiles({ name: 'kauf.pdf', mimeType: 'application/pdf', buffer: Buffer.from(makePdf(TR_KAUF_AT)) })
+  await page.getByRole('button', { name: '1 Buchung übernehmen' }).click()
+  await expect(page.getByText(/1 Buchung übernommen/)).toBeVisible()
+
+  await page.goto('/app/analyse')
+  await expect(page.getByRole('heading', { name: 'Rebalancing' })).toBeVisible()
+  await page.getByLabel('Ziel ETFs in Prozent').fill('80')
+  await expect(page.getByText(/Summe der Ziele: 80 % – es fehlen 20 Prozentpunkte/)).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Zielaufteilung speichern' })).toBeDisabled()
+  await page.getByLabel('Klasse hinzufügen').selectOption({ label: 'Krypto' })
+  await page.getByLabel('Ziel Krypto in Prozent').fill('20')
+  await expect(page.getByText('✓ Summe der Ziele: 100 %')).toBeVisible()
+
+  // ETFs sind übergewichtet → 100 € gehen komplett in Krypto
+  await page.getByLabel('Betrag für Nachkäufe (€)').fill('100')
+  const table = page.getByRole('table', { name: 'Zielaufteilung und Vorschlag je Anlageklasse' })
+  await expect(table.getByRole('row', { name: /Krypto/ })).toContainText('100 €')
+  await page.getByRole('group', { name: 'Vorschlag' }).getByRole('button', { name: 'Voll umschichten' }).click()
+  await expect(table.getByRole('row', { name: /ETFs/ })).toContainText(/[-−]120\s€/)
+
+  await page.getByRole('button', { name: 'Zielaufteilung speichern' }).click()
+  await expect(page.getByText('Zielaufteilung gespeichert.')).toBeVisible()
+  await page.reload()
+  await expect(page.getByLabel('Ziel ETFs in Prozent')).toHaveValue('80')
+  await expect(page.getByLabel('Ziel Krypto in Prozent')).toHaveValue('20')
+  await expectNoOverflow(page)
 })
