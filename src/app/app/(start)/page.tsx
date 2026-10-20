@@ -5,6 +5,8 @@ import { Markets } from '@/components/markets/Markets'
 import { Amount } from '@/components/privacy/privacy'
 import { RouteSummary } from '@/components/road/RouteSummary'
 import { SaveOfflineSnapshot } from '@/components/shell/pwa'
+import { RefreshButton } from '@/components/shell/refresh'
+import { TaskList } from '@/components/tasks/TaskList'
 import button from '@/components/ui/button.module.css'
 import { DataTable, NameCell, Td, Th } from '@/components/ui/DataTable'
 import { Message } from '@/components/ui/forms'
@@ -19,7 +21,9 @@ import { requireUser } from '@/server/auth/session'
 import { recentNewDeviceLogin } from '@/server/dal/audit'
 import { valuePortfolios } from '@/server/overview'
 import { loadRoad } from '@/server/road'
-import styles from './depots/depots.module.css'
+import { loadOpenTasks } from '@/server/tasks'
+import styles from '../depots/depots.module.css'
+import { completeTaskAction } from '../hinweise/actions'
 
 export const metadata = { title: 'Übersicht' }
 
@@ -64,7 +68,7 @@ export default async function OverviewPage() {
     )
   }
 
-  const road = await loadRoad(user, valuation)
+  const [road, tasks] = await Promise.all([loadRoad(user, valuation), loadOpenTasks(user, valuation)])
   const total = valuation.totalCents / 100
   const invested = valuation.investedCents / 100
   const gain = total - invested
@@ -124,6 +128,12 @@ export default async function OverviewPage() {
       {valuation.ledgerError ? <Message tone="error">{valuation.ledgerError}</Message> : null}
 
       <Grid>
+        {tasks.length > 0 ? (
+          <Section id="offene-punkte" title="Offene Punkte" meta={`${tasks.length} offen`}>
+            <TaskList tasks={tasks} complete={completeTaskAction} />
+          </Section>
+        ) : null}
+
         <Section label="Verlauf" span="twoThirds">
           {road.history.length >= 2 ? (
             <HistoryChart history={road.history} title="Vermögensverlauf mit eingesetztem Kapital" />
@@ -144,6 +154,7 @@ export default async function OverviewPage() {
           id="depots"
           title="Depots und Konten"
           meta={asOf ? `Kurse von ${formatTime(asOf)} Uhr${valuation.delayed ? ', teils verzögert' : ''}` : undefined}
+          actions={<RefreshButton label="Kurse aktualisieren" />}
           span="twoThirds"
         >
           <DataTable

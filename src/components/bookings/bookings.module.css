@@ -48,6 +48,8 @@
 .month {
   display: grid;
   gap: var(--space-2);
+  /* senkrecht scrollt der Browser, waagrecht wischt die Zeile */
+  touch-action: pan-y;
 }
 
 .monthHead {
@@ -65,8 +67,9 @@
 
 .actions {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: var(--space-4);
+  gap: 0 var(--space-4);
 }
 
 /* Link und Knopf sehen gleich aus; Tippfläche 44 px hoch */
@@ -81,6 +84,7 @@
   color: var(--ink-2);
   text-decoration: underline;
   text-underline-offset: 2px;
+  white-space: nowrap;
   cursor: pointer;
 }
 
@@ -91,4 +95,21 @@
 .action:disabled {
   opacity: 0.5;
   cursor: default;
+}
+
+.confirm {
+  white-space: nowrap;
+  font-size: var(--text-sm);
+  color: var(--ink);
+  font-weight: var(--weight-medium);
+}
+
+.danger {
+  composes: action;
+  color: var(--neg);
+  font-weight: var(--weight-medium);
+}
+
+.danger:hover {
+  color: var(--neg);
 }

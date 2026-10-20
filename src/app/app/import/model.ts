@@ -33,6 +33,8 @@ export interface FileEntry {
   /** Datei wurde schon einmal importiert */
   known: boolean
   portfolioId: string
+  /** Von Hand zu buchen (z. B. Kapitalmaßnahmen) – nach dem Übernehmen als Aufgabe gemerkt */
+  tasks: string[]
 }
 
 export interface Draft {

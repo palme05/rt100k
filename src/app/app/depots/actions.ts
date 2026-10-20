@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { requireUser } from '@/server/auth/session'
-import { createBooking, deleteBooking, updateBooking } from '@/server/dal/bookings'
+import { createBooking, deleteBooking, reconcileCashBalance, updateBooking } from '@/server/dal/bookings'
 import { ValidationError, NotFoundError } from '@/server/dal/errors'
 import { deleteImportedBookings } from '@/server/dal/imports'
 import { ensureGlobalInstrument } from '@/server/dal/instruments'
@@ -141,6 +141,24 @@ export async function updateBookingAction(bookingId: string, _prev: ActionResult
   }
   revalidatePath('/app', 'layout')
   redirect(`/app/depots/${portfolioId}?geaendert=1#buchungen`)
+}
+
+export interface ReconcileResult extends ActionResult {
+  /** gebuchter Unterschied in Cent (0 = Stand stimmte schon) */
+  diffCents: number | null
+}
+
+/** Kontostand eines Cash-Kontos abgleichen; Depot kommt aus der gebundenen ID, nie aus dem Formular. */
+export async function reconcileCashAction(portfolioId: string, _prev: ReconcileResult, formData: FormData): Promise<ReconcileResult> {
+  const user = await requireUser()
+  try {
+    await consumeRateLimit(user, 'write')
+    const { diffCents } = await reconcileCashBalance(user, portfolioId, formData.get('balance'))
+    revalidatePath('/app', 'layout')
+    return { ...ok, diffCents }
+  } catch (error) {
+    return { ...fail(error), diffCents: null }
+  }
 }
 
 export async function deleteBookingAction(id: string): Promise<ActionResult> {

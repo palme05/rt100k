@@ -11,6 +11,7 @@ export function Row({
   date,
   value,
   emphasis = sub !== undefined,
+  swipeKey,
 }: {
   label: React.ReactNode
   sub?: React.ReactNode
@@ -19,9 +20,11 @@ export function Row({
   value: React.ReactNode
   /** Bezeichnung hervorheben und bei Platzmangel kürzen */
   emphasis?: boolean
+  /** Zeile lässt sich wischen (siehe useSwipe) */
+  swipeKey?: string
 }) {
   return (
-    <li className={date ? styles.rowWithDate : styles.row}>
+    <li className={date ? styles.rowWithDate : styles.row} data-swipe={swipeKey}>
       {date ? <span className={styles.rowDate}>{date}</span> : null}
       {emphasis ? (
         <span className={styles.rowMain}>

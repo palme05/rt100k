@@ -1,0 +1,42 @@
+.list {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.empty {
+  margin: 0;
+  color: var(--ink-3);
+  font-size: var(--text-sm);
+}
+
+.error {
+  margin: 0;
+  color: var(--neg);
+  font-size: var(--text-sm);
+}
+
+.done,
+.more {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.75rem;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: var(--text-sm);
+  color: var(--ink-2);
+  white-space: nowrap;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+
+.done:hover,
+.more:hover {
+  color: var(--ink);
+}
+
+.more {
+  justify-self: start;
+}

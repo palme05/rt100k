@@ -1,8 +1,11 @@
 'use client'
 
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { useId, useMemo, useState, useTransition } from 'react'
 import { monthLabel } from '@/lib/display'
+import { haptic } from '../hooks/haptics'
+import { useSwipe } from '../hooks/useSwipe'
 import { Amount } from '../privacy/privacy'
 import { Button, Input, Select } from '../ui/forms'
 import { Note } from '../ui/layout'
@@ -33,7 +36,8 @@ const PAGE = 150
 /**
  * Alle Buchungen mit Filter (Art, Wertpapier, Jahr) und Suche, nach Monat
  * gruppiert, schrittweise angezeigt. Bearbeiten und Löschen je Zeile –
- * per Tippen, Maus oder Tastatur.
+ * per Tippen, Maus oder Tastatur; am Handy zusätzlich wischen (nach rechts
+ * bearbeiten, nach links löschen). Löschen fragt immer einmal nach.
  */
 export function BookingList({
   items,
@@ -52,6 +56,15 @@ export function BookingList({
   const [limit, setLimit] = useState(PAGE)
   const [pending, start] = useTransition()
   const [error, setError] = useState<string | null>(null)
+  const [confirming, setConfirming] = useState<string | null>(null)
+  const router = useRouter()
+  const byId = useMemo(() => new Map(items.map((b) => [b.id, b])), [items])
+  const swipe = useSwipe((direction, key) => {
+    const b = byId.get(key)
+    if (!b) return
+    if (direction === 'left') setConfirming(b.id)
+    else router.push(b.editHref)
+  })
 
   const types = useMemo(() => [...new Map(items.map((b) => [b.type, b.typeLabel])).entries()].sort((a, b) => a[1].localeCompare(b[1], 'de')), [items])
   const instruments = useMemo(
@@ -85,7 +98,9 @@ export function BookingList({
     start(async () => {
       setError(null)
       const result = await remove(b.id)
-      if (!result.ok) setError(result.error)
+      setConfirming(null)
+      if (result.ok) haptic('success')
+      else setError(result.error)
     })
 
   if (items.length === 0) return <Note>Noch keine Buchungen.</Note>
@@ -136,7 +151,7 @@ export function BookingList({
       </div>
 
       <p className={styles.count} aria-live="polite">
-        {filteredActive ? `${filtered.length} von ${items.length} Buchungen` : `${items.length} Buchungen`}
+        {filteredActive ? `${filtered.length} von ${items.length} Buchungen` : items.length === 1 ? '1 Buchung' : `${items.length} Buchungen`}
         {filteredActive ? (
           <button
             type="button"
@@ -160,12 +175,13 @@ export function BookingList({
       ) : null}
 
       {groups.map((g) => (
-        <section key={g.month} className={styles.month} aria-label={monthLabel(g.month, 'long')}>
+        <section key={g.month} className={styles.month} aria-label={monthLabel(g.month, 'long')} {...swipe}>
           <h3 className={styles.monthHead}>{monthLabel(g.month, 'long')}</h3>
           <Rows>
             {g.rows.map((b) => (
               <Row
                 key={b.id}
+                swipeKey={b.id}
                 date={`${b.occurredOn.slice(8, 10)}.${b.occurredOn.slice(5, 7)}.`}
                 label={linkInstruments && b.instrumentId ? <Link href={`/app/wertpapier/${b.instrumentId}`}>{b.instrumentName ?? b.typeLabel}</Link> : (b.instrumentName ?? b.typeLabel)}
                 sub={
@@ -175,14 +191,26 @@ export function BookingList({
                       {b.typeLabel}
                       {b.imported ? ' · Import' : ''}
                     </span>
-                    <span className={styles.actions}>
-                      <Link href={b.editHref} className={styles.action} aria-label={`${b.typeLabel} vom ${b.occurredOn} bearbeiten`}>
-                        Bearbeiten
-                      </Link>
-                      <button type="button" className={styles.action} disabled={pending} onClick={() => onRemove(b)} aria-label={`${b.typeLabel} vom ${b.occurredOn} löschen`}>
-                        Löschen
-                      </button>
-                    </span>
+                    {confirming === b.id ? (
+                      <span className={styles.actions} role="group" aria-label="Löschen bestätigen">
+                        <span className={styles.confirm}>Wirklich löschen?</span>
+                        <button type="button" className={styles.danger} disabled={pending} onClick={() => onRemove(b)} aria-label={`Ja, ${b.typeLabel} vom ${b.occurredOn} löschen`}>
+                          {pending ? 'Wird gelöscht …' : 'Ja, löschen'}
+                        </button>
+                        <button type="button" className={styles.action} disabled={pending} onClick={() => setConfirming(null)} autoFocus>
+                          Abbrechen
+                        </button>
+                      </span>
+                    ) : (
+                      <span className={styles.actions}>
+                        <Link href={b.editHref} className={styles.action} aria-label={`${b.typeLabel} vom ${b.occurredOn} bearbeiten`}>
+                          Bearbeiten
+                        </Link>
+                        <button type="button" className={styles.action} disabled={pending} onClick={() => setConfirming(b.id)} aria-label={`${b.typeLabel} vom ${b.occurredOn} löschen`}>
+                          Löschen
+                        </button>
+                      </span>
+                    )}
                   </span>
                 }
                 value={b.amount === null ? '–' : <Amount value={b.amount} signed={b.signed} />}
