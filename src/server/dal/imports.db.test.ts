@@ -6,9 +6,9 @@ import { getDb, withUser } from '../db/client'
 import { booking, csvMapping, importFile, instrument } from '../db/schema'
 import type { Actor } from './actor'
 import { computeLedger } from '@/lib/holdings'
-import { listAllLedgerBookings, listBookings } from './bookings'
+import { createBooking, listAllLedgerBookings, listBookings } from './bookings'
 import { NotFoundError, ValidationError } from './errors'
-import { deleteCsvMapping, findImported, ImportConflictError, importBookings, listCsvMappings, saveCsvMapping } from './imports'
+import { deleteCsvMapping, deleteImportedBookings, findImported, ImportConflictError, importBookings, listCsvMappings, saveCsvMapping } from './imports'
 import { createPortfolio } from './portfolios'
 
 const key = (s: string) => createHash('sha256').update(s).digest('hex')
@@ -104,6 +104,55 @@ describe('Import von Buchungen', () => {
   it('begrenzt die Menge je Lieferung', async () => {
     const items = Array.from({ length: 501 }, (_, i) => buy(`viele-${i}`))
     await expect(importBookings(alice, { portfolioId: aliceDepot, files: [], items })).rejects.toThrow(/Höchstens 500/)
+  })
+})
+
+describe('Importierte Buchungen löschen', () => {
+  const file = (name: string) => ({ hash: key(name), source: 'traderepublic' as const, bookings: 2 })
+
+  it('löscht nur Importiertes dieses Depots; von Hand erfasste bleiben, die Datei gilt wieder als neu', async () => {
+    const erik = await createUser('Erik')
+    const depot = (await createPortfolio(erik, { name: 'TR', kind: 'depot' })).id
+    await importBookings(erik, { portfolioId: depot, files: [file('erik-1')], items: [buy('e1'), buy('e2', { occurredOn: '2026-03-05' })] })
+    const manual = await createBooking(erik, { portfolioId: depot, type: 'buy', occurredOn: '2026-03-10', instrumentId: etf, quantity: '1', amount: '100,00' })
+
+    expect(await deleteImportedBookings(erik, depot)).toBe(2)
+    expect((await listBookings(erik, depot)).map((b) => b.id)).toEqual([manual.id])
+    expect(await findImported(erik, [key('e1')], [key('erik-1')])).toEqual({ keys: new Set(), files: new Set() })
+    // dieselbe Datei lässt sich neu importieren
+    expect(await importBookings(erik, { portfolioId: depot, files: [file('erik-1')], items: [buy('e1'), buy('e2')] })).toEqual({ created: 2, duplicates: 0 })
+    // nichts mehr zu löschen → 0
+    await deleteImportedBookings(erik, depot)
+    expect(await deleteImportedBookings(erik, depot)).toBe(0)
+  })
+
+  it('behält die gemerkten Dateien, solange ein anderes Depot noch Importiertes hat', async () => {
+    const frida = await createUser('Frida')
+    const first = (await createPortfolio(frida, { name: 'TR', kind: 'depot' })).id
+    const second = (await createPortfolio(frida, { name: 'flatex', kind: 'depot' })).id
+    await importBookings(frida, { portfolioId: first, files: [file('frida-1')], items: [buy('f1')] })
+    await importBookings(frida, { portfolioId: second, files: [file('frida-2')], items: [buy('f2')] })
+    expect(await deleteImportedBookings(frida, first)).toBe(1)
+    expect((await findImported(frida, [], [key('frida-1'), key('frida-2')])).files).toEqual(new Set([key('frida-1'), key('frida-2')]))
+    expect((await listBookings(frida, second)).length).toBe(1)
+  })
+
+  it('bricht ab, wenn von Hand erfasste Buchungen Stück aus dem Import brauchen – nichts wird gelöscht', async () => {
+    const gerd = await createUser('Gerd')
+    const depot = (await createPortfolio(gerd, { name: 'TR', kind: 'depot' })).id
+    await importBookings(gerd, { portfolioId: depot, files: [], items: [buy('g1')] })
+    await createBooking(gerd, { portfolioId: depot, type: 'sell', occurredOn: '2026-03-10', instrumentId: etf, quantity: '2', amount: '300,00' })
+    await expect(deleteImportedBookings(gerd, depot)).rejects.toThrow(/von Hand erfasste/i)
+    expect((await listBookings(gerd, depot)).length).toBe(2)
+  })
+
+  it('fremdes oder ungültiges Depot → nicht gefunden, fremde Buchungen bleiben', async () => {
+    const before = (await listBookings(alice, aliceDepot)).length
+    expect(before).toBeGreaterThan(0)
+    await expect(deleteImportedBookings(bob, aliceDepot)).rejects.toBeInstanceOf(NotFoundError)
+    await expect(deleteImportedBookings(bob, 'kein-depot')).rejects.toBeInstanceOf(NotFoundError)
+    expect((await listBookings(alice, aliceDepot)).length).toBe(before)
+    expect((await findImported(alice, [], [key('datei-1')])).files).toEqual(new Set([key('datei-1')]))
   })
 })
 

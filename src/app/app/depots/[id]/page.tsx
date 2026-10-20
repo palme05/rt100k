@@ -20,8 +20,10 @@ import { updatePortfolioAction } from '../actions'
 import { PortfolioForm } from '../PortfolioForm'
 import { BookingForm } from './BookingForm'
 import { DeleteBookingButton } from './DeleteBookingButton'
+import { DeleteImportsForm } from './DeleteImportsForm'
 import { DeletePortfolioForm } from './DeletePortfolioForm'
 import { ShareSettings } from './ShareSettings'
+import styles from '../depots.module.css'
 
 const KIND_LABEL = { depot: 'Wertpapierdepot', krypto: 'Krypto', cash: 'Cash-Konto', sachwert: 'Edelmetalle' } as const
 const TYPE_LABEL: Record<string, string> = {
@@ -197,7 +199,10 @@ export default async function PortfolioPage({ params }: { params: Promise<{ id: 
         </Section>
 
         <Section id="loeschen" title="Löschen" span="half">
-          <DeletePortfolioForm id={portfolio.id} name={portfolio.name} />
+          <div className={styles.forms}>
+            <DeleteImportsForm id={portfolio.id} count={bookings.filter((b) => b.source === 'import').length} />
+            <DeletePortfolioForm id={portfolio.id} name={portfolio.name} />
+          </div>
         </Section>
       </Grid>
     </>

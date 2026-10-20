@@ -37,6 +37,35 @@ test('PDF: Trade-Republic-Kauf erkennen, prüfen, übernehmen – der zweite Imp
   expect(problems).toEqual([])
 })
 
+test('Importierte Buchungen eines Depots löschen – danach lässt sich die Datei neu importieren', async ({ page }) => {
+  const problems = collectProblems(page)
+  await register(page)
+  const id = await createPortfolio(page, 'Trade Republic')
+  const pdf = makePdf(TR_KAUF_AT)
+  await page.goto('/app/import')
+  await upload(page, 'abrechnung.pdf', 'application/pdf', pdf)
+  await page.getByRole('button', { name: '1 Buchung übernehmen' }).click()
+  await expect(page.getByText(/1 Buchung übernommen/)).toBeVisible()
+
+  await page.goto(`/app/depots/${id}`)
+  const remove = page.getByRole('button', { name: 'Importierte Buchungen löschen' })
+  await page.getByLabel('1 importierte Buchung löschen').fill('weg')
+  await remove.click()
+  await expect(page.getByText('Zum Bestätigen bitte „löschen“ eintippen.')).toBeVisible()
+  await page.getByLabel('1 importierte Buchung löschen').fill('löschen')
+  await remove.click()
+  await expect(page.getByText(/Importierte Buchungen gelöscht/)).toBeVisible()
+  await expect(page.getByText('Noch keine Buchungen.')).toBeVisible()
+  await expectNoOverflow(page)
+
+  await page.goto('/app/import')
+  await upload(page, 'abrechnung.pdf', 'application/pdf', pdf)
+  await expect(review(page)).toContainText('Kauf · Vanguard FTSE All-World U.ETF')
+  await expect(page.getByText(/schon einmal importiert/)).toHaveCount(0)
+  await expect(page.getByRole('button', { name: '1 Buchung übernehmen' })).toBeEnabled()
+  expect(problems).toEqual([])
+})
+
 test('CSV: Bitpanda-Export – erkannte Coins und Gold übernehmen, unbekannte bleiben abgewählt', async ({ page }) => {
   await register(page)
   await createPortfolio(page, 'Bitpanda', 'krypto')

@@ -311,6 +311,16 @@ Unabhängiges Review (eigener Prüfdurchlauf, nur lesend) aller Route-Handler, S
 | Die Datei wird wie alle Importe nur im Browser gelesen; an den Server gehen nur erkannte Buchungen und der gehashte Fingerabdruck (Transaktions-ID) | ✅ |
 | Unbekannte Arten werden nicht geraten, sondern als „nicht übernommen“ gemeldet; Handelszeilen unbekannter Art nur mit Warnung und Konfidenz „mittel“ | ✅ |
 
+## Nachtrag: Importierte Buchungen löschen (20.10.2026)
+
+| Prüfung | Ergebnis |
+|---|---|
+| Server Action in der üblichen Reihenfolge: `requireUser()`, Bestätigungswort „löschen“, `consumeRateLimit(user, 'write')`, dann DAL. Die Depot-ID kommt gebunden aus der Seite und wird im DAL geprüft | ✅ |
+| `deleteImportedBookings` läuft in `withUser` mit `ownerId`-Filter und sperrt das Depot (`FOR UPDATE`) – kein Wettlauf mit einem gleichzeitigen Import. Fremdes oder ungültiges Depot → `NotFoundError`, fremde Buchungen und Dateien bleiben | ✅ (Negativ-Test) |
+| Gelöscht wird nur `source = 'import'`; brauchen von Hand erfasste Buchungen Stück aus dem Import, bricht es ohne Änderung ab | ✅ (DB-Test) |
+| Gemerkte Datei-Prüfsummen werden nur gelöscht, wenn im ganzen Konto keine importierte Buchung mehr übrig ist | ✅ (DB-Test) |
+| Audit-Eintrag `imports_deleted` mit Depot-ID und Anzahl – keine Beträge | ✅ |
+
 ## Notfallplan
 
 **Bei Verdacht auf Secret-Leak** (Commit, Log, Screenshot):

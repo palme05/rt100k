@@ -5,6 +5,7 @@ import { redirect } from 'next/navigation'
 import { requireUser } from '@/server/auth/session'
 import { createBooking, deleteBooking } from '@/server/dal/bookings'
 import { ValidationError, NotFoundError } from '@/server/dal/errors'
+import { deleteImportedBookings } from '@/server/dal/imports'
 import { ensureGlobalInstrument } from '@/server/dal/instruments'
 import { createPortfolio, deletePortfolio, updatePortfolio } from '@/server/dal/portfolios'
 import { consumeRateLimit, withinLimit } from '@/server/dal/rate-limit'
@@ -70,6 +71,20 @@ export async function deletePortfolioAction(id: string, _prev: ActionResult, for
   }
   revalidatePath('/app', 'layout')
   redirect('/app/depots')
+}
+
+/** Alle importierten Buchungen des Depots löschen (von Hand erfasste bleiben). */
+export async function deleteImportedBookingsAction(id: string, _prev: ActionResult, formData: FormData): Promise<ActionResult> {
+  const user = await requireUser()
+  if (formData.get('confirm') !== 'löschen') return { ok: false, error: 'Zum Bestätigen bitte „löschen“ eintippen.', field: 'confirm' }
+  try {
+    await consumeRateLimit(user, 'write')
+    await deleteImportedBookings(user, id)
+  } catch (error) {
+    return fail(error)
+  }
+  revalidatePath('/app', 'layout')
+  return ok
 }
 
 export async function createBookingAction(_prev: ActionResult, formData: FormData): Promise<ActionResult> {

@@ -14,6 +14,7 @@ export const AUDIT_LABELS: Record<string, string> = {
   invitation_created: 'Einladung erstellt',
   invitation_revoked: 'Einladung widerrufen',
   portfolio_deleted: 'Depot gelöscht',
+  imports_deleted: 'Importierte Buchungen gelöscht',
   export: 'Daten exportiert',
   backup_restored: 'Backup wiederhergestellt',
   share_created: 'Freigabe-Link erstellt',
