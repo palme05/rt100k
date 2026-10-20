@@ -72,6 +72,7 @@ Alle unter `src/components/`. Seiten setzen sich nur daraus zusammen, eigene CSS
 | `BookingList` | `bookings/BookingList.tsx` | Alle Buchungen nach Monat, Filter (Art, Wert, Jahr), Suche, Bearbeiten/Löschen je Zeile, schrittweise anzeigen |
 | `PriceChart` | `charts/PriceChart.tsx` | Kursverlauf eines Wertpapiers (6 M bis Max) mit Kauf-/Verkaufspunkten |
 | `SaleSimulator` | `tax/SaleSimulator.tsx` | Verkauf durchspielen: Position, Stück, Kurs → Erlös, Einstand, Gewinn/Verlust, ≈ KESt-Änderung, Netto (Live-Region, als Schätzung gekennzeichnet) |
+| `LinkPending` | `shell/LinkPending.tsx` | Schmaler Balken oben, solange nach einem Klick die nächste Seite lädt (in Navigation, Tab-Leiste, `TextLink`, `BackLink`, `NameCell`); erscheint erst nach 120 ms |
 | `TaskList` | `tasks/TaskList.tsx` | Offene Punkte: abgeleitete (verschwinden von selbst, „Beheben →“) und gespeicherte Aufgaben („✓ Erledigt“) |
 | `LinkChips` | `ui/Chips.tsx` | Auswahl als Links (z. B. Depot beim Schnell-Erfassen), `aria-current`, 44 px hoch |
 | `RefreshButton`, `PullToRefresh` | `shell/refresh.tsx` | Daten neu laden per Knopf bzw. Ziehen (nur installierte App) |
@@ -153,7 +154,7 @@ Jede Geste hat eine sichtbare Entsprechung für Maus und Tastatur – nichts ist
 - **Haptik:** kurzes Vibrieren bei Geste erkannt, Löschen bestätigt (`haptic()`); nur Android – iOS kennt keine Vibrations-API, dort trägt der sichtbare Druckzustand (Knopf sinkt leicht ein, „+“ wird kleiner). Bei „Bewegung reduzieren“ aus.
 - **Bewegung:** neue Seiten blenden in 180 ms ein (`template.tsx`), Blätter gleiten hoch. `prefers-reduced-motion` schaltet alles ab.
 - **Tippflächen:** mindestens 44 px; Werkzeug-Knöpfe und Umschalter wachsen bei Touch (`pointer: coarse`).
-- **Ladezustände:** nur Übersicht (zeigt währenddessen den letzten Stand dieses Geräts, `LastSnapshot`) und Analyse. Nie für Seiten mit `notFound()` (sonst 200 statt 404) und nicht für Seiten mit Eingaben wie Road oder Steuer – dort würden schnelle Eingaben vor der Hydrierung verloren gehen.
+- **Ladezustände:** Jeder Seitenwechsel zeigt oben einen schmalen Akzent-Balken (`LinkPending`), bis die Seite da ist. Eigene Ladeansichten nur für Übersicht (zeigt währenddessen den letzten Stand dieses Geräts, `LastSnapshot`) und Analyse. Nie für Seiten mit `notFound()` (sonst 200 statt 404) und nicht für Seiten mit Eingaben wie Road oder Steuer – dort würden schnelle Eingaben vor der Hydrierung verloren gehen.
 
 ## Do / Don't
 
