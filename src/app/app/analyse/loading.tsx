@@ -9,7 +9,7 @@ export default function Loading() {
         Rendite, Risiko, Erträge und Kosten über alle Depots.
       </PageHead>
       <Progress label="Analyse wird berechnet …" />
-      <Note>Beim ersten Aufruf lädt die App die Kurshistorie aller Werte – das kann bis zu einer halben Minute dauern. Danach kommt sie 12 Stunden aus dem Zwischenspeicher.</Note>
+      <Note>Beim ersten Aufruf lädt die App die Kurshistorie aller Werte – das kann bis zu einer halben Minute dauern. Danach liegt sie in der Datenbank und die Analyse ist schnell.</Note>
     </>
   )
 }

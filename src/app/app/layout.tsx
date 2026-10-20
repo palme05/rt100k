@@ -5,7 +5,7 @@ import { requireUser } from '@/server/auth/session'
 import { unreadCount } from '@/server/dal/notifications'
 import { listPortfolios } from '@/server/dal/portfolios'
 import { AccountMenu } from './AccountMenu'
-import { APP_BASE, APP_HOTKEYS, appCommands, appNav } from './navigation'
+import { APP_BASE, APP_HOTKEYS, appCommands, appNav, QUICK_ADD_HREF } from './navigation'
 
 export const metadata: Metadata = { title: { default: 'Übersicht', template: '%s · rt100k' } }
 
@@ -24,6 +24,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         nav={appNav(isAdmin)}
         commands={appCommands(portfolios, isAdmin)}
         hotkeys={APP_HOTKEYS}
+        quickAdd={QUICK_ADD_HREF}
         account={<AccountMenu name={user.name} unread={unread} />}
       >
         {children}

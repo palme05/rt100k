@@ -24,6 +24,18 @@ export interface NavItem {
 
 export const isActive = (pathname: string, item: NavItem) => pathname === item.href || (item.activePrefix !== undefined && pathname.startsWith(item.activePrefix))
 
+const DEPOT_PAGE = /^\/app\/depots\/([0-9a-f-]{36})(?:\/|$)/
+
+/**
+ * Ziel für „Neue Buchung“ von der aktuellen Seite aus: im Depot gleich dieses
+ * Depot vorwählen; auf der Erfassungs- und Bearbeiten-Seite selbst nichts.
+ */
+export function quickAddTarget(pathname: string, base: string | undefined): string | null {
+  if (!base || pathname.startsWith(base) || pathname.includes('/buchung/')) return null
+  const depot = DEPOT_PAGE.exec(pathname)?.[1]
+  return depot ? `${base}?depot=${depot}` : base
+}
+
 /** Logo: die Strecke mit aktueller Position. */
 function BrandMark() {
   return (
@@ -87,16 +99,19 @@ export function AppHeader({
   nav,
   commands,
   hotkeys,
+  quickAdd,
   children,
 }: {
   homeHref: string
   nav: readonly NavItem[]
   commands: readonly Command[]
   hotkeys: Readonly<Record<string, string>>
+  quickAdd?: string | undefined
   /** Konto-Bereich rechts (z. B. Sicherheit, Abmelden) */
   children?: React.ReactNode
 }) {
   const pathname = usePathname()
+  const add = quickAddTarget(pathname, quickAdd)
   return (
     <header className={styles.header}>
       <div className={styles.headerInner}>
@@ -115,6 +130,12 @@ export function AppHeader({
           <MoreMenu items={nav.filter((item) => !item.primary)} pathname={pathname} />
         </nav>
         <div className={styles.tools}>
+          {add ? (
+            <Link href={add} className={styles.addButton} aria-label="Neue Buchung" title="Neue Buchung (G B)">
+              <Icon name="plus" size={16} />
+              Buchung
+            </Link>
+          ) : null}
           <PrivacyToggle />
           <span className={styles.search}>
             <CommandPalette commands={commands} />

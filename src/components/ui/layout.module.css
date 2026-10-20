@@ -58,6 +58,14 @@
   margin-bottom: var(--space-4);
 }
 
+.aside {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: flex-end;
+  gap: 0 var(--space-4);
+}
+
 .spaced {
   margin-top: var(--space-8);
 }

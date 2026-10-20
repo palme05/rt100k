@@ -83,6 +83,22 @@
   gap: var(--space-12);
 }
 
+/* Seiteninhalt: gleiches Raster wie main, kurz einblenden */
+.page {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-12);
+  min-width: 0;
+  animation: enter 180ms ease-out;
+}
+
+@keyframes enter {
+  from {
+    opacity: 0;
+    translate: 0 0.35rem;
+  }
+}
+
 @media (max-width: 720px) {
   .headerInner {
     gap: var(--space-1) var(--space-4);
@@ -130,6 +146,30 @@
   border-radius: var(--radius-pill);
   padding: 0 0.4rem;
   line-height: 1.35rem;
+}
+
+/* ── Neue Buchung: Knopf in der Kopfzeile (Desktop), „+“ unten (Handy) ── */
+
+.addButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  min-height: 2.25rem;
+  padding: 0 0.85rem 0 0.6rem;
+  border-radius: var(--radius-pill);
+  background: var(--ink);
+  color: var(--bg);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  white-space: nowrap;
+}
+
+.addButton:hover {
+  background: var(--ink-2);
+}
+
+.fab {
+  display: none;
 }
 
 /* ── Desktop: Menü „Mehr“ ─────────────────────────────────────────────── */
@@ -208,6 +248,26 @@
   box-shadow: var(--shadow-pop);
 }
 
+.grip {
+  display: block;
+  width: 2.5rem;
+  height: 0.25rem;
+  margin: 0 auto var(--space-2);
+  border-radius: var(--radius-pill);
+  background: var(--rule-strong);
+}
+
+.sheet[open] .sheetInner {
+  animation: rise 180ms ease-out;
+}
+
+@keyframes rise {
+  from {
+    translate: 0 1.5rem;
+    opacity: 0.6;
+  }
+}
+
 .sheetHead {
   display: flex;
   align-items: center;
@@ -256,8 +316,34 @@
     display: none;
   }
 
+  /* Platz für Leiste und „+“, damit nichts darunter verschwindet */
   .main {
-    padding-bottom: calc(6rem + env(safe-area-inset-bottom, 0px));
+    padding-bottom: calc(10rem + env(safe-area-inset-bottom, 0px));
+  }
+
+  .addButton {
+    display: none;
+  }
+
+  .fab {
+    position: fixed;
+    right: max(var(--gutter), env(safe-area-inset-right, 0px));
+    bottom: calc(3.5rem + var(--space-4) + env(safe-area-inset-bottom, 0px));
+    z-index: 20;
+    display: grid;
+    place-items: center;
+    width: 3.5rem;
+    height: 3.5rem;
+    border-radius: var(--radius-pill);
+    background: var(--ink);
+    color: var(--bg);
+    box-shadow: var(--shadow-pop);
+    -webkit-tap-highlight-color: transparent;
+    transition: transform 120ms ease-out;
+  }
+
+  .fab:active {
+    transform: scale(0.94);
   }
 
   .tabbar {
@@ -304,5 +390,64 @@
 
   .tab:active {
     background: var(--wash);
+  }
+}
+
+/* ── Aktualisieren: Knopf und Ziehen in der installierten App ─────────── */
+
+.pull {
+  position: fixed;
+  top: calc(env(safe-area-inset-top, 0px) + var(--space-3));
+  left: 50%;
+  z-index: 40;
+  translate: -50% 0;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+  color: var(--ink);
+  font-size: var(--text-sm);
+  box-shadow: var(--shadow-pop);
+  animation: drop 160ms ease-out;
+}
+
+@keyframes drop {
+  from {
+    opacity: 0;
+    translate: -50% -0.75rem;
+  }
+}
+
+.refresh {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-height: 2.75rem;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: var(--text-sm);
+  color: var(--ink-2);
+  cursor: pointer;
+}
+
+.refresh:hover {
+  color: var(--ink);
+}
+
+.refresh:disabled {
+  cursor: progress;
+}
+
+.spin {
+  animation: spin 900ms linear infinite;
+}
+
+@keyframes spin {
+  to {
+    rotate: 360deg;
   }
 }

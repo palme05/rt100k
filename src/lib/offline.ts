@@ -41,3 +41,26 @@ export function buildSnapshot(input: {
     slices: input.allocation.slice(0, 8).map((s) => ({ label: s.label.slice(0, 40), share: Math.round(s.share * 1000) / 1000 })),
   }
 }
+
+const isCents = (n: unknown): n is number => typeof n === 'number' && Number.isSafeInteger(n)
+
+/**
+ * Gespeicherten Stand prüfen (stammt aus dem Browser-Cache – nicht blind
+ * vertrauen); ungültig → null. Gleiche Regeln wie in public/offline.js, ohne
+ * zod, damit das Paket für die Ladeansicht klein bleibt.
+ */
+export function parseSnapshot(value: unknown): OfflineSnapshot | null {
+  if (!value || typeof value !== 'object') return null
+  const s = value as Record<string, unknown>
+  if (s.v !== 1 || typeof s.savedAt !== 'string' || Number.isNaN(Date.parse(s.savedAt))) return null
+  if (s.quotesAt !== null && (typeof s.quotesAt !== 'string' || Number.isNaN(Date.parse(s.quotesAt)))) return null
+  if (!isCents(s.totalCents) || !isCents(s.investedCents) || !isCents(s.incomeCents)) return null
+  if (!Array.isArray(s.slices) || s.slices.length > 8) return null
+  const slices: OfflineSnapshot['slices'] = []
+  for (const x of s.slices as unknown[]) {
+    const slice = x as { label?: unknown; share?: unknown } | null
+    if (!slice || typeof slice.label !== 'string' || slice.label.length > 40 || typeof slice.share !== 'number' || !(slice.share >= 0 && slice.share <= 1)) return null
+    slices.push({ label: slice.label, share: slice.share })
+  }
+  return { v: 1, savedAt: s.savedAt, quotesAt: s.quotesAt, totalCents: s.totalCents, investedCents: s.investedCents, incomeCents: s.incomeCents, slices }
+}
