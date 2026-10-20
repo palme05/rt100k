@@ -5,6 +5,7 @@ import { requireUser } from '@/server/auth/session'
 import { NotFoundError, ValidationError } from '@/server/dal/errors'
 import { deleteCsvMapping, importBookings, saveCsvMapping, type CsvMappingDto } from '@/server/dal/imports'
 import { prepareImport, type PreparedImport } from '@/server/imports'
+import { consumeRateLimit } from '@/server/dal/rate-limit'
 
 type Result<T> = ({ ok: true } & T) | { ok: false; error: string }
 
@@ -18,6 +19,7 @@ function fail(error: unknown): { ok: false; error: string } {
 export async function prepareImportAction(input: unknown): Promise<Result<PreparedImport>> {
   const user = await requireUser()
   try {
+    await consumeRateLimit(user, 'import')
     return { ok: true, ...(await prepareImport(user, input)) }
   } catch (error) {
     return fail(error)
@@ -27,6 +29,7 @@ export async function prepareImportAction(input: unknown): Promise<Result<Prepar
 export async function commitImportAction(input: unknown): Promise<Result<{ created: number; duplicates: number }>> {
   const user = await requireUser()
   try {
+    await consumeRateLimit(user, 'import')
     const result = await importBookings(user, input)
     revalidatePath('/app', 'layout')
     return { ok: true, ...result }
@@ -38,6 +41,7 @@ export async function commitImportAction(input: unknown): Promise<Result<{ creat
 export async function saveMappingAction(name: unknown, mapping: unknown): Promise<Result<{ mapping: CsvMappingDto }>> {
   const user = await requireUser()
   try {
+    await consumeRateLimit(user, 'write')
     return { ok: true, mapping: await saveCsvMapping(user, { name, mapping }) }
   } catch (error) {
     return fail(error)

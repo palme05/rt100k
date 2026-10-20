@@ -62,6 +62,12 @@ test('Wiederherstellen: nur angemeldet, nur von der eigenen Seite, nur JSON', as
   const invalid = await page.request.post('/app/konto/wiederherstellen', { data: { format: 'anderes' }, headers: { Origin: origin } })
   expect(invalid.status()).toBe(400)
   expect(((await invalid.json()) as { error: string }).error).toContain('kein gültiges rt100k-Backup')
+  // Rate-Limit je Nutzer: 5 Versuche je Stunde, danach 429 mit Retry-After
+  for (let i = 1; i < 5; i++) expect((await page.request.post('/app/konto/wiederherstellen', { data: { format: 'anderes' }, headers: { Origin: origin } })).status()).toBe(400)
+  const limited = await page.request.post('/app/konto/wiederherstellen', { data: { format: 'anderes' }, headers: { Origin: origin } })
+  expect(limited.status()).toBe(429)
+  expect(Number(limited.headers()['retry-after'])).toBeGreaterThan(0)
+  expect(((await limited.json()) as { error: string }).error).toContain('Zu viele Anfragen')
   const exportAnon = await request.get('/app/konto/export?format=json', { maxRedirects: 0 })
   expect(exportAnon.headers()['location']).toContain('/anmelden')
 })

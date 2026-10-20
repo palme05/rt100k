@@ -5,6 +5,7 @@ import { revalidatePath } from 'next/cache'
 import { requireUser } from '@/server/auth/session'
 import { NotFoundError, ValidationError } from '@/server/dal/errors'
 import { createPriceAlert, deletePriceAlert, deletePushSubscription, markAllRead, savePushSubscription } from '@/server/dal/notifications'
+import { consumeRateLimit } from '@/server/dal/rate-limit'
 
 type Result = { ok: boolean; error: string | null }
 
@@ -22,6 +23,7 @@ export async function markAllReadAction(): Promise<void> {
 export async function createPriceAlertAction(_prev: Result, formData: FormData): Promise<Result> {
   const user = await requireUser()
   try {
+    await consumeRateLimit(user, 'write')
     await createPriceAlert(user, { instrumentId: formData.get('instrumentId'), direction: formData.get('direction'), price: String(formData.get('price') ?? '') })
   } catch (error) {
     return fail(error)
@@ -44,6 +46,7 @@ export async function deletePriceAlertAction(id: string): Promise<Result> {
 export async function savePushSubscriptionAction(subscription: unknown): Promise<Result> {
   const user = await requireUser()
   try {
+    await consumeRateLimit(user, 'push')
     await savePushSubscription(user, subscription, (await headers()).get('user-agent'))
   } catch (error) {
     return fail(error)

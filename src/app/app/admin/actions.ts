@@ -5,6 +5,7 @@ import { appBaseUrl } from '@/server/auth/auth'
 import { requireAdmin } from '@/server/auth/session'
 import { ValidationError } from '@/server/dal/errors'
 import { createInvitation, revokeInvitation } from '@/server/dal/invitations'
+import { consumeRateLimit } from '@/server/dal/rate-limit'
 
 export interface InviteState {
   link: string | null
@@ -15,6 +16,7 @@ export interface InviteState {
 export async function createInvitationAction(_previous: InviteState, formData: FormData): Promise<InviteState> {
   const admin = await requireAdmin()
   try {
+    await consumeRateLimit(admin, 'invite')
     const { token, expiresAt } = await createInvitation(admin, {
       role: formData.get('role') === 'admin' ? 'admin' : 'member',
       note: String(formData.get('note') ?? ''),
