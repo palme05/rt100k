@@ -170,12 +170,15 @@ export async function loadAnalysis(actor: Actor, options: { benchmarkId: string 
   const instruments = [...valuation.instruments.values()]
   const quotes = new Map(valuation.quotes)
   if (benchmark && !quotes.has(benchmark.id)) for (const [k, q] of await getQuotes([benchmark])) quotes.set(k, q)
+  const firstUse = new Map<string, string>()
+  for (const b of valuation.bookings) if (b.instrumentId && !(firstUse.get(b.instrumentId)! <= b.occurredOn)) firstUse.set(b.instrumentId, b.occurredOn)
   const history = await getPriceHistory({
     instruments: benchmark && !valuation.instruments.has(benchmark.id) ? [...instruments, benchmark] : instruments,
     from: first,
     today,
     quotes,
     fx: valuation.fx,
+    firstUse,
   })
 
   const series = dailySeries(

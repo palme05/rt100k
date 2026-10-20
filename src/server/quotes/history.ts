@@ -7,7 +7,7 @@ import { getDb } from '../db/client'
 import { fxDaily, priceDaily } from '../db/schema'
 import type { InstrumentDto } from '../dal/instruments'
 import { providerFetch } from './fetch'
-import { convertToEur, parseCoinGeckoChart, parseEcbHistoryCsv, parseYahooHistory, type FxPoint, type HistoryPoint, type ParsedHistory } from './history-parsers'
+import { convertToEur, historyCovered, parseCoinGeckoChart, parseEcbHistoryCsv, parseYahooHistory, type FxPoint, type HistoryPoint, type ParsedHistory } from './history-parsers'
 import { METAL_FUTURES, perGram, type FxRates } from './parsers'
 import { fixtureMode, inBatches, quoteInEur } from './service'
 import type { Quote } from './types'
@@ -18,9 +18,11 @@ import type { Quote } from './types'
  *   Krypto:           CoinGecko, kostenlos höchstens 365 Tage
  *   Edelmetalle:      Yahoo-Futures je Unze → je Gramm
  *   Devisen:          EZB-Referenzkurse (SDMX)
- * Rückfall: in der DB gespeicherte Schlusskurse und Wechselkurse des Crons.
- * Antworten liegen 12 h im Data Cache (für alle Nutzer gemeinsam, keine
- * Nutzerdaten in den URLs); in der DB wird dafür nichts gespeichert.
+ * Zuerst zählen die in der DB gespeicherten Tagesschlüsse (`price_daily`:
+ * Cron und früher geladene Historie). Nur was dort fehlt, kommt vom Anbieter –
+ * und wird danach gespeichert, damit der nächste Aufruf ohne Anbieter auskommt.
+ * Anbieter-Antworten liegen zusätzlich 12 h im Data Cache (für alle Nutzer
+ * gemeinsam, keine Nutzerdaten in den URLs).
  */
 
 const HISTORY_TTL = 12 * 3600
@@ -134,6 +136,21 @@ export interface HistoryInput {
   today: string
   quotes: ReadonlyMap<string, Quote>
   fx: FxRates | null
+  /** Erste Buchung je Instrument – davor braucht es keine Historie */
+  firstUse?: ReadonlyMap<string, string>
+}
+
+const STORE_CHUNK = 1_000
+
+/** Geladene Historie speichern (nur in der Kurswährung, in der auch der Cron speichert). */
+async function storeHistory(entries: readonly { instrumentId: string; source: string; points: readonly HistoryPoint[] }[]): Promise<void> {
+  const rows = entries.flatMap((e) => e.points.map((p) => ({ instrumentId: e.instrumentId, day: p.day, closeMicros: Number(p.priceMicros), source: e.source })))
+  for (let i = 0; i < rows.length; i += STORE_CHUNK) {
+    await getDb()
+      .insert(priceDaily)
+      .values(rows.slice(i, i + STORE_CHUNK))
+      .onConflictDoNothing()
+  }
 }
 
 /**
@@ -141,7 +158,7 @@ export interface HistoryInput {
  * den ersten Kurs). Der heutige Kurs der Übersicht schließt jede Reihe ab,
  * damit Analyse und Übersicht denselben Endwert zeigen.
  */
-export async function getPriceHistory({ instruments, from, today, quotes, fx }: HistoryInput): Promise<Map<string, PricePoint[]>> {
+export async function getPriceHistory({ instruments, from, today, quotes, fx, firstUse }: HistoryInput): Promise<Map<string, PricePoint[]>> {
   const result = new Map<string, PricePoint[]>()
   const unique = [...new Map(instruments.map((i) => [i.id, i])).values()].slice(0, MAX_HISTORY_INSTRUMENTS)
   const live = (i: InstrumentDto): bigint | null => {
@@ -157,9 +174,22 @@ export async function getPriceHistory({ instruments, from, today, quotes, fx }: 
     return result
   }
 
+  const lookback = addDays(from, -10)
+  const priced = unique.filter((i) => i.symbol || i.coingeckoId || i.metal)
+  const storedCurrency = (i: InstrumentDto) => (i.metal ? 'USD' : i.currency)
+  const stored = await storedCloses(priced.map((i) => i.id), lookback)
+  const raw = new Map<string, ParsedHistory>()
+  const toFetch: InstrumentDto[] = []
+  for (const i of priced) {
+    const points = stored.get(i.id) ?? []
+    const start = firstUse?.get(i.id) ?? from
+    if (historyCovered(points, start > from ? start : from, today, i.coingeckoId ? { daily: true, maxDays: 364 } : {})) raw.set(i.id, { currency: storedCurrency(i), points })
+    else toFetch.push(i)
+  }
+
   const range = yahooRange(from, today)
   const budget = { deadline: Date.now() + HISTORY_BUDGET_MS, skipped: (i: InstrumentDto) => [i, null] as const }
-  const fetched = await inBatches(unique, async (i): Promise<readonly [InstrumentDto, ParsedHistory | null]> => {
+  const fetched = await inBatches(toFetch, async (i): Promise<readonly [InstrumentDto, ParsedHistory | null]> => {
     if (i.metal) {
       const symbol = METAL_FUTURES[i.metal]
       const h = symbol ? await yahooHistory(symbol, range) : null
@@ -171,14 +201,24 @@ export async function getPriceHistory({ instruments, from, today, quotes, fx }: 
     return [i, null]
   }, budget)
 
-  const raw = new Map<string, ParsedHistory>()
-  for (const [i, h] of fetched) if (h && h.points.length > 0) raw.set(i.id, h)
-  const missing = unique.filter((i) => !raw.has(i.id) && (i.symbol || i.coingeckoId || i.metal))
-  const lookback = addDays(from, -10)
-  const stored = await storedCloses(missing.map((i) => i.id), lookback)
-  for (const i of missing) {
+  const toStore: { instrumentId: string; source: string; points: readonly HistoryPoint[] }[] = []
+  for (const [i, h] of fetched) {
+    if (!h || h.points.length === 0) continue
+    raw.set(i.id, h)
+    // Nur speichern, was zur Kurswährung des Instruments passt (sonst Faktor-Fehler, z. B. GBp/GBP)
+    if (h.currency === storedCurrency(i)) toStore.push({ instrumentId: i.id, source: i.coingeckoId ? 'coingecko' : 'yahoo', points: h.points })
+  }
+  if (toStore.length > 0) {
+    try {
+      await storeHistory(toStore)
+    } catch (error) {
+      console.warn('Kurshistorie speichern fehlgeschlagen:', error instanceof Error ? error.name : 'unbekannt')
+    }
+  }
+  // Was der Anbieter nicht lieferte: gespeicherte Schlusskurse, so weit vorhanden
+  for (const i of priced) {
     const points = stored.get(i.id)
-    if (points?.length) raw.set(i.id, { currency: i.metal ? 'USD' : i.currency, points })
+    if (!raw.has(i.id) && points?.length) raw.set(i.id, { currency: storedCurrency(i), points })
   }
 
   const currencies = [...new Set([...raw.values()].map((h) => h.currency).filter((c) => c !== 'EUR'))]
