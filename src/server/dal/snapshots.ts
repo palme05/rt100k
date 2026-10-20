@@ -1,5 +1,5 @@
 import 'server-only'
-import { asc, eq, sql } from 'drizzle-orm'
+import { and, asc, eq, gte, sql } from 'drizzle-orm'
 import { withUser } from '../db/client'
 import { portfolioSnapshot } from '../db/schema'
 import type { Actor } from './actor'
@@ -25,6 +25,20 @@ export async function listDailyTotals(actor: Actor): Promise<DailyTotal[]> {
       .orderBy(asc(portfolioSnapshot.day)),
   )
   return rows.map((r) => ({ day: r.day, valueCents: Number(r.valueCents), investedCents: Number(r.investedCents) }))
+}
+
+/** Tageswerte je Depot ab `since` (für kleine Verlaufslinien). */
+export async function listPortfolioSeries(actor: Actor, since: string): Promise<Map<string, number[]>> {
+  const rows = await withUser(actor.id, (tx) =>
+    tx
+      .select({ portfolioId: portfolioSnapshot.portfolioId, valueCents: portfolioSnapshot.valueCents })
+      .from(portfolioSnapshot)
+      .where(and(eq(portfolioSnapshot.ownerId, actor.id), gte(portfolioSnapshot.day, since)))
+      .orderBy(asc(portfolioSnapshot.day)),
+  )
+  const out = new Map<string, number[]>()
+  for (const r of rows) out.set(r.portfolioId, [...(out.get(r.portfolioId) ?? []), Number(r.valueCents)])
+  return out
 }
 
 export interface SnapshotInput {
