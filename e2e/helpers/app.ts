@@ -38,6 +38,22 @@ export async function addNotification(email: string, title: string, amountCents:
   }
 }
 
+/** Schlusskurs eines allgemeinen Instruments direkt in der DB (sonst nur über den Tageslauf). */
+export async function addPriceClose(isin: string, day: string, closeMicros: number): Promise<void> {
+  const client = new pg.Client({ connectionString: OWNER_URL })
+  await client.connect()
+  try {
+    await client.query(
+      `insert into price_daily (instrument_id, day, close_micros, source)
+       select id, $2, $3, 'yahoo' from instrument where isin = $1 and owner_id is null
+       on conflict do nothing`,
+      [isin, day, closeMicros],
+    )
+  } finally {
+    await client.end()
+  }
+}
+
 let counter = 0
 export function uniqueEmail(prefix = 'nutzer'): string {
   return `${prefix}-${Date.now()}-${process.pid}-${++counter}@e2e.invalid`
