@@ -37,7 +37,7 @@ Stand der Recherche: **19.10.2026**. Ziel: alles an Vermögens-/Depotfunktionen,
 | Broker-Autosync / Bank-API | ✅/💎 (Anzahl Integrationen) | ✅ (Open Banking, IBKR seit 2026) | ✅ (350+ Banken/Broker) | — | ❌ **bewusst ausgeschlossen** (Brief, Regeln 4 + 5) |
 | Sparpläne | ✅ (manuell, keine Auto-Erkennung) | ? | ? (Quellen widersprüchlich) | 2 | ✅ |
 | Kapitalmaßnahmen (Split, Spin-off …) | ✅ | ✅ | ? | 2 | ✅ |
-| Transaktion splitten (± Teile) | ? | ? | ✅ (9/2026) | 3 (Review-Screen) | ✅ |
+| Transaktion splitten (± Teile) | ? | ? | ✅ (9/2026) | 6 (im Import-Review noch nicht umgesetzt) | ✅ |
 | Tags / eigene Gruppierungen | ✅ (Investor: unbegrenzt) | ? | ? | 4 | ✅ |
 
 ### Asset-Klassen
