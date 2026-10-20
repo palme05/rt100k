@@ -1,5 +1,6 @@
 import type { Command } from '../command/CommandPalette'
 import { AppHeader, type NavItem } from './AppHeader'
+import { TabBar } from './TabBar'
 import styles from './shell.module.css'
 
 /** Seitenrahmen: Kopfzeile + Inhaltsspalte. */
@@ -21,6 +22,7 @@ export function AppShell({
       <main className={styles.main} id="inhalt">
         {children}
       </main>
+      <TabBar nav={header.nav} />
     </>
   )
 }

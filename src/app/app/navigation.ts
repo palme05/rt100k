@@ -3,14 +3,22 @@ import type { NavItem } from '@/components/shell/AppHeader'
 
 export const APP_BASE = '/app'
 
+/**
+ * Alle Ziele der App – gleich auf Desktop und Handy: `primary` steht am
+ * Desktop oben, `tab` am Handy in der Leiste unten, der Rest jeweils unter „Mehr“.
+ */
 export function appNav(isAdmin: boolean): NavItem[] {
   return [
-    { href: APP_BASE, label: 'Übersicht' },
-    { href: `${APP_BASE}/depots`, label: 'Depots', activePrefix: `${APP_BASE}/depots` },
-    { href: `${APP_BASE}/analyse`, label: 'Analyse' },
-    { href: `${APP_BASE}/steuer`, label: 'Steuer' },
-    { href: `${APP_BASE}/road`, label: 'Road to 100k' },
-    ...(isAdmin ? [{ href: `${APP_BASE}/admin`, label: 'Admin' }] : []),
+    { href: APP_BASE, label: 'Übersicht', icon: 'home', primary: true, tab: true },
+    { href: `${APP_BASE}/depots`, label: 'Depots', icon: 'depots', activePrefix: `${APP_BASE}/depots`, primary: true, tab: true },
+    { href: `${APP_BASE}/analyse`, label: 'Analyse', icon: 'analysis', primary: true, tab: true },
+    { href: `${APP_BASE}/steuer`, label: 'Steuer', icon: 'tax', activePrefix: `${APP_BASE}/steuer`, primary: true },
+    { href: `${APP_BASE}/road`, label: 'Road to 100k', short: 'Road', icon: 'road', primary: true, tab: true },
+    { href: `${APP_BASE}/import`, label: 'Import', icon: 'import' },
+    { href: `${APP_BASE}/hinweise`, label: 'Hinweise und Kursalarme', icon: 'bell' },
+    { href: `${APP_BASE}/rueckblick`, label: 'Monatsrückblick', icon: 'review' },
+    { href: `${APP_BASE}/sicherheit`, label: 'Konto und Sicherheit', icon: 'shield' },
+    ...(isAdmin ? [{ href: `${APP_BASE}/admin`, label: 'Admin', icon: 'admin' as const }] : []),
   ]
 }
 
