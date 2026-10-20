@@ -82,6 +82,7 @@ GitHub Actions (öffentliches Repo, kostenlos)
 | A45 | **Sparpläne aus dem Buchungsmuster erkennen** (`src/lib/savings.ts`) statt sie anzulegen | Kein neues Datenmodell, wirkt auch für importierte Ausführungen; Regeln: ≥ 3 Käufe im Monatsabstand mit ±15 % Betrag, aktiv bis 70 Tage nach der letzten Ausführung, überfällig nach 5 Tagen Karenz. |
 | A46 | **OpenFIGI nur als Rückfall für unbekannte ISINs**, Ergebnis über Yahoo bestätigt | Yahoo kennt manche europäische ETF-ISIN nicht; OpenFIGI liefert den Ticker je Börse (MIT-Lizenz, kostenlos). Daten bleiben einheitlich von Yahoo (siehe `docs/DATA_SOURCES.md`). |
 | A47 | **Monatliche Import-Erinnerung** nur für aktive Importierer (Import in den letzten 90 Tagen, diesen Monat noch keiner, ab dem 3.) | Erinnert an die Monatsroutine, ohne Nutzer zu stören, die nie oder nur einmal importiert haben. |
+| A48 | **Ladebalken je Link statt Ladeansichten überall** (`useLinkStatus` in `LinkPending`) | Rückmeldung bei jedem Seitenwechsel ohne Suspense-Grenzen – damit bleiben 404-Antworten korrekt und Eingaben gehen nicht vor der Hydrierung verloren (A35, A41). |
 | A15 | **Tests gegen echtes Postgres** (`pnpm test:db`, CI-Service Postgres 18) statt Mocks | RLS, Rollen und Constraints lassen sich nur gegen eine echte Datenbank prüfen. |
 
 ## Free-Tier-Grenzen (geprüft am 19.10.2026)

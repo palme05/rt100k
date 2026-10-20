@@ -369,6 +369,8 @@ Unabhängiges Review (eigener Prüfdurchlauf, nur lesend) aller Route-Handler, S
 | Sparplan- und Import-Hinweise entstehen im Tageslauf im RLS-Kontext des Nutzers, mit festen internen Links und Dedupe je Ausführung bzw. Monat | ✅ (DB-Test: einmalig, nicht beim anderen Nutzer) |
 | OpenFIGI: nur serverseitig, feste URL (kein nutzergesteuertes Ziel), Zeit- und Größenlimit wie alle Anbieter, Antwort per zod geprüft, Ticker per Positivliste (`[A-Z0-9./-]`, bekannte Börsen). Übernommen wird nur ein Yahoo-Symbol, das Yahoo anschließend bestätigt; Name und Währung kommen nie von OpenFIGI. Nur ISINs gehen hinaus, keine Nutzerdaten. Optionaler Schlüssel nur über Env-Var | ✅ (Unit-Tests) |
 | Übersicht: keine neuen Inline-Styles (Verlaufslinie als SVG-Pfad, Farben über Klassen); „+“ blendet sich über Klassen aus und ist dann weder fokussierbar noch für Screenreader sichtbar | ✅ |
+| Nicht zugeordnete Wertpapiere aus dem Import werden als Aufgabe gespeichert – über dieselbe Action wie Kapitalmaßnahmen (Rate-Limit, zod, höchstens 50 je Aufruf, je 300 Zeichen, nur Text) | ✅ (Unit-Test) |
+| Sparplan-Vorschlag in der Road und Ladebalken beim Seitenwechsel: nur Anzeige, keine neuen Endpunkte | ✅ |
 
 ## Notfallplan
 
