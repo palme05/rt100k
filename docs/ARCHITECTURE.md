@@ -18,7 +18,7 @@ Vercel Hobby · Region fra1 · Next.js 16 (App Router, alle Seiten dynamisch ger
    ├─ Kursdienst src/server/quotes (Yahoo inkl. Metall-Futures · CoinGecko · EZB, Data Cache 60 s,
    │    Fallback letzter Schlusskurs)
    ├─ /api/cron/daily (CRON_SECRET) ← Vercel Cron 22:00 UTC
-   └─ /api/status (Erreichbarkeit der Kursquellen, 10 min gecacht)
+   └─ /api/status (Erreichbarkeit der Kursquellen und der Kurshistorie, 10 min gecacht)
    ▼  node-postgres über den Neon-Pooler · TLS (sslmode=verify-full im Code erzwungen, channel_binding=require)
 Neon Postgres 18 · aws-eu-central-1 (Frankfurt) · Projekt rt100k (silent-salad-93686485) · DB rt100k
    ├─ Branch main     → Produktion (0,25–0,5 CU)
