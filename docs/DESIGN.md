@@ -71,6 +71,12 @@ Alle unter `src/components/`. Seiten setzen sich nur daraus zusammen, eigene CSS
 | `TabBar` | `shell/TabBar.tsx` | Handy: Leiste unten (Übersicht, Depots, Analyse, Road, Mehr) mit Blatt „Mehr“; am Desktop ausgeblendet (dort „Mehr“ in der Kopfzeile) |
 | `BookingList` | `bookings/BookingList.tsx` | Alle Buchungen nach Monat, Filter (Art, Wert, Jahr), Suche, Bearbeiten/Löschen je Zeile, schrittweise anzeigen |
 | `PriceChart` | `charts/PriceChart.tsx` | Kursverlauf eines Wertpapiers (6 M bis Max) mit Kauf-/Verkaufspunkten |
+| `TaskList` | `tasks/TaskList.tsx` | Offene Punkte: abgeleitete (verschwinden von selbst, „Beheben →“) und gespeicherte Aufgaben („✓ Erledigt“) |
+| `LinkChips` | `ui/Chips.tsx` | Auswahl als Links (z. B. Depot beim Schnell-Erfassen), `aria-current`, 44 px hoch |
+| `RefreshButton`, `PullToRefresh` | `shell/refresh.tsx` | Daten neu laden per Knopf bzw. Ziehen (nur installierte App) |
+| `LastSnapshot` | `shell/LastSnapshot.tsx` | Ladeansicht der Übersicht mit dem letzten Stand dieses Geräts |
+| `PageTransition` | `shell/PageTransition.tsx` | Einblenden beim Seitenwechsel (über `src/app/app/template.tsx`) |
+| `useSwipe`, `haptic` | `hooks/` | Wischen auf Touch-Geräten (Ereignis-Delegation über `data-swipe`), kurzes Vibrieren |
 | `DonutChart` | `charts/DonutChart.tsx` | Anteile als Ring mit Legende (Name, Prozent, Betrag); Segment per Zeiger, Antippen oder Pfeiltasten hervorheben |
 | `DataTable`, `Th`, `Td`, `NameCell` | `ui/DataTable.tsx` | Tabellen (Zahlen rechts, Name links, `hideSm`; `NameCell` nimmt weiteren Inhalt wie Status und Bearbeiten auf, `Th left` für die passende Kopfzeile) |
 | `Segmented` | `ui/Segmented.tsx` | Zeitraum-/Ansichtsumschalter (`aria-pressed`) |
@@ -122,9 +128,31 @@ Grundlage sind die Dataviz-Regeln: Form nach Aufgabe wählen, Farbe zuletzt.
 - `prefers-reduced-motion` schaltet Übergänge ab. Tastenkürzel greifen nie in Eingabefeldern.
 - Sprache `de-AT`, Zeitzone Europe/Vienna.
 
-## Nur hell (vorerst)
+## Hell und dunkel
 
-Die Richtung lebt vom warmen Papierton und der feinen Linienführung. Ein dunkles Thema braucht eigene, gegen den dunklen Grund geprüfte Stufen (Akzent und Zweitfarbe verlieren sonst Kontrast) und ist kein bloßes Invertieren. Es steht in `docs/IDEAS.md` und kommt frühestens in Phase 6. Die Tokens sind so angelegt, dass es später nur einen zweiten Wertesatz braucht.
+Wahl unter „Konto und Sicherheit → Darstellung“: **Wie das Gerät** (Standard), **Hell** oder **Dunkel**. Gespeichert als Cookie auf dem Gerät; der Server setzt `data-theme` auf `<html>` (kein Inline-Skript, kein Aufblitzen) und passt `theme-color` an.
+
+- **Eigene Stufen statt Invertieren:** Der dunkle Wertesatz in `tokens.css` gilt bei „Wie das Gerät“ + dunklem Gerät (`prefers-color-scheme`) oder bei „Dunkel“. Grund `#131416`, Text mindestens 6 : 1, Akzent und Zweitfarbe heller, Gewinn/Verlust in helleren Tönen (weiter nur mit Vorzeichen/Pfeil).
+- **Kategorie-Farben dunkel:** eigene Reihe gegen den dunklen Grund mit dem Dataviz-Validator geprüft (Helligkeitsband, Farbsehschwäche ΔE ≥ 10 benachbart und beim Ringschluss). Reihenfolge und Bedeutung (`ASSET_KIND_SLOT`) bleiben gleich.
+- Komponenten kennen kein Thema – sie nutzen nur Tokens. Neue Farben immer in beiden Wertesätzen anlegen.
+- Offline-Seite (`public/offline.css`) folgt dem Gerät.
+
+## Gesten, Haptik, Bewegung
+
+Jede Geste hat eine sichtbare Entsprechung für Maus und Tastatur – nichts ist nur per Wischen erreichbar.
+
+| Geste (Handy) | Entsprechung | Wo |
+|---|---|---|
+| Buchung nach rechts wischen → bearbeiten | „Bearbeiten“ je Zeile | `BookingList` |
+| Buchung nach links wischen → Rückfrage „Wirklich löschen?“ | „Löschen“ je Zeile (fragt ebenfalls nach) | `BookingList` |
+| Blatt „Mehr“ nach unten wischen | „✕“, Esc, Tippen daneben | `TabBar` |
+| Ziehen am Seitenanfang (nur installierte App) | „Kurse aktualisieren“ | `PullToRefresh`, `RefreshButton` |
+| „+“ unten rechts | „+ Buchung“ in der Kopfzeile, Tasten `g b`, Palette | `TabBar`, `AppHeader` |
+
+- **Haptik:** kurzes Vibrieren bei Geste erkannt, Löschen bestätigt (`haptic()`); nur Android – iOS kennt keine Vibrations-API, dort trägt der sichtbare Druckzustand (Knopf sinkt leicht ein, „+“ wird kleiner). Bei „Bewegung reduzieren“ aus.
+- **Bewegung:** neue Seiten blenden in 180 ms ein (`template.tsx`), Blätter gleiten hoch. `prefers-reduced-motion` schaltet alles ab.
+- **Tippflächen:** mindestens 44 px; Werkzeug-Knöpfe und Umschalter wachsen bei Touch (`pointer: coarse`).
+- **Ladezustände:** nur Übersicht (zeigt währenddessen den letzten Stand dieses Geräts, `LastSnapshot`) und Analyse. Nie für Seiten mit `notFound()` (sonst 200 statt 404) und nicht für Seiten mit Eingaben wie Road oder Steuer – dort würden schnelle Eingaben vor der Hydrierung verloren gehen.
 
 ## Do / Don't
 
