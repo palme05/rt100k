@@ -24,8 +24,8 @@ const entry = z.object({ label, bp: z.number().int().min(-10_000).max(10_000) })
 const list = z.array(entry).max(MAX_ENTRIES)
 const total = (entries: readonly WeightEntry[]) => entries.reduce((s, e) => s + e.bp, 0)
 
-const input = z.object({
-  instrumentId: z.unknown(),
+/** Inhalt einer Bestandsliste (ohne Instrument) – auch für Backups. */
+export const breakdownData = z.object({
   fundName: z
     .string()
     .max(120)
@@ -37,6 +37,8 @@ const input = z.object({
   sectors: list.refine((l) => total(l) >= 5_000 && total(l) <= 15_000, 'Die Branchengewichte müssen etwa 100 % ergeben.'),
   top: z.array(entry).max(10),
 })
+
+const input = breakdownData.extend({ instrumentId: z.unknown() })
 
 /** Bestandsliste für ein sichtbares ETF/einen Fonds speichern (ersetzt die vorherige). */
 export async function saveEtfBreakdown(actor: Actor, value: unknown): Promise<void> {
