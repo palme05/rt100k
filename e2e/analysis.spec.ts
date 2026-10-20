@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { TR_DIVIDENDE_USD, TR_KAUF_AT } from '../src/lib/import/fixtures'
+import { TR_KAUF_AT } from '../src/lib/import/fixtures'
 import { makePdf } from '../src/test/pdf'
 import { collectProblems, createPortfolio, expectNoOverflow, register } from './helpers/app'
 
@@ -41,20 +41,30 @@ test('Analyse: Rendite je Zeitraum, Vergleichswert, Erträge, Aufteilung', async
   expect(problems).toEqual([])
 })
 
-test('Analyse: Dividende erscheint in Erträgen und Prognose', async ({ page }) => {
+test('Analyse: Dividende erscheint in Erträgen, Prognose und Dividendenkalender', async ({ page }) => {
   await register(page)
-  await createPortfolio(page, 'Trade Republic')
+  const id = await createPortfolio(page, 'Trade Republic')
   await page.goto('/app/import')
-  await page.locator('input[type=file]').setInputFiles([
-    { name: 'kauf.pdf', mimeType: 'application/pdf', buffer: Buffer.from(makePdf(TR_KAUF_AT)) },
-    { name: 'dividende.pdf', mimeType: 'application/pdf', buffer: Buffer.from(makePdf(TR_DIVIDENDE_USD)) },
-  ])
-  // Die Dividende betrifft ein Wertpapier ohne Testkurs → bleibt abgewählt; nur der Kauf wird übernommen
-  await page.getByRole('button', { name: /Buchung(en)? übernehmen/ }).click()
-  await expect(page.getByText(/übernommen/)).toBeVisible()
+  await page.locator('input[type=file]').setInputFiles({ name: 'kauf.pdf', mimeType: 'application/pdf', buffer: Buffer.from(makePdf(TR_KAUF_AT)) })
+  await page.getByRole('button', { name: '1 Buchung übernehmen' }).click()
+  await expect(page.getByText(/1 Buchung übernommen/)).toBeVisible()
+
+  // Ausschüttung von vor einem Monat erfassen
+  const day = new Date(Date.now() - 30 * 86_400_000).toISOString().slice(0, 10)
+  await page.goto(`/app/depots/${id}`)
+  await page.getByLabel('Art', { exact: true }).selectOption('dividend')
+  await page.getByLabel('Datum').fill(day)
+  await page.getByRole('group', { name: 'Bereits im Depot' }).getByRole('button', { name: /Vanguard/ }).click()
+  await page.getByLabel(/Ertrag \(brutto\) in €/).fill('5,00')
+  await page.getByRole('button', { name: 'Buchung speichern' }).click()
+  await expect(page.getByText('Buchung gespeichert.')).toBeVisible()
+
   await page.goto('/app/analyse')
   await expect(page.getByRole('heading', { name: 'Dividenden und Zinsen' })).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'Gebühren und Steuern' })).toBeVisible()
+  await expect(page.getByRole('group', { name: /Dividenden und Zinsen je Monat/ })).toBeVisible()
+  const calendar = page.getByRole('region', { name: 'Dividendenkalender' })
+  await expect(calendar).toContainText('Vanguard')
+  await expect(calendar).toContainText('5,00')
   await expect(page.getByRole('table', { name: 'Gebühren und Steuern je Jahr' })).toContainText('2026')
 })
 
