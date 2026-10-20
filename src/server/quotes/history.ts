@@ -26,6 +26,12 @@ import type { Quote } from './types'
 const HISTORY_TTL = 12 * 3600
 /** Mehr Positionen bekommen keine Historie (Schutz der Anbieter); sie zählen zum Einstand. */
 export const MAX_HISTORY_INSTRUMENTS = 80
+/**
+ * Zeitbudget für Anbieter-Abrufe je Seitenaufruf. Danach zählen gespeicherte
+ * Schlusskurse; was schon geladen ist, liegt im Cache – beim nächsten Aufruf
+ * geht es dort weiter. Hält die Analyse sicher unter `maxDuration`.
+ */
+export const HISTORY_BUDGET_MS = 15_000
 
 /** Zeitraum-Stufen statt exakter Startdaten – gleiche URL für alle, gute Cache-Trefferquote. */
 function yahooRange(from: string, today: string): string {
@@ -152,6 +158,7 @@ export async function getPriceHistory({ instruments, from, today, quotes, fx }: 
   }
 
   const range = yahooRange(from, today)
+  const budget = { deadline: Date.now() + HISTORY_BUDGET_MS, skipped: (i: InstrumentDto) => [i, null] as const }
   const fetched = await inBatches(unique, async (i): Promise<readonly [InstrumentDto, ParsedHistory | null]> => {
     if (i.metal) {
       const symbol = METAL_FUTURES[i.metal]
@@ -162,7 +169,7 @@ export async function getPriceHistory({ instruments, from, today, quotes, fx }: 
     if (i.coingeckoId) return [i, await coingeckoHistory(i.coingeckoId)]
     if (i.symbol) return [i, await yahooHistory(i.symbol, range)]
     return [i, null]
-  })
+  }, budget)
 
   const raw = new Map<string, ParsedHistory>()
   for (const [i, h] of fetched) if (h && h.points.length > 0) raw.set(i.id, h)

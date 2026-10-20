@@ -28,11 +28,15 @@ test('lädt ohne CSP-Verletzungen', async ({ page }) => {
   expect(violations).toEqual([])
 })
 
-test('geschützte Seiten leiten ohne Anmeldung zur Anmeldung', async ({ page }) => {
-  for (const path of ['/app', '/app/depots', '/app/road', '/app/admin', '/app/sicherheit']) {
+test('geschützte Seiten leiten ohne Anmeldung zur Anmeldung', async ({ page, request }) => {
+  for (const path of ['/app', '/app/depots', '/app/road', '/app/admin', '/app/sicherheit', '/app/analyse']) {
     await page.goto(path)
     await expect(page).toHaveURL(/\/anmelden$/)
   }
+  // auch mit Ladezustand (Streaming) leitet der Server selbst um – kein HTML der Seite
+  const response = await request.get('/app/analyse', { maxRedirects: 0 })
+  expect(response.status()).toBe(307)
+  expect(response.headers()['location']).toMatch(/\/anmelden$/)
 })
 
 test('API: Cron ohne Secret und öffentliche Registrierung sind zu', async ({ request }) => {

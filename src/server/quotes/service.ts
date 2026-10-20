@@ -42,9 +42,18 @@ const FIXTURE_PRICES: Record<string, { micros: bigint; currency: string }> = {
 
 const FIXTURE_FX: FxRates = { day: '2026-10-19', rates: new Map([['USD', '1.0823'], ['GBP', '0.83265'], ['CHF', '0.9412']]) }
 
-export async function inBatches<T, R>(items: readonly T[], fn: (item: T) => Promise<R>): Promise<R[]> {
+/**
+ * Abrufe in kleinen Gruppen. Mit `budget` startet nach Ablauf der Frist keine
+ * Gruppe mehr – die übrigen bekommen `skipped(item)` (Rückfall auf die DB),
+ * damit eine Seite nicht an langsamen Anbietern hängt.
+ */
+export async function inBatches<T, R>(items: readonly T[], fn: (item: T) => Promise<R>, budget?: { deadline: number; skipped: (item: T) => R }): Promise<R[]> {
   const results: R[] = []
-  for (let i = 0; i < items.length; i += MAX_PARALLEL) results.push(...(await Promise.all(items.slice(i, i + MAX_PARALLEL).map(fn))))
+  for (let i = 0; i < items.length; i += MAX_PARALLEL) {
+    const batch = items.slice(i, i + MAX_PARALLEL)
+    if (budget && Date.now() >= budget.deadline) results.push(...batch.map(budget.skipped))
+    else results.push(...(await Promise.all(batch.map(fn))))
+  }
   return results
 }
 
