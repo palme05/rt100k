@@ -30,26 +30,36 @@ export function defaultSettings(data: RoadPlannerData): RoadSettings {
   return { ...data.defaults, lumpSum: 0, includeTangibles: data.includeTangibles ?? true }
 }
 
-export function useRoadForecast(data: RoadPlannerData) {
+/**
+ * Prognose mit verstellbaren Annahmen. `extra` > 0 rechnet zusätzlich ein
+ * Vergleichsszenario mit höherer Sparrate (nicht gespeichert).
+ */
+export function useRoadForecast(data: RoadPlannerData, extra = 0) {
   const defaults = useMemo(() => defaultSettings(data), [data])
   const [settings, setSettings] = useState<RoadSettings>(defaults)
   // Schieberegler bleiben flüssig, die Simulation läuft nachgelagert
   const deferred = useDeferredValue(settings)
+  const deferredExtra = useDeferredValue(extra)
   const nowMonth = data.history.at(-1)?.month ?? ''
 
-  const simulation = useMemo(() => {
+  const run = useMemo(() => {
     const { includeTangibles, ...assumptions } = deferred
     const startValue = data.totalValue - (includeTangibles ? 0 : data.tangibleValue)
-    return simulateRoad(startValue, nowMonth, assumptions, [...data.milestones, ...data.goals])
+    const targets = [...data.milestones, ...data.goals]
+    return (more: number) => simulateRoad(startValue, nowMonth, { ...assumptions, monthlyContribution: assumptions.monthlyContribution + more }, targets)
   }, [data, deferred, nowMonth])
+  const simulation = useMemo(() => run(0), [run])
+  const scenario = useMemo(() => (deferredExtra > 0 ? run(deferredExtra) : null), [run, deferredExtra])
 
   return {
     settings,
     setSettings,
     reset: () => setSettings(defaults),
     /** Eingaben haben sich geändert, Ergebnis wird noch berechnet */
-    stale: deferred !== settings,
+    stale: deferred !== settings || deferredExtra !== extra,
     simulation,
+    /** Vergleich mit höherer Sparrate (oder null) */
+    scenario,
     nowMonth,
   }
 }
