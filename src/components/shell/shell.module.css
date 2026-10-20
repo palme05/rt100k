@@ -339,11 +339,20 @@
     color: var(--bg);
     box-shadow: var(--shadow-pop);
     -webkit-tap-highlight-color: transparent;
-    transition: transform 120ms ease-out;
+    transition:
+      transform 120ms ease-out,
+      opacity 160ms ease-out,
+      translate 200ms ease-out;
   }
 
   .fab:active {
     transform: scale(0.94);
+  }
+
+  .fabHidden {
+    opacity: 0;
+    translate: 0 1.5rem;
+    pointer-events: none;
   }
 
   .tabbar {
