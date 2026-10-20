@@ -63,7 +63,8 @@ Im Cloud-Container richtet `.claude/hooks/session-start.sh` beim Start alles ein
 - `src/components/` – Komponentenbibliothek „Strecke“ (`shell`, `ui`, `charts`, `road`, `privacy`, `command`, `markets`, `hooks`, `import`, `analysis`, `tax`); Regeln in [`docs/DESIGN.md`](docs/DESIGN.md)
 - `src/styles/tokens.css` – Design-Tokens
 - `drizzle/` – versionierte Migrationen (0000 Rollen/Funktion, 0001 Tabellen+RLS, 0002 Rechte, … 0006/0007 Zielaufteilung, 0008/0009 ETF-Durchschau, 0010 Buchungsarten AGE und Steuergutschrift)
-- `scripts/` – Migrationen, Einladung, E2E-DB
+- `scripts/` – Migrationen, Einladung, E2E-DB, App-Icons (`icons.ts`)
+- `public/` – PWA: `sw.js` (Service Worker, nur Offline-Seite), `offline.js`/`offline.css`, `icons/`; Manifest in `src/app/manifest.ts`
 - `e2e/` – Playwright (Anmeldung, 2FA, Einladungen, Depots, Import, Analyse, Steuer, Zugriff, Security)
 
 **UI-Regeln:** Seiten nur aus `src/components/` zusammensetzen. Keine Hex-Werte außerhalb von `tokens.css`. Beträge immer über `Amount`/`AmountSplit` (Privatsphäre-Modus).
