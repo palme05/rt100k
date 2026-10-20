@@ -110,5 +110,12 @@ test('Sparplan: aus drei Monatskäufen erkannt, fehlende Ausführung im Depot un
   await page.goto('/app')
   await expect(page.getByRole('region', { name: 'Offene Punkte' })).toContainText('Sparplan fehlt: Vanguard')
   await expectNoOverflow(page)
+
+  // Road: erkannter Sparplan als Vorschlag für die Sparrate
+  await page.goto('/app/road')
+  await expect(page.getByText(/Erkannter Sparplan: 100\s€ im Monat/)).toBeVisible()
+  await page.getByRole('button', { name: 'übernehmen' }).click()
+  await expect(page.getByText('✓ entspricht deinem erkannten Sparplan')).toBeVisible()
+  await expect(page.getByLabel('Sparrate pro Monat')).toHaveValue('100')
   expect(problems).toEqual([])
 })
