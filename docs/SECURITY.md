@@ -168,7 +168,7 @@ Meldeweg für Sicherheitslücken: siehe [`/SECURITY.md`](../SECURITY.md).
 | Kein Steuerwert berechnet; der Hinweis nennt nur den KESt-Satz bei Verkäufen | ✅ |
 
 **Restrisiken Phase 4, Teil 1**
-- Die Formate der Historien-Schnittstellen (Yahoo `range`/`events=split`, CoinGecko `market_chart`, EZB-SDMX-CSV) sind nach Dokumentation und Beispielen gebaut; aus der Entwicklungsumgebung waren die Anbieter nicht erreichbar. Fällt eine Quelle aus oder ändert ihr Format, greift der Rückfall auf gespeicherte Schlusskurse; der Zeitraum wird dann sichtbar verkürzt („Ausgewertet ab …“), es entstehen keine falschen Sprünge.
+- Die Historien-Schnittstellen (Yahoo `range`/`events=split`, CoinGecko `market_chart`, EZB-SDMX-CSV) sind nach Dokumentation gebaut und am 20.10.2026 auf der Preview live geprüft: `/api/status` → `historie` liefert für alle drei `true` (dieselben Parser und Abfrageformen wie die Analyse). Fällt eine Quelle aus oder ändert ihr Format, zeigt das `/api/status`; die Analyse greift auf gespeicherte Schlusskurse zurück und verkürzt den Zeitraum sichtbar („Ausgewertet ab …“), ohne falsche Sprünge.
 - Krypto-Historie über die kostenlose CoinGecko-Schnittstelle nur 12 Monate.
 - Ein Nutzer kann über `?vergleich=` für jedes sichtbare globale Instrument einen Historien-Abruf auslösen (gecacht, begrenzt auf die Zahl der globalen Instrumente) – geringes Risiko; gehört zum Rate-Limit je Nutzer, das für Phase 6 vorgesehen ist (siehe Restrisiken Phase 3).
 

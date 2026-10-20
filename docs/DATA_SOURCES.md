@@ -74,7 +74,7 @@ In der DB landen nur **Tagesschlusskurse** gehaltener oder beobachteter Instrume
 | Edelmetalle | Yahoo-Futures (`GC=F`, `SI=F`, `PL=F`) wie beim aktuellen Kurs | 12 h | USD je Unze → je Gramm |
 | Wechselkurse | EZB-Datenportal (SDMX) `EXR/D.{Währung}.EUR.SP00.A?format=csvdata&detail=dataonly` | je Währung ab Jahresbeginn des ersten Kaufs, 12 h | Referenzkurse nur an Bankarbeitstagen; dazwischen gilt der letzte Kurs |
 
-Rückfall bei Ausfall: gespeicherte Tagesschlusskurse (`price_daily`) und Wechselkurse (`fx_daily`) des Crons.
+Rückfall bei Ausfall: gespeicherte Tagesschlusskurse (`price_daily`) und Wechselkurse (`fx_daily`) des Crons. Live-Prüfung aller drei Historien-Quellen über `/api/status` → `historie` (am 20.10.2026 auf der Preview: alle erreichbar und im erwarteten Format).
 
 ## Import-Formate (Phase 3)
 
