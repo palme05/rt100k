@@ -5,6 +5,7 @@ import {
   char,
   check,
   date,
+  foreignKey,
   index,
   integer,
   jsonb,
@@ -15,6 +16,7 @@ import {
   primaryKey,
   text,
   timestamp,
+  unique,
   uniqueIndex,
   uuid,
 } from 'drizzle-orm/pg-core'
@@ -238,6 +240,7 @@ export const portfolio = pgTable(
   },
   (t) => [
     index('portfolio_owner_idx').on(t.ownerId),
+    unique('portfolio_id_owner_unique').on(t.id, t.ownerId),
     check('portfolio_kind_check', sql`${t.kind} in ('depot', 'krypto', 'cash', 'sachwert')`),
     check('portfolio_name_check', sql`char_length(${t.name}) between 1 and 80`),
     pgPolicy('portfolio_owner', { for: 'all', to: appRole, using: ownRows, withCheck: ownRows }),
@@ -506,6 +509,41 @@ export const etfBreakdown = pgTable(
     check('etf_breakdown_rows_check', sql`${t.rows} between 1 and 20000`),
     check('etf_breakdown_name_check', sql`${t.fundName} is null or char_length(${t.fundName}) <= 120`),
     pgPolicy('etf_breakdown_owner', { for: 'all', to: appRole, using: ownRows, withCheck: ownRows }),
+  ],
+).enableRLS()
+
+/**
+ * Freigabe eines Depots zum Lesen. Zuerst ein Link (nur der SHA-256 des
+ * Tokens, 72 h gültig, einmalig), nach dem Annehmen mit Empfänger. Annehmen
+ * und Vorschau laufen über eng begrenzte Funktionen (Migration 0012), weil
+ * der Empfänger die Zeile vorher nicht sehen darf.
+ */
+export const portfolioShare = pgTable(
+  'portfolio_share',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    portfolioId: uuid('portfolio_id').notNull(),
+    ownerId: text('owner_id')
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    granteeId: text('grantee_id').references(() => user.id, { onDelete: 'cascade' }),
+    tokenHash: text('token_hash').unique(),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+    acceptedAt: timestamp('accepted_at', { withTimezone: true }),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    // Depot und Besitzer gehören zusammen: nur der Besitzer kann sein Depot freigeben
+    foreignKey({ name: 'portfolio_share_portfolio_owner_fk', columns: [t.portfolioId, t.ownerId], foreignColumns: [portfolio.id, portfolio.ownerId] }).onDelete('cascade'),
+    index('portfolio_share_portfolio_idx').on(t.portfolioId),
+    index('portfolio_share_grantee_idx').on(t.granteeId),
+    uniqueIndex('portfolio_share_unique_grantee').on(t.portfolioId, t.granteeId).where(sql`grantee_id is not null`),
+    check('portfolio_share_state_check', sql`(${t.granteeId} is null) = (${t.acceptedAt} is null) and (${t.granteeId} is null) = (${t.tokenHash} is not null)`),
+    check('portfolio_share_token_check', sql`${t.tokenHash} is null or ${t.tokenHash} ~ '^[0-9a-f]{64}$'`),
+    check('portfolio_share_not_self', sql`${t.granteeId} is null or ${t.granteeId} <> ${t.ownerId}`),
+    pgPolicy('portfolio_share_owner', { for: 'all', to: appRole, using: ownRows, withCheck: ownRows }),
+    pgPolicy('portfolio_share_grantee_read', { for: 'select', to: appRole, using: sql`grantee_id = ${currentUser}` }),
+    pgPolicy('portfolio_share_grantee_leave', { for: 'delete', to: appRole, using: sql`grantee_id = ${currentUser}` }),
   ],
 ).enableRLS()
 

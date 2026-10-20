@@ -16,6 +16,10 @@ export const AUDIT_LABELS: Record<string, string> = {
   portfolio_deleted: 'Depot gelöscht',
   export: 'Daten exportiert',
   backup_restored: 'Backup wiederhergestellt',
+  share_created: 'Freigabe-Link erstellt',
+  share_revoked: 'Freigabe widerrufen',
+  share_accepted: 'Freigabe angenommen',
+  share_left: 'Freigabe verlassen',
 }
 
 export function auditLabel(type: string): string {
