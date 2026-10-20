@@ -1,0 +1,94 @@
+/* Buchungsliste: Filterleiste, Monatsgruppen, Aktionen je Zeile. */
+
+.list {
+  display: grid;
+  gap: var(--space-4);
+  min-width: 0;
+}
+
+.filters {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 9.5rem), 1fr));
+  gap: var(--space-2);
+}
+
+.filter {
+  display: block;
+  min-width: 0;
+}
+
+.count {
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  align-items: baseline;
+  font-size: var(--text-sm);
+  color: var(--ink-3);
+}
+
+.reset {
+  border: 0;
+  background: none;
+  padding: 0;
+  font: inherit;
+  color: var(--ink-2);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+  min-height: 2.75rem;
+}
+
+.error {
+  margin: 0;
+  color: var(--neg);
+  font-size: var(--text-sm);
+}
+
+.month {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.monthHead {
+  margin: var(--space-2) 0 0;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  color: var(--ink-3);
+}
+
+/* Text oben, Aktionen immer in eigener Zeile – gleich bei kurzen und langen Namen */
+.sub {
+  display: grid;
+  justify-items: start;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+/* Link und Knopf sehen gleich aus; Tippfläche 44 px hoch */
+.action {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.75rem;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: var(--ink-2);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+
+.action:hover {
+  color: var(--ink);
+}
+
+.action:disabled {
+  opacity: 0.5;
+  cursor: default;
+}

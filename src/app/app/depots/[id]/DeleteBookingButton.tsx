@@ -1,10 +1,12 @@
 'use client'
 
+import { useRouter } from 'next/navigation'
 import { useState, useTransition } from 'react'
 import { Button } from '@/components/ui/forms'
 import { deleteBookingAction } from '../actions'
 
-export function DeleteBookingButton({ id, label }: { id: string; label: string }) {
+export function DeleteBookingButton({ id, label, redirectTo }: { id: string; label: string; redirectTo?: string }) {
+  const router = useRouter()
   const [pending, start] = useTransition()
   const [error, setError] = useState<string | null>(null)
   return (
@@ -17,6 +19,7 @@ export function DeleteBookingButton({ id, label }: { id: string; label: string }
           start(async () => {
             const result = await deleteBookingAction(id)
             setError(result.ok ? null : result.error)
+            if (result.ok && redirectTo) router.push(redirectTo)
           })
         }
       >

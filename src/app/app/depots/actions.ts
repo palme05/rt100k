@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { requireUser } from '@/server/auth/session'
-import { createBooking, deleteBooking } from '@/server/dal/bookings'
+import { createBooking, deleteBooking, updateBooking } from '@/server/dal/bookings'
 import { ValidationError, NotFoundError } from '@/server/dal/errors'
 import { deleteImportedBookings } from '@/server/dal/imports'
 import { ensureGlobalInstrument } from '@/server/dal/instruments'
@@ -112,6 +112,35 @@ export async function createBookingAction(_prev: ActionResult, formData: FormDat
   }
   revalidatePath('/app', 'layout')
   return ok
+}
+
+/** Buchung ändern; danach zurück zum Depot der Buchung (aus der DB, nicht aus dem Formular). */
+export async function updateBookingAction(bookingId: string, _prev: ActionResult, formData: FormData): Promise<ActionResult> {
+  const user = await requireUser()
+  const field = (name: string) => {
+    const v = formData.get(name)
+    return typeof v === 'string' ? v : null
+  }
+  let portfolioId: string
+  try {
+    await consumeRateLimit(user, 'write')
+    const updated = await updateBooking(user, bookingId, {
+      type: field('type'),
+      occurredOn: field('occurredOn'),
+      instrumentId: field('instrumentId'),
+      quantity: field('quantity'),
+      factor: field('factor'),
+      amount: field('amount'),
+      fee: field('fee'),
+      tax: field('tax'),
+      note: field('note'),
+    })
+    portfolioId = updated.portfolioId
+  } catch (error) {
+    return fail(error)
+  }
+  revalidatePath('/app', 'layout')
+  redirect(`/app/depots/${portfolioId}?geaendert=1#buchungen`)
 }
 
 export async function deleteBookingAction(id: string): Promise<ActionResult> {

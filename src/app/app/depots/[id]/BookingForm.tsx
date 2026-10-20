@@ -5,7 +5,7 @@ import { Actions, Button, describedBy, Field, Form, FormRow, Input, Message, Sel
 import { formatCents, MoneyParseError, parseEuroToCents, type Cents } from '@/lib/money'
 import { averagePriceCents, parseQuantity } from '@/lib/quantity'
 import type { InstrumentCandidate } from '@/server/quotes/types'
-import { createBookingAction, searchInstrumentsAction, selectInstrumentAction, type ActionResult } from '../actions'
+import { createBookingAction, searchInstrumentsAction, selectInstrumentAction, updateBookingAction, type ActionResult } from '../actions'
 import styles from '../depots.module.css'
 
 type Kind = 'depot' | 'krypto' | 'cash' | 'sachwert'
@@ -71,18 +71,34 @@ function cents(value: string): Cents | null {
   }
 }
 
-export function BookingForm({ portfolioId, kind, held, today }: { portfolioId: string; kind: Kind; held: readonly HeldInstrument[]; today: string }) {
+/** Werte einer bestehenden Buchung als Eingabetext (deutsches Format). */
+export interface BookingEdit {
+  bookingId: string
+  type: string
+  occurredOn: string
+  instrument: HeldInstrument | null
+  quantity: string
+  factor: string
+  amount: string
+  fee: string
+  tax: string
+  note: string
+}
+
+export function BookingForm({ portfolioId, kind, held, today, edit }: { portfolioId: string; kind: Kind; held: readonly HeldInstrument[]; today: string; edit?: BookingEdit }) {
   const id = useId()
-  const types = TYPES[kind]
-  const [type, setType] = useState(types[0] ?? 'buy')
-  const [instrument, setInstrument] = useState<HeldInstrument | null>(held[0] ?? null)
-  const [quantity, setQuantity] = useState('')
-  const [amount, setAmount] = useState('')
+  // Beim Bearbeiten auch Arten zulassen, die das Formular sonst nicht anbietet (z. B. aus einem Import)
+  const types = edit && !TYPES[kind].includes(edit.type) ? [...TYPES[kind], edit.type] : TYPES[kind]
+  const [type, setType] = useState(edit?.type ?? types[0] ?? 'buy')
+  const [instrument, setInstrument] = useState<HeldInstrument | null>(edit ? edit.instrument : (held[0] ?? null))
+  const [quantity, setQuantity] = useState(edit?.quantity ?? '')
+  const [amount, setAmount] = useState(edit?.amount ?? '')
   const [formKey, setFormKey] = useState(0)
   const [state, action, pending] = useActionState(async (previous: ActionResult, formData: FormData) => {
-    const result = await createBookingAction(previous, formData)
+    // Bearbeiten leitet nach dem Speichern zum Depot weiter
+    const result = edit ? await updateBookingAction(edit.bookingId, previous, formData) : await createBookingAction(previous, formData)
     // Nach erfolgreichem Speichern: Felder leeren, Art und Wertpapier behalten (schnelles Erfassen)
-    if (result.ok) {
+    if (result.ok && !edit) {
       setQuantity('')
       setAmount('')
       setFormKey((k) => k + 1)
@@ -100,12 +116,12 @@ export function BookingForm({ portfolioId, kind, held, today }: { portfolioId: s
   return (
     <div className={styles.stack}>
       {state.error && (!state.field || state.field === 'instrumentId') ? <Message tone="error">{state.error}</Message> : null}
-      {state.ok ? <Message tone="success">Buchung gespeichert.</Message> : null}
+      {state.ok && !edit ? <Message tone="success">Buchung gespeichert.</Message> : null}
       <Form action={action} key={formKey}>
         <input type="hidden" name="portfolioId" value={portfolioId} />
         <FormRow>
           <Field id={`${id}-type`} label="Art">
-            <Select id={`${id}-type`} name="type" value={type} onChange={(e) => setType(e.target.value)} autoFocus>
+            <Select id={`${id}-type`} name="type" value={type} onChange={(e) => setType(e.target.value)} autoFocus={!edit}>
               {types.map((t) => (
                 <option key={t} value={t}>
                   {LABEL[t]}
@@ -114,7 +130,7 @@ export function BookingForm({ portfolioId, kind, held, today }: { portfolioId: s
             </Select>
           </Field>
           <Field id={`${id}-date`} label="Datum" error={err('occurredOn')}>
-            <Input id={`${id}-date`} name="occurredOn" type="date" required defaultValue={today} max={today} {...describedBy(`${id}-date`, null, err('occurredOn'))} />
+            <Input id={`${id}-date`} name="occurredOn" type="date" required defaultValue={edit?.occurredOn ?? today} max={today} {...describedBy(`${id}-date`, null, err('occurredOn'))} />
           </Field>
         </FormRow>
 
@@ -144,7 +160,7 @@ export function BookingForm({ portfolioId, kind, held, today }: { portfolioId: s
           ) : null}
           {type === 'split' ? (
             <Field id={`${id}-factor`} label="Verhältnis (neue Stück je altem)" hint="4 bei einem 4:1-Split, 0,1 bei 1:10" error={err('factor')}>
-              <Input id={`${id}-factor`} name="factor" inputMode="decimal" required {...describedBy(`${id}-factor`, true, err('factor'))} />
+              <Input id={`${id}-factor`} name="factor" inputMode="decimal" required defaultValue={edit?.factor} {...describedBy(`${id}-factor`, true, err('factor'))} />
             </Field>
           ) : null}
           {NO_AMOUNT.has(type) ? null : (
@@ -157,23 +173,23 @@ export function BookingForm({ portfolioId, kind, held, today }: { portfolioId: s
         {type === 'split' || type === 'fee' || type === 'tax' || type === 'tax_refund' ? null : (
           <FormRow>
             <Field id={`${id}-fee`} label="Gebühren in €" hint="optional" error={err('fee')}>
-              <Input id={`${id}-fee`} name="fee" inputMode="decimal" {...describedBy(`${id}-fee`, true, err('fee'))} />
+              <Input id={`${id}-fee`} name="fee" inputMode="decimal" defaultValue={edit?.fee} {...describedBy(`${id}-fee`, true, err('fee'))} />
             </Field>
             {type === 'sell' || type === 'dividend' || type === 'interest' || type === 'age' ? (
               <Field id={`${id}-tax`} label="Einbehaltene Steuer in €" hint="KESt, Quellensteuer – optional" error={err('tax')}>
-                <Input id={`${id}-tax`} name="tax" inputMode="decimal" {...describedBy(`${id}-tax`, true, err('tax'))} />
+                <Input id={`${id}-tax`} name="tax" inputMode="decimal" defaultValue={edit?.tax} {...describedBy(`${id}-tax`, true, err('tax'))} />
               </Field>
             ) : null}
           </FormRow>
         )}
 
         <Field id={`${id}-note`} label="Notiz" hint="optional, höchstens 500 Zeichen">
-          <Textarea id={`${id}-note`} name="note" maxLength={500} rows={2} />
+          <Textarea id={`${id}-note`} name="note" maxLength={500} rows={2} defaultValue={edit?.note} />
         </Field>
 
         <Actions>
           <Button type="submit" disabled={pending}>
-            {pending ? 'Speichern …' : 'Buchung speichern'}
+            {pending ? 'Speichern …' : edit ? 'Änderung speichern' : 'Buchung speichern'}
           </Button>
         </Actions>
       </Form>

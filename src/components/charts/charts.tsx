@@ -1,7 +1,7 @@
 'use client'
 
 import { useId, useMemo, useState, type KeyboardEvent, type PointerEvent } from 'react'
-import { eurCompact, eurWhole, pct, share } from '@/lib/display'
+import { eur, eurCompact, eurWhole, pct, share } from '@/lib/display'
 import { MASK, usePrivacy } from '../privacy/privacy'
 import { useElementWidth } from '../hooks/useElementWidth'
 import styles from './charts.module.css'
@@ -67,7 +67,8 @@ const classNames = {
 
 type ChartClassNames = typeof classNames
 
-export type ValueKind = 'money' | 'percent' | 'index'
+/** `price`: Kurs je Stück – öffentlich, daher auch im Privatsphäre-Modus sichtbar, mit Cent */
+export type ValueKind = 'money' | 'percent' | 'index' | 'price'
 
 export interface ChartSeries {
   id: string
@@ -121,6 +122,7 @@ function useFormatters(kind: ValueKind) {
       }
     }
     if (kind === 'percent') return { value: (v: number) => pct(v), tick: (v: number) => share(v, 0) }
+    if (kind === 'price') return { value: (v: number) => eur(v), tick: (v: number) => (Math.abs(v) >= 1000 ? eurCompact(v) : eur(v)) }
     return { value: (v: number) => v.toFixed(1).replace('.', ','), tick: (v: number) => v.toFixed(0) }
   }, [hidden, kind])
 }

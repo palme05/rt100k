@@ -243,6 +243,51 @@ export async function createBooking(actor: Actor, input: unknown): Promise<Booki
   })
 }
 
+/** Eine Buchung des Nutzers (zum Bearbeiten), sonst `NotFoundError`. */
+export async function getBooking(actor: Actor, id: unknown): Promise<BookingDto> {
+  const bookingId = parseId(id)
+  const [row] = await withUser(actor.id, (tx) =>
+    tx
+      .select({ ...ledgerColumns, portfolioId: booking.portfolioId, instrumentName: instrument.name, note: booking.note, source: booking.source })
+      .from(booking)
+      .leftJoin(instrument, eq(instrument.id, booking.instrumentId))
+      .where(and(eq(booking.id, bookingId), eq(booking.ownerId, actor.id)))
+      .limit(1),
+  )
+  if (!row) throw new NotFoundError('Buchung nicht gefunden.')
+  return row
+}
+
+/**
+ * Ändert eine Buchung – geprüft wie eine neue: Instrument sichtbar, Bestand
+ * an keinem Tag negativ (mit der geänderten statt der alten Buchung). Depot,
+ * Quelle und Import-Schlüssel bleiben; ein erneuter Import der Datei
+ * überschreibt die Änderung daher nicht.
+ */
+export async function updateBooking(actor: Actor, id: unknown, input: unknown): Promise<BookingDto> {
+  const bookingId = parseId(id)
+  const data = normalizeBooking({ ...(typeof input === 'object' && input ? input : {}), portfolioId: '' })
+  return withUser(actor.id, async (tx) => {
+    const [existing] = await tx
+      .select({ portfolioId: booking.portfolioId })
+      .from(booking)
+      .where(and(eq(booking.id, bookingId), eq(booking.ownerId, actor.id)))
+      .limit(1)
+    if (!existing) throw new NotFoundError('Buchung nicht gefunden.')
+    await ownedPortfolio(tx, actor, existing.portfolioId, { lock: true })
+    const instrumentName = data.instrumentId ? (await getInstrument(actor, data.instrumentId, tx)).name : null
+    const ledger = (await ledgerBookings(tx, actor, existing.portfolioId)).map((b) => (b.id === bookingId ? { id: bookingId, ...data } : b))
+    assertConsistent(ledger)
+    const [row] = await tx
+      .update(booking)
+      .set(data)
+      .where(and(eq(booking.id, bookingId), eq(booking.ownerId, actor.id)))
+      .returning({ ...ledgerColumns, portfolioId: booking.portfolioId, note: booking.note, source: booking.source })
+    if (!row) throw new NotFoundError('Buchung nicht gefunden.')
+    return { ...row, instrumentName }
+  })
+}
+
 export async function deleteBooking(actor: Actor, id: unknown): Promise<void> {
   const bookingId = parseId(id)
   await withUser(actor.id, async (tx) => {
