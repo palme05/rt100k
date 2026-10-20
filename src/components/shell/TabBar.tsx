@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
 import { isActive, quickAddTarget, type NavItem } from './AppHeader'
 import { Icon } from './icons'
+import { LinkPending } from './LinkPending'
 import styles from './shell.module.css'
 
 /**
@@ -53,6 +54,7 @@ export function TabBar({ nav, quickAdd }: { nav: readonly NavItem[]; quickAdd?: 
       {add ? (
         <Link href={add} className={fabHidden ? `${styles.fab} ${styles.fabHidden}` : styles.fab} aria-label="Neue Buchung" tabIndex={fabHidden ? -1 : undefined} aria-hidden={fabHidden || undefined}>
           <Icon name="plus" size={26} />
+          <LinkPending />
         </Link>
       ) : null}
       <nav className={styles.tabbar} aria-label="Hauptnavigation">
@@ -60,6 +62,7 @@ export function TabBar({ nav, quickAdd }: { nav: readonly NavItem[]; quickAdd?: 
           <Link key={item.href} href={item.href} className={styles.tab} aria-current={isActive(pathname, item) ? 'page' : undefined}>
             <Icon name={item.icon} />
             <span>{item.short ?? item.label}</span>
+            <LinkPending />
           </Link>
         ))}
         <button type="button" className={styles.tab} aria-haspopup="dialog" aria-expanded={open} aria-current={moreActive ? 'page' : undefined} onClick={show}>
@@ -100,6 +103,7 @@ export function TabBar({ nav, quickAdd }: { nav: readonly NavItem[]; quickAdd?: 
                 <Link href={item.href} className={styles.sheetLink} aria-current={isActive(pathname, item) ? 'page' : undefined} onClick={() => dialog.current?.close()}>
                   <Icon name={item.icon} />
                   {item.label}
+                  <LinkPending />
                 </Link>
               </li>
             ))}

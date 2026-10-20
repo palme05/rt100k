@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { LinkPending } from '../shell/LinkPending'
 import styles from './layout.module.css'
 
 /**
@@ -93,6 +94,7 @@ export function BackLink({ href, children }: { href: string; children: React.Rea
   return (
     <Link className={styles.back} href={href}>
       ← {children}
+      <LinkPending />
     </Link>
   )
 }
@@ -101,6 +103,7 @@ export function TextLink({ href, children }: { href: string; children: React.Rea
   return (
     <Link className={styles.textLink} href={href}>
       {children}
+      <LinkPending />
     </Link>
   )
 }
