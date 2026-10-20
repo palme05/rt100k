@@ -112,7 +112,7 @@ Meldeweg für Sicherheitslücken: siehe [`/SECURITY.md`](../SECURITY.md).
 | Kursdaten: zod, Größen-/Zeitlimit, Steuerzeichen entfernt, Namen gekürzt; Stammdaten nur nach Server-Bestätigung beim Anbieter | ✅ (Tests) |
 | Cron nur mit Secret (konstante Vergleichszeit) | ✅ (Unit + E2E) |
 | Secrets im Repo: keine; Test-Secrets und -Passwörter je Lauf zufällig; gitleaks über die gesamte Historie | ✅ |
-| `pnpm audit --prod` | 1 × mittel: altes esbuild in drizzle-kit (nur Entwicklung, Dev-Server ungenutzt) – beobachten |
+| `pnpm audit` | esbuild-Lücke (drizzle-kit, mittel) per Override auf 0.25 behoben (20.10.2026). Offen: `braces` (hoch, GHSA-vfj7-8cjw-p6xm) nur in ESLint, ohne verfügbaren Fix; verarbeitet nur eigene Glob-Muster, nicht ausnutzbar – beobachten. Produktionsabhängigkeiten: 0 Funde |
 
 **Restrisiken Phase 2**
 - Die Datenbank-Passwörter und Better-Auth-Secrets wurden in der Claude-Code-Sitzung erzeugt und über die Neon-/Vercel-Schnittstellen gesetzt; sie stehen dadurch im Sitzungsverlauf. Empfehlung: vor dem ersten echten Familien-Account rotieren (Anleitung in `docs/EINRICHTUNG.md`).
