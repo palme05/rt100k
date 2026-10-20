@@ -25,6 +25,10 @@ export const AUDIT_TYPES = [
   'portfolio_deleted',
   'export',
   'backup_restored',
+  'share_created',
+  'share_revoked',
+  'share_accepted',
+  'share_left',
 ] as const
 export type AuditType = (typeof AUDIT_TYPES)[number]
 
