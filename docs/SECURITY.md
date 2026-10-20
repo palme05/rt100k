@@ -64,11 +64,11 @@ Meldeweg für Sicherheitslücken: siehe [`/SECURITY.md`](../SECURITY.md).
 - [x] Keine Beträge, Tokens, Session-IDs in Logs (nur Fehlerklassen)
 - [x] Audit-Log (Logins, Fehlversuche, neue Geräte, Sitzungen, 2FA, Passkeys, Passwort, Einladungen, Depot-Löschung), für den Nutzer einsehbar, nur anhängbar, 2 Jahre
 
-### Uploads (Phase 3) – ✅ bis auf den Export
+### Uploads und Export (Phase 3/5) – ✅
 - [x] Magic Bytes, Größe ≤ 10 MB, ≤ 50 Seiten, Timeout 20 s (Unit-Tests mit echten PDFs)
 - [x] pdf.js ohne eval (v6 hat keine eval-Pfade mehr; `isEvalSupported` gibt es nicht mehr), keine Skripte/Formulare (`enableXfa: false`, kein Annotation-Layer), nur `getTextContent`
 - [x] Hochgeladene Dateien nicht speichern – sie verlassen den Browser gar nicht; gespeichert werden nur Buchungen plus Datei-Hash
-- [ ] CSV-Export gegen Formel-Injection (mit dem Export in Phase 6)
+- [x] CSV-Export gegen Formel-Injection (Phase 5: `src/lib/csv-export.ts` – Text mit `= + - @`, auch nach Leerraum und in voller Breite, bekommt ein Apostroph; Beträge als eigener Zelltyp aus Cent; Unit- und E2E-Test)
 
 ### Abschluss (Phase 6)
 - [ ] Vollständiges Security-Review aller Endpunkte, Restrisiko-Bericht an den Betreiber
@@ -182,6 +182,24 @@ Meldeweg für Sicherheitslücken: siehe [`/SECURITY.md`](../SECURITY.md).
 - Die Historien-Schnittstellen (Yahoo `range`/`events=split`, CoinGecko `market_chart`, EZB-SDMX-CSV) sind nach Dokumentation gebaut und am 20.10.2026 auf der Preview live geprüft: `/api/status` → `historie` liefert für alle drei `true` (dieselben Parser und Abfrageformen wie die Analyse). Fällt eine Quelle aus oder ändert ihr Format, zeigt das `/api/status`; die Analyse greift auf gespeicherte Schlusskurse zurück und verkürzt den Zeitraum sichtbar („Ausgewertet ab …“), ohne falsche Sprünge.
 - Krypto-Historie über die kostenlose CoinGecko-Schnittstelle nur 12 Monate.
 - Ein Nutzer kann über `?vergleich=` für jedes sichtbare globale Instrument einen Historien-Abruf auslösen (gecacht, begrenzt auf die Zahl der globalen Instrumente) – geringes Risiko; gehört zum Rate-Limit je Nutzer, das für Phase 6 vorgesehen ist (siehe Restrisiken Phase 3).
+
+## Security-Check Phase 5 (20.10.2026)
+
+| Prüfung | Ergebnis |
+|---|---|
+| Steuerwerte überall als Schätzung gekennzeichnet: Hinweis „≈ Schätzung, keine Steuerberatung“ oben im Cockpit, `≈` an Steuerbeträgen, Sicherheitsstufe je E 1kv-Kennzahl, Hinweis im CSV (Brief-Regel 4) | ✅ (E2E) |
+| Keine neue Tabelle; Migration `0010` erweitert nur die Prüfregel der Buchungsart (`age`, `tax_refund`). Die Steuer wird bei jedem Aufruf aus den eigenen Buchungen gerechnet, nichts gespeichert | ✅ |
+| Neue Abfrage nur über die DAL mit `withUser` **und** `owner_id`: AGE aus OeKB-Meldung (`createAgeFromReport`) prüft Depot und Instrument wie jede Buchung | ✅ |
+| Negativ-Tests `tax.db.test.ts`: fremdes Depot, fremder privater Fonds, ungültige IDs, fremder Nutzer auf eigenes Depot → `NotFoundError`; Zukunftsdatum, Duplikat, kein Bestand, fehlender Kurs, Formel/Text statt Zahl → `ValidationError` | ✅ (3 DB-Tests) |
+| Server Action `createAgeReportAction`: zuerst `requireUser()`, die Fonds-Auswahl „Depot\|Fonds“ prüft die DAL, nie vertraut | ✅ |
+| CSV-Export `GET /app/steuer/export`: `requireUser()` (ohne Sitzung Weiterleitung, E2E), nur eigene Daten, `Cache-Control: private, no-store`, Jahreszahl per zod (1970–2100), Inhalt aus ganzen Cent; GET ohne Nebenwirkung (kein CSRF-Ziel) | ✅ (E2E) |
+| Formel-Injection: Depot- und Wertpapiernamen sind Nutzereingaben → `csvText` entschärft `=`, `+`, `-`, `@` (auch nach Leerraum, Tab, Zeilenumbruch und in voller Breite) und entfernt Steuerzeichen; E2E mit Depotname `=HYPERLINK(…)` | ✅ (13 Unit-Tests + E2E) |
+| OeKB: kein automatischer Abruf (Nutzungsregeln ungeklärt); Link zu my.oekb.at mit `rel="noopener noreferrer"`, die Werte tippt der Nutzer selbst ab | ✅ |
+| Steuergutschriften aus Abrechnungen (TR, flatex) werden als eigene Buchung `tax_refund` übernommen statt verworfen – Steuerfelder bleiben nie negativ | ✅ (Unit) |
+
+**Restrisiken Phase 5**
+- Die Steuerregeln sind nach Sekundärquellen umgesetzt (BMF-/RIS-Seiten waren aus der Entwicklungsumgebung nicht abrufbar); Kennzahlen mit Sicherheit „mittel/niedrig“ sind markiert. Das ist kein Sicherheits-, aber ein Richtigkeitsrisiko – deshalb überall „Schätzung“.
+- Der Steuer-Export lädt keine Kurse (nur Buchungen). Die Cockpit-Seite holt im laufenden Jahr Kurse für den Jahresend-Hinweis aus dem bestehenden Cache.
 
 ## Notfallplan
 
