@@ -331,6 +331,17 @@ Unabhängiges Review (eigener Prüfdurchlauf, nur lesend) aller Route-Handler, S
 | Altes `.xls` (OLE2) wird abgewiesen statt geraten | ✅ |
 | Tortendiagramm ohne Inline-Styles (Farben über Klassen, CSP unverändert); Beträge in der Mitte und in der Legende folgen dem Privatsphäre-Modus | ✅ (E2E: Tastatur, Live-Region, kein seitliches Scrollen) |
 
+## Nachtrag: Paket 1 – Navigation, Buchungen bearbeiten, Wertpapier-Seite, Kurshistorie (20.10.2026)
+
+| Prüfung | Ergebnis |
+|---|---|
+| `updateBookingAction`: `requireUser()` → `consumeRateLimit('write')` → DAL. Die Buchungs-ID ist gebunden; Depot und Rückleitung kommen aus der DB, nicht aus dem Formular | ✅ |
+| `updateBooking`/`getBooking`: `withUser` + `ownerId`-Filter, Depot-Sperre, Instrument muss sichtbar sein, Bestand darf an keinem Tag negativ werden (mit der geänderten statt der alten Buchung). Quelle und Import-Schlüssel bleiben | ✅ (Negativ-Tests: fremde/ungültige Buchung, fremdes privates Instrument, Bestand) |
+| Bearbeiten-Seite prüft zusätzlich, dass die Buchung zum Depot in der Adresse gehört (sonst 404) | ✅ |
+| Wertpapier-Seite `/app/wertpapier/[id]`: nur für sichtbare Instrumente mit eigenen Buchungen, sonst 404 – kein Ausforschen fremder privater Instrumente | ✅ (DB-Test, E2E 404) |
+| Kurshistorie wird nach dem Abruf in `price_daily` gespeichert (allgemeine Marktdaten ohne Nutzerbezug, nur vom Server geholte und geparste Werte, nur in der Kurswährung des Instruments). Kein Eingabeweg für Nutzer | ✅ |
+| Navigation: „Mehr“ als natives `<dialog>` (Fokus bleibt darin, Esc schließt), keine neuen Inline-Styles | ✅ |
+
 ## Notfallplan
 
 **Bei Verdacht auf Secret-Leak** (Commit, Log, Screenshot):
