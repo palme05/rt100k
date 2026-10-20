@@ -1,6 +1,6 @@
 # Architektur
 
-Stand: Phase 4, Teil 1 (20.10.2026). Grundsatz: **0 € Kosten, Sicherheit vor Features.** Jede Architekturentscheidung muss in die Free Tiers unten passen.
+Stand: Phase 4, Teil 2 (20.10.2026). Grundsatz: **0 € Kosten, Sicherheit vor Features.** Jede Architekturentscheidung muss in die Free Tiers unten passen.
 
 ## Überblick
 
@@ -56,6 +56,7 @@ GitHub Actions (öffentliches Repo, kostenlos)
 | A19 | **Analyse bei jedem Aufruf neu berechnet** (`src/lib/performance.ts`, reine Funktionen): Tagesreihe aus Buchungen und Kurshistorie, TTWROR (Zuflüsse zu Tagesbeginn, Abflüsse zu Tagesende), IZF taggenau | Keine zusätzlichen Tabellen, keine Cron-Last, immer konsistent mit den Buchungen (auch nach Import alter Abrechnungen). Rechenzeit für Familienportfolios im Millisekundenbereich. |
 | A20 | **Kurshistorie aus dem Data Cache statt aus der DB** (12 h, Zeitraum-Stufen `1y…max` als stabile Cache-Schlüssel); Rückfall auf die gespeicherten Schlusskurse | Spart DB-Speicher und Schreibzugriffe; gleiche Antworten für alle Nutzer. Brief-Regel bleibt: in der DB nur Tagesschlusskurse gehaltener Instrumente (Cron). |
 | A21 | **Kein Sprung bei fehlender Historie**: Beginnt die Kurshistorie einer Position erst nach dem Kauf (z. B. Krypto 12 Monate), startet die Auswertung am ersten vollständig bewerteten Tag mit dessen Marktwert als Ausgangswert und weist das aus | Sonst entstünde am ersten Kurstag ein Scheingewinn (Einstand → Marktwert). Positionen ganz ohne Kurse zählen durchgehend mit dem Einstand. |
+| A22 | **Rebalancing nach Anlageklasse**, Vorschlag im Browser (`src/lib/rebalance.ts`); gespeichert wird nur die Zielaufteilung (`allocation_target`, Basispunkte) | Klassen (ETF, Krypto, Edelmetall, Cash …) sind die übliche Ebene für Familienportfolios; „Nur nachkaufen“ zuerst, weil Verkäufe in Österreich KESt auslösen. Ziele je Wertpapier wären eine Erweiterung. |
 | A15 | **Tests gegen echtes Postgres** (`pnpm test:db`, CI-Service Postgres 18) statt Mocks | RLS, Rollen und Constraints lassen sich nur gegen eine echte Datenbank prüfen. |
 
 ## Free-Tier-Grenzen (geprüft am 19.10.2026)

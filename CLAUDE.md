@@ -62,7 +62,7 @@ Im Cloud-Container richtet `.claude/hooks/session-start.sh` beim Start alles ein
 - `src/app/` – Seiten: `/anmelden`, `/einladung/[token]`, `/app` (Übersicht, `depots`, `import`, `analyse`, `road`, `sicherheit`, `admin`), API: `/api/auth`, `/api/cron/daily`, `/api/status`
 - `src/components/` – Komponentenbibliothek „Strecke“ (`shell`, `ui`, `charts`, `road`, `privacy`, `command`, `markets`, `hooks`, `import`, `analysis`); Regeln in [`docs/DESIGN.md`](docs/DESIGN.md)
 - `src/styles/tokens.css` – Design-Tokens
-- `drizzle/` – versionierte Migrationen (0000 Rollen/Funktion, 0001 Tabellen+RLS, 0002 Rechte, …)
+- `drizzle/` – versionierte Migrationen (0000 Rollen/Funktion, 0001 Tabellen+RLS, 0002 Rechte, … 0006/0007 Zielaufteilung)
 - `scripts/` – Migrationen, Einladung, E2E-DB
 - `e2e/` – Playwright (Anmeldung, 2FA, Einladungen, Depots, Import, Analyse, Zugriff, Security)
 
