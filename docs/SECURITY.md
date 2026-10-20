@@ -302,6 +302,15 @@ Unabhängiges Review (eigener Prüfdurchlauf, nur lesend) aller Route-Handler, S
 6. **Kursquelle:** Yahoo ohne offizielle API (Ausfall möglich, kein Sicherheitsrisiko).
 7. **Secrets:** Vor dem ersten echten Familien-Nutzer `BETTER_AUTH_SECRET` (über `BETTER_AUTH_SECRETS`) und `CRON_SECRET` neu setzen sowie das Passwort der App-Rolle im Preview-Branch tauschen (Ablauf in `docs/EINRICHTUNG.md`).
 
+## Nachtrag: Trade-Republic-Transaktionsexport (20.10.2026)
+
+| Prüfung | Ergebnis |
+|---|---|
+| Der CSV-Export enthält auch Girokonto-Daten (Kartenzahlungen, Überweisungen mit Gegenkonto, IBAN, Verwendungszweck, Händler-Kategorie). Der Parser liest diese Spalten **nie**; Karten-, Überweisungs- und Ein-/Auszahlungszeilen werden nur gezählt (Brief: kein Girokonto, kein Haushaltsbuch) | ✅ (Unit-Test: kein Name, Verwendungszweck oder MCC im Ergebnis; E2E: Händlername erscheint nicht) |
+| Zeilen eines Junior-Kontos (`account_type` ≠ `DEFAULT`) gehören einer anderen Person und werden nicht übernommen | ✅ (Unit-Test) |
+| Die Datei wird wie alle Importe nur im Browser gelesen; an den Server gehen nur erkannte Buchungen und der gehashte Fingerabdruck (Transaktions-ID) | ✅ |
+| Unbekannte Arten werden nicht geraten, sondern als „nicht übernommen“ gemeldet; Handelszeilen unbekannter Art nur mit Warnung und Konfidenz „mittel“ | ✅ |
+
 ## Notfallplan
 
 **Bei Verdacht auf Secret-Leak** (Commit, Log, Screenshot):

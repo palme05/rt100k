@@ -192,7 +192,7 @@ export function ImportFlow({ portfolios, mappings: initialMappings }: { portfoli
         <div className={styles.stack}>
           <FileDrop
             label="Abrechnungen hierher ziehen oder auswählen"
-            hint="Trade Republic und flatex als PDF, Bitpanda als CSV-Export, andere Banken als CSV mit eigener Zuordnung. Die Dateien werden nur in deinem Browser gelesen – an rt100k gehen nur die erkannten Buchungen."
+            hint="Trade Republic als Transaktionsexport (CSV) oder PDF, flatex als PDF, Bitpanda als CSV-Export, andere Banken als CSV mit eigener Zuordnung. Die Dateien werden nur in deinem Browser gelesen – an rt100k gehen nur die erkannten Buchungen."
             accept=".pdf,.csv,application/pdf,text/csv"
             disabled={busy}
             onFiles={(list) => void addFiles(list)}

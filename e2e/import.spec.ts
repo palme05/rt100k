@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
-import { BITPANDA_CSV, GENERIC_CSV, TR_KAUF_AT } from '../src/lib/import/fixtures'
+import { BITPANDA_CSV, GENERIC_CSV, TR_CSV_EXPORT, TR_KAUF_AT } from '../src/lib/import/fixtures'
 import { makePdf } from '../src/test/pdf'
 import { collectProblems, createPortfolio, expectNoOverflow, register } from './helpers/app'
 
@@ -49,6 +49,27 @@ test('CSV: Bitpanda-Export – erkannte Coins und Gold übernehmen, unbekannte b
   await expect(page.getByRole('button', { name: '3 Buchungen übernehmen' })).toBeEnabled()
   await page.getByRole('button', { name: '3 Buchungen übernehmen' }).click()
   await expect(page.getByText(/3 Buchungen übernommen/)).toBeVisible()
+})
+
+test('CSV: Trade-Republic-Transaktionsexport – automatisch erkannt, Konto-Buchungen bleiben draußen', async ({ page }) => {
+  const problems = collectProblems(page)
+  await register(page)
+  await createPortfolio(page, 'TR')
+  await page.goto('/app/import')
+  await upload(page, 'Transaktionsexport.csv', 'text/csv', TR_CSV_EXPORT)
+
+  // keine Spaltenzuordnung nötig
+  await expect(page.getByText(/Trade Republic · Transaktionsexport \(CSV\)/)).toBeVisible()
+  await expect(page.getByText('Erste Zeile ist eine Kopfzeile')).toHaveCount(0)
+  await expect(page.getByText(/3 × nicht übernommen: Ein-\/Auszahlungen, Karte und Überweisungen/)).toBeVisible()
+  await expect(review(page)).toContainText('Kauf')
+  await expect(review(page)).toContainText('Zinsen')
+  await expect(review(page)).not.toContainText('Bäckerei')
+  const save = page.getByRole('button', { name: /Buchungen? übernehmen$/ })
+  await expect(save).toBeEnabled()
+  await save.click()
+  await expect(page.getByText(/übernommen/).first()).toBeVisible()
+  expect(problems.filter((p) => !/status of 4\d\d/.test(p))).toEqual([])
 })
 
 test('Unbekannte Datei und Fremdformat werden abgewiesen', async ({ page }) => {

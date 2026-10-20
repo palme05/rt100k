@@ -296,10 +296,14 @@ export const parseTradeRepublic: PdfParser = (raw) => {
   if (has(/^(?:WERTPAPIERABRECHNUNG|SECURITIES SETTLEMENT|ABRECHNUNG CRYPTO|CRYPTO SETTLEMENT)/)) return parseTrade(lines, style, 'Wertpapierabrechnung')
   if (has(/^(?:DIVIDENDE|DIVIDEND|AUSSCHÜTTUNG|DISTRIBUTION)(?:\s|$)/)) return parseDividend(lines, style, 'Dividende/Ausschüttung')
   if (has(/^(?:ABRECHNUNG ZINSEN|INTEREST INVOICE)/)) return parseInterest(lines, style, 'Zinsabrechnung')
+  const tip = 'Alle Käufe, Sparpläne und Dividenden auf einmal: in der App Profil → Kontoauszüge → Transaktionsexport (CSV) herunterladen und hier importieren.'
+  if (has(/VERMÖGENSÜBERSICHT|DEPOTAUSZUG|DEPOTÜBERSICHT|PORTFOLIO STATEMENT|SECURITIES ACCOUNT STATEMENT/i)) {
+    return { source: 'traderepublic', document: 'Vermögensübersicht', bookings: [], notices: [`Eine Vermögensübersicht ist eine Bestandsliste ohne Kaufpreise und Buchungen – daraus lässt sich nichts importieren. ${tip}`] }
+  }
   return {
     source: 'traderepublic',
     document: 'Sonstiges Dokument',
     bookings: [],
-    notices: ['Dieses Trade-Republic-Dokument (z. B. Kontoauszug, Steuerabrechnung, Kosteninformation) wird nicht importiert.'],
+    notices: [`Dieses Trade-Republic-Dokument (z. B. Kontoauszug, Steuerabrechnung, Kosteninformation) wird nicht importiert. ${tip}`],
   }
 }
