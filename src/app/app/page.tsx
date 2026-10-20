@@ -133,6 +133,7 @@ export default async function OverviewPage() {
               <Note>Der Verlauf beginnt jetzt: Jeden Abend nach US-Börsenschluss speichert rt100k den Tageswert. Nach dem ersten Monatswechsel erscheint hier die Kurve.</Note>
             </>
           )}
+          <TextLink href="/app/rueckblick">Monatsrückblick lesen</TextLink>
         </Section>
 
         <Section id="aufteilung" title="Aufteilung" meta="nach Anlageklasse" span="third">
