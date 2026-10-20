@@ -59,7 +59,7 @@ Im Cloud-Container richtet `.claude/hooks/session-start.sh` beim Start alles ein
 
 - `src/lib/` – reine Logik mit Tests (Geld, Stückzahlen, Bestände, Bewertung, Verlauf, Format, Monate, Tage, Prognose, Road, Kennzahlen, Performance, Rebalancing, ETF-Durchschau, Steuer AT `tax.ts`, CSV-Export mit Formel-Schutz, Börsenzeiten, CSP) und `import/` (Parser Trade Republic/flatex/Bitpanda/CSV, pdf.js-Textextraktion, synthetische Testdokumente in `fixtures.ts`)
 - `src/server/` – nur Server: `db` (Schema, Client, withUser), `dal` (Data-Access-Schicht), `auth` (Better Auth, Session, Einladungs-Registrierung, Sperre), `quotes` (Kursanbieter, Parser, Kurshistorie, Cache), `cron`, `imports.ts` (Import vorbereiten), `analysis.ts` (Analyse), `tax.ts` (Steuer-Cockpit, CSV), `overview.ts`, `road.ts`
-- `src/app/` – Seiten: `/anmelden`, `/einladung/[token]`, `/app` (Übersicht, `depots`, `import`, `analyse`, `steuer` inkl. `steuer/export`, `road`, `sicherheit`, `admin`), API: `/api/auth`, `/api/cron/daily`, `/api/status`
+- `src/app/` – Seiten: `/anmelden`, `/einladung/[token]`, `/app` (Übersicht, `depots`, `import`, `analyse`, `steuer` inkl. `steuer/export`, `road`, `sicherheit` inkl. Daten/Backup/Konto löschen, `konto/export` und `konto/wiederherstellen`, `admin`), API: `/api/auth`, `/api/cron/daily`, `/api/status`
 - `src/components/` – Komponentenbibliothek „Strecke“ (`shell`, `ui`, `charts`, `road`, `privacy`, `command`, `markets`, `hooks`, `import`, `analysis`, `tax`); Regeln in [`docs/DESIGN.md`](docs/DESIGN.md)
 - `src/styles/tokens.css` – Design-Tokens
 - `drizzle/` – versionierte Migrationen (0000 Rollen/Funktion, 0001 Tabellen+RLS, 0002 Rechte, … 0006/0007 Zielaufteilung, 0008/0009 ETF-Durchschau, 0010 Buchungsarten AGE und Steuergutschrift)

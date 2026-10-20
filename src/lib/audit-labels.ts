@@ -15,6 +15,7 @@ export const AUDIT_LABELS: Record<string, string> = {
   invitation_revoked: 'Einladung widerrufen',
   portfolio_deleted: 'Depot gelöscht',
   export: 'Daten exportiert',
+  backup_restored: 'Backup wiederhergestellt',
 }
 
 export function auditLabel(type: string): string {

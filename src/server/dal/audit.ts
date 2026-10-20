@@ -24,6 +24,7 @@ export const AUDIT_TYPES = [
   'invitation_revoked',
   'portfolio_deleted',
   'export',
+  'backup_restored',
 ] as const
 export type AuditType = (typeof AUDIT_TYPES)[number]
 

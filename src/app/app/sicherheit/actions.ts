@@ -3,9 +3,13 @@
 import { headers } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
+import { isAPIError } from 'better-auth/api'
 import { getAuth } from '@/server/auth/auth'
+import { isLocked, registerFailure } from '@/server/auth/lockout'
 import { requireUser } from '@/server/auth/session'
+import { deleteAccount } from '@/server/dal/account'
 import { recordAudit } from '@/server/dal/audit'
+import { ValidationError } from '@/server/dal/errors'
 import { revokeSession } from '@/server/dal/sessions'
 
 export async function revokeSessionAction(sessionId: string): Promise<void> {
@@ -29,4 +33,32 @@ export async function revokeAllSessionsAction(): Promise<void> {
   await recordAudit({ userId: user.id, actorId: user.id, type: 'sessions_revoked', detail: { scope: 'alle' }, userAgent: h.get('user-agent') })
   await getAuth().api.revokeSessions({ headers: h })
   redirect('/anmelden')
+}
+
+const DELETE_CONFIRMATION = 'LÖSCHEN'
+
+/**
+ * Konto mit allen Daten löschen. Bestätigung: Passwort (Fehlversuche zählen
+ * zur Login-Sperre) und das Wort LÖSCHEN – eine gestohlene Sitzung allein reicht nicht.
+ */
+export async function deleteAccountAction(_prev: { error: string | null }, formData: FormData): Promise<{ error: string | null }> {
+  const user = await requireUser({ allowMissingAdmin2fa: true })
+  const password = formData.get('password')
+  if (String(formData.get('confirm') ?? '').trim() !== DELETE_CONFIRMATION) return { error: `Bitte zur Bestätigung ${DELETE_CONFIRMATION} eintippen.` }
+  if (typeof password !== 'string' || password.length === 0 || password.length > 128) return { error: 'Bitte das Passwort eingeben.' }
+  if (await isLocked(user.email)) return { error: 'Zu viele Fehlversuche. Bitte in 15 Minuten erneut versuchen.' }
+  try {
+    await getAuth().api.verifyPassword({ body: { password }, headers: await headers() })
+  } catch (error) {
+    if (!isAPIError(error)) throw error
+    await registerFailure(user.email)
+    return { error: 'Das Passwort stimmt nicht.' }
+  }
+  try {
+    await deleteAccount(user)
+  } catch (error) {
+    if (error instanceof ValidationError) return { error: error.message }
+    throw error
+  }
+  redirect('/anmelden?geloescht=1')
 }
