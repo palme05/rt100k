@@ -1,7 +1,7 @@
 import { generateKeyPairSync, randomBytes, verify } from 'node:crypto'
 import { describe, expect, it, vi } from 'vitest'
 import { base64url } from '@/lib/push'
-import { sendPing, vapidJwt, vapidKeys } from './push'
+import { newestAuthSecret, sendPing, vapidJwt, vapidKeys } from './push'
 
 function testKeys() {
   const { privateKey, publicKey } = generateKeyPairSync('ec', { namedCurve: 'prime256v1' })
@@ -28,6 +28,12 @@ describe('VAPID', () => {
     expect(base64url.decode(keys!.publicKey)).toHaveLength(65)
     expect(vapidKeys()).toBe(keys)
     expect(vapidJwt('https://web.push.apple.com', keys!).split('.')).toHaveLength(3)
+  })
+
+  it('nimmt nach einem Schlüsseltausch das neueste Secret', () => {
+    expect(newestAuthSecret({ BETTER_AUTH_SECRET: 'alt' })).toBe('alt')
+    expect(newestAuthSecret({ BETTER_AUTH_SECRET: 'alt', BETTER_AUTH_SECRETS: '2:neu:mit:doppelpunkt,1:vorher' })).toBe('neu:mit:doppelpunkt')
+    expect(newestAuthSecret({ BETTER_AUTH_SECRET: 'alt', BETTER_AUTH_SECRETS: '' })).toBe('alt')
   })
 
   it('sendet nie an unbekannte Hosts', async () => {

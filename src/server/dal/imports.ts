@@ -1,10 +1,10 @@
 import 'server-only'
-import { and, asc, eq, inArray } from 'drizzle-orm'
+import { and, asc, count, eq, inArray, ne } from 'drizzle-orm'
 import { z } from 'zod'
 import { withUser } from '../db/client'
 import { booking, csvMapping, IMPORT_SOURCES, importFile, BOOKING_TYPES } from '../db/schema'
 import type { Actor } from './actor'
-import { assertConsistent, ledgerBookings, normalizeBooking, ownedPortfolio } from './bookings'
+import { assertBookingRoom, assertConsistent, ledgerBookings, normalizeBooking, ownedPortfolio } from './bookings'
 import { NotFoundError, ValidationError } from './errors'
 import { parseId } from './ids'
 import { getInstrument } from './instruments'
@@ -19,6 +19,7 @@ import { getInstrument } from './instruments'
 
 export const MAX_IMPORT_BOOKINGS = 500
 export const MAX_IMPORT_FILES = 50
+export const MAX_CSV_MAPPINGS = 50
 
 const hex64 = z.string().regex(/^[0-9a-f]{64}$/, 'Ungültiger Schlüssel.')
 
@@ -103,7 +104,7 @@ export async function importBookings(actor: Actor, input: unknown): Promise<{ cr
   })
 
   return withUser(actor.id, async (tx) => {
-    await ownedPortfolio(tx, actor, portfolioId)
+    await ownedPortfolio(tx, actor, portfolioId, { lock: true })
     for (const id of new Set(normalized.map((n) => n.instrumentId).filter((v): v is string => !!v))) await getInstrument(actor, id, tx)
 
     const keys = normalized.map((n) => n.importKey)
@@ -121,6 +122,7 @@ export async function importBookings(actor: Actor, input: unknown): Promise<{ cr
     })
 
     if (fresh.length > 0) {
+      await assertBookingRoom(tx, actor, fresh.length)
       const current = await ledgerBookings(tx, actor, portfolioId)
       const sorted = [...fresh].sort((a, b) => (a.occurredOn < b.occurredOn ? -1 : a.occurredOn > b.occurredOn ? 1 : 0))
       assertConsistent([...current, ...sorted.map((n, i) => ({ id: `import-${i}`, ...n }))])
@@ -181,6 +183,8 @@ export async function saveCsvMapping(actor: Actor, input: { name: unknown; mappi
   const mapping = csvMappingSchema.safeParse(input.mapping)
   if (!mapping.success) throw new ValidationError('Ungültige Zuordnung.', 'mapping')
   return withUser(actor.id, async (tx) => {
+    const [existing] = await tx.select({ n: count() }).from(csvMapping).where(and(eq(csvMapping.ownerId, actor.id), ne(csvMapping.name, name.data)))
+    if ((existing?.n ?? 0) >= MAX_CSV_MAPPINGS) throw new ValidationError(`Höchstens ${MAX_CSV_MAPPINGS} gespeicherte Zuordnungen.`, 'name')
     const [row] = await tx
       .insert(csvMapping)
       .values({ ownerId: actor.id, name: name.data, mapping: mapping.data })

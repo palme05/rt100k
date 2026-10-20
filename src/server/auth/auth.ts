@@ -10,6 +10,7 @@ import { getDb } from '../db/client'
 import * as schema from '../db/schema'
 import { recordAudit, summarizeUserAgent } from '../dal/audit'
 import { clearFailures, isLocked, registerFailure } from './lockout'
+import { PASSWORD_CHECK_PATHS } from './paths'
 
 /**
  * Better Auth (selbst gehostet). Entscheidungen: docs/ARCHITECTURE.md (A5),
@@ -110,6 +111,13 @@ function createAuth() {
         if (ctx.path === '/two-factor/disable' && (await getSessionFromCtx(ctx))?.user.role === 'admin') {
           throw new APIError('FORBIDDEN', { message: 'Für Admins ist die Zwei-Faktor-Anmeldung Pflicht.' })
         }
+        // Passwort-Prüfungen mit bestehender Sitzung: gesperrt wie das Login
+        if (PASSWORD_CHECK_PATHS.has(ctx.path)) {
+          const email = (await getSessionFromCtx(ctx))?.user.email
+          if (email && (await isLocked(email))) {
+            throw new APIError('TOO_MANY_REQUESTS', { message: 'Zu viele falsche Passwörter. Bitte in 15 Minuten erneut versuchen.' })
+          }
+        }
         if (ctx.path === '/sign-in/email') {
           const email = typeof ctx.body?.email === 'string' ? ctx.body.email : ''
           if (email && (await isLocked(email))) {
@@ -137,6 +145,13 @@ function createAuth() {
             return
           }
           if (email && !isAPIError(ctx.context.returned)) await clearFailures(email)
+        }
+
+        // Falsches Passwort bei Passwort ändern / 2FA: zählt zur Login-Sperre (sonst
+        // wäre das ein Passwort-Orakel für jemanden mit gestohlener Sitzung)
+        if (PASSWORD_CHECK_PATHS.has(ctx.path) && ctx.context.session && isAPIError(ctx.context.returned) && ctx.context.returned.body?.code === 'INVALID_PASSWORD') {
+          await registerFailure(ctx.context.session.user.email)
+          return
         }
 
         // Erfolgreiche, vollständige Anmeldung (2FA erledigt bzw. Passkey). Beim

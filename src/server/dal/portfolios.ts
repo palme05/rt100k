@@ -1,5 +1,5 @@
 import 'server-only'
-import { and, asc, eq, isNull } from 'drizzle-orm'
+import { and, asc, count, eq, isNull } from 'drizzle-orm'
 import { z } from 'zod'
 import { withUser } from '../db/client'
 import { portfolio, PORTFOLIO_KINDS, type PortfolioKind } from '../db/schema'
@@ -79,14 +79,19 @@ export async function getPortfolio(actor: Actor, id: unknown): Promise<Portfolio
   return toDto(row)
 }
 
+/** Obergrenze je Nutzer (wie beim Wiederherstellen). */
+export const MAX_PORTFOLIOS_PER_USER = 200
+
 export async function createPortfolio(actor: Actor, input: unknown): Promise<PortfolioDto> {
   const data = parseInput(input)
-  const [row] = await withUser(actor.id, (tx) =>
-    tx
+  const [row] = await withUser(actor.id, async (tx) => {
+    const [existing] = await tx.select({ n: count() }).from(portfolio).where(eq(portfolio.ownerId, actor.id))
+    if ((existing?.n ?? 0) >= MAX_PORTFOLIOS_PER_USER) throw new ValidationError(`Höchstens ${MAX_PORTFOLIOS_PER_USER} Depots und Konten.`)
+    return tx
       .insert(portfolio)
       .values({ ...data, ownerId: actor.id })
-      .returning(columns),
-  )
+      .returning(columns)
+  })
   if (!row) throw new Error('Depot konnte nicht angelegt werden.')
   return toDto(row)
 }

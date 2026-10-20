@@ -50,6 +50,8 @@ describe('Hinweise', () => {
     expect((await listNotifications(alice))[0]).toMatchObject({ title: 'Dividende: Test', amount: 12.34, read: false })
     await markAllRead(alice)
     expect(await unreadCount(alice)).toBe(0)
+    // gerade gelesen: noch als „neu“ markiert
+    expect((await listNotifications(alice))[0]).toMatchObject({ read: true, fresh: true })
   })
 
   it('Aufräumen löscht nur eigene, alte Hinweise', async () => {
@@ -100,6 +102,13 @@ describe('Push-Abos', () => {
     expect(await listPushEndpoints(alice)).toEqual([endpoint])
     expect(await listPushEndpoints(bob)).toEqual([])
     expect(await getDb().select().from(pushSubscription)).toEqual([])
+  })
+
+  it('höchstens 10 Geräte je Nutzer; ein bekanntes Gerät darf sich erneuern', async () => {
+    const gina = await createUser('Gina')
+    for (let i = 0; i < 10; i++) await savePushSubscription(gina, { endpoint: `${endpoint}-gina-${i}`, keys }, null)
+    await expect(savePushSubscription(gina, { endpoint: `${endpoint}-gina-neu`, keys }, null)).rejects.toThrow('höchstens 10 Geräten')
+    await expect(savePushSubscription(gina, { endpoint: `${endpoint}-gina-3`, keys }, null)).resolves.toBeUndefined()
   })
 })
 

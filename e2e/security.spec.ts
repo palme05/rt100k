@@ -40,6 +40,10 @@ test('API: Cron ohne Secret und öffentliche Registrierung sind zu', async ({ re
   expect((await request.get('/api/cron/daily', { headers: { authorization: 'Bearer falsch' } })).status()).toBe(401)
   const signup = await request.post('/api/auth/sign-up/email', { data: { name: 'Eve', email: 'eve@e2e.invalid', password: 'x'.repeat(16) } })
   expect(signup.status()).toBe(404)
+  // nur genutzte Better-Auth-Endpunkte sind erreichbar
+  for (const path of ['/api/auth/update-user', '/api/auth/list-sessions', '/api/auth/revoke-session', '/api/auth/two-factor/get-totp-uri', '/api/auth/irgendwas']) {
+    expect((await request.post(path, { data: {} })).status(), path).toBe(404)
+  }
 })
 
 test('unbekannter Einladungslink zeigt keinen Formular-Zugang', async ({ page }) => {

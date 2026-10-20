@@ -1,7 +1,7 @@
 import 'server-only'
-import { and, count, desc, eq, isNull, lt } from 'drizzle-orm'
+import { and, count, desc, eq, isNull, lt, ne } from 'drizzle-orm'
 import { z } from 'zod'
-import { MAX_PRICE_ALERTS } from '@/lib/notify'
+import { MAX_PRICE_ALERTS, MAX_PUSH_SUBSCRIPTIONS } from '@/lib/notify'
 import { isAllowedPushEndpoint } from '@/lib/push'
 import { parseScaled, PRICE_ONE } from '@/lib/quantity'
 import { withUser } from '../db/client'
@@ -22,7 +22,12 @@ export interface NotificationDto {
   link: string | null
   createdAt: string
   read: boolean
+  /** ungelesen oder erst vor Kurzem gelesen – bleibt beim Ansehen als „neu“ markiert */
+  fresh: boolean
 }
+
+/** So lange gilt ein gelesener Hinweis noch als „neu“ (die Seite markiert beim Ansehen sofort als gelesen). */
+const FRESH_MS = 15 * 60_000
 
 export interface NewNotification {
   kind: NotificationKind
@@ -37,7 +42,18 @@ export async function listNotifications(actor: Actor, limit = 50): Promise<Notif
   const rows = await withUser(actor.id, (tx) =>
     tx.select().from(notification).where(eq(notification.ownerId, actor.id)).orderBy(desc(notification.createdAt)).limit(limit),
   )
-  return rows.map((r) => ({ id: r.id, kind: r.kind, title: r.title, body: r.body, amount: r.amountCents === null ? null : r.amountCents / 100, link: r.link, createdAt: r.createdAt.toISOString(), read: r.readAt !== null }))
+  const now = Date.now()
+  return rows.map((r) => ({
+    id: r.id,
+    kind: r.kind,
+    title: r.title,
+    body: r.body,
+    amount: r.amountCents === null ? null : r.amountCents / 100,
+    link: r.link,
+    createdAt: r.createdAt.toISOString(),
+    read: r.readAt !== null,
+    fresh: r.readAt === null || now - r.readAt.getTime() < FRESH_MS,
+  }))
 }
 
 export async function unreadCount(actor: Actor): Promise<number> {
@@ -158,12 +174,17 @@ export async function savePushSubscription(actor: Actor, value: unknown, userAge
   const parsed = subscriptionInput.safeParse(value)
   if (!parsed.success) throw new ValidationError(parsed.error.issues[0]?.message ?? 'Ungültiges Push-Abo.')
   const { endpoint, keys } = parsed.data
-  await withUser(actor.id, (tx) =>
-    tx
+  await withUser(actor.id, async (tx) => {
+    const [others] = await tx
+      .select({ n: count() })
+      .from(pushSubscription)
+      .where(and(eq(pushSubscription.ownerId, actor.id), ne(pushSubscription.endpoint, endpoint)))
+    if ((others?.n ?? 0) >= MAX_PUSH_SUBSCRIPTIONS) throw new ValidationError(`Mitteilungen gehen auf höchstens ${MAX_PUSH_SUBSCRIPTIONS} Geräten – bitte auf einem alten Gerät ausschalten.`)
+    await tx
       .insert(pushSubscription)
       .values({ ownerId: actor.id, endpoint, p256dh: keys.p256dh, auth: keys.auth, userAgent: userAgent?.slice(0, 200) ?? null })
-      .onConflictDoUpdate({ target: [pushSubscription.ownerId, pushSubscription.endpoint], set: { p256dh: keys.p256dh, auth: keys.auth } }),
-  )
+      .onConflictDoUpdate({ target: [pushSubscription.ownerId, pushSubscription.endpoint], set: { p256dh: keys.p256dh, auth: keys.auth } })
+  })
 }
 
 export async function listPushEndpoints(actor: Actor): Promise<string[]> {
