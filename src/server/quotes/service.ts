@@ -24,7 +24,7 @@ const FX_TTL = 3600
 const MAX_PARALLEL = 4
 
 /** Testdaten statt echter Abrufe (E2E/CI). In Produktion gesperrt. */
-function fixtureMode(): boolean {
+export function fixtureMode(): boolean {
   if (process.env.RT100K_QUOTES !== 'fixture') return false
   if (process.env.VERCEL_ENV === 'production') throw new Error('Testkurse sind in Produktion nicht erlaubt.')
   return true
@@ -42,7 +42,7 @@ const FIXTURE_PRICES: Record<string, { micros: bigint; currency: string }> = {
 
 const FIXTURE_FX: FxRates = { day: '2026-10-19', rates: new Map([['USD', '1.0823'], ['GBP', '0.83265'], ['CHF', '0.9412']]) }
 
-async function inBatches<T, R>(items: readonly T[], fn: (item: T) => Promise<R>): Promise<R[]> {
+export async function inBatches<T, R>(items: readonly T[], fn: (item: T) => Promise<R>): Promise<R[]> {
   const results: R[] = []
   for (let i = 0; i < items.length; i += MAX_PARALLEL) results.push(...(await Promise.all(items.slice(i, i + MAX_PARALLEL).map(fn))))
   return results
