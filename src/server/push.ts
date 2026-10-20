@@ -8,9 +8,10 @@ import { base64url, isAllowedPushEndpoint } from '@/lib/push'
  * auf dem Sperrbildschirm).
  *
  * Schlüssel: `VAPID_PRIVATE_KEY`/`VAPID_PUBLIC_KEY` (base64url), sonst per
- * HKDF aus `BETTER_AUTH_SECRET` abgeleitet (eigener Zweck „rt100k vapid v1“).
- * Ein Tausch des Auth-Secrets erneuert damit auch den Push-Schlüssel – Geräte
- * melden sich dann neu an.
+ * HKDF aus dem neuesten Auth-Secret abgeleitet (`BETTER_AUTH_SECRETS`, sonst
+ * `BETTER_AUTH_SECRET`; eigener Zweck „rt100k vapid v1“). Ein Tausch des
+ * Auth-Secrets erneuert damit auch den Push-Schlüssel – alte Abos lehnt der
+ * Push-Dienst ab, sie werden gelöscht, Geräte schalten Mitteilungen neu ein.
  */
 
 export interface VapidKeys {
@@ -35,13 +36,20 @@ function derive(secret: string): { publicKey: string; privateKey: string } {
   throw new Error('VAPID-Schlüssel konnte nicht abgeleitet werden.')
 }
 
+/** Neuestes Auth-Secret: erster Eintrag von `BETTER_AUTH_SECRETS` („2:neu,1:alt“), sonst `BETTER_AUTH_SECRET`. */
+export function newestAuthSecret(env: Record<string, string | undefined> = process.env): string | undefined {
+  const first = env.BETTER_AUTH_SECRETS?.split(',')[0]?.trim()
+  const value = first?.includes(':') ? first.slice(first.indexOf(':') + 1) : first
+  return value || env.BETTER_AUTH_SECRET
+}
+
 export function vapidKeys(): VapidKeys | null {
   if (cached !== undefined) return cached
   const subject = process.env.VAPID_SUBJECT ?? process.env.BETTER_AUTH_URL ?? 'https://rt100k.vercel.app'
   if (process.env.VAPID_PRIVATE_KEY && process.env.VAPID_PUBLIC_KEY) {
     cached = { privateKey: process.env.VAPID_PRIVATE_KEY, publicKey: process.env.VAPID_PUBLIC_KEY, subject }
-  } else if (process.env.BETTER_AUTH_SECRET && process.env.BETTER_AUTH_SECRET.length >= 32) {
-    cached = { ...derive(process.env.BETTER_AUTH_SECRET), subject }
+  } else if ((newestAuthSecret()?.length ?? 0) >= 32) {
+    cached = { ...derive(newestAuthSecret()!), subject }
   } else {
     cached = null
   }
@@ -62,7 +70,7 @@ export function vapidJwt(audience: string, keys: VapidKeys, now = Date.now()): s
   return `${data}.${signature.toString('base64url')}`
 }
 
-/** Ping an ein Gerät. „gone“ = Abo existiert nicht mehr (löschen). */
+/** Ping an ein Gerät. „gone“ = Abo ungültig oder abgelaufen (löschen): jede 4xx außer 408/429. */
 export async function sendPing(endpoint: string, keys: VapidKeys): Promise<'ok' | 'gone' | 'error'> {
   if (!isAllowedPushEndpoint(endpoint)) return 'error'
   try {
@@ -72,7 +80,7 @@ export async function sendPing(endpoint: string, keys: VapidKeys): Promise<'ok' 
       redirect: 'error',
       signal: AbortSignal.timeout(5000),
     })
-    if (response.status === 404 || response.status === 410) return 'gone'
+    if (response.status >= 400 && response.status < 500 && response.status !== 408 && response.status !== 429) return 'gone'
     return response.ok ? 'ok' : 'error'
   } catch {
     return 'error'

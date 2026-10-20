@@ -6,6 +6,7 @@ import { addDays } from './days'
  */
 
 export const MAX_PRICE_ALERTS = 50
+export const MAX_PUSH_SUBSCRIPTIONS = 10
 
 /** Kursalarm ausgelöst? „über“ ab Erreichen des Kurses, „unter“ ab Unterschreiten bzw. Erreichen. */
 export function alertTriggered(direction: 'above' | 'below', thresholdMicros: bigint, priceMicros: bigint): boolean {

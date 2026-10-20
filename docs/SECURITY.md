@@ -25,7 +25,7 @@ Meldeweg für Sicherheitslücken: siehe [`/SECURITY.md`](../SECURITY.md).
 | T8 | **Ungeschützte Cron-/API-Endpunkte** | Cron-URL aufrufen → DB wecken, CU-Budget verbrauchen, Daten verändern | `CRON_SECRET` (Bearer, konstante Vergleichszeit, min. 32 Zeichen, sonst Endpunkt zu); Cron idempotent (Upsert je Tag); `/api/status` ohne Daten, 10 min gecacht | ✅ Phase 2 |
 | T9 | **XSS / Injection** | Nutzereingaben, externe Kurs-/Steuerdaten, Dateinamen | Strikte CSP mit Nonce + `strict-dynamic`, kein `unsafe-inline`; React-Escaping; ESLint verbietet `dangerouslySetInnerHTML`, `eval`; zod-Validierung aller Eingaben und Fremddaten; Drizzle mit Parametern | ✅ |
 | T10 | **CSRF / Clickjacking** | fremde Seite löst Aktionen aus / bettet App ein | Server Actions mit Origin-Prüfung (Next); Better Auth prüft Origin/Fetch-Metadata (ausdrücklich an, auch in Tests); `SameSite`-Cookies; `frame-ancestors 'none'` + `X-Frame-Options: DENY`; eigene Route-Handler nur GET (Cron mit Secret, Status ohne Daten) | ✅ |
-| T11 | **Budget-Erschöpfung (DoS)** | viele Requests wecken Neon / verbrauchen Function-Volumen | Rate-Limits (DB-gestützt); Kurse und Suchen im Data Cache; kleiner Pool mit 5 s Leerlauf; Import: ≤ 500 Buchungen je Speichern, ≤ 5 neue Instrumente je Vorbereitung (Laufzeit < 60 s), Eingaben vor jedem Anbieter-Abruf geprüft; Preview hinter Vercel-Login; Vercel-Firewall-Regeln prüfen (Phase 6) | ✅ teilweise |
+| T11 | **Budget-Erschöpfung (DoS)** | viele Requests wecken Neon / verbrauchen Function-Volumen; Speicher füllen | Rate-Limits (Login je IP, alle Aktionen je Nutzer); unbekannte Auth-Pfade → 404 ohne DB; Obergrenzen je Konto (50 000 Buchungen, 200 Depots, 50 Zuordnungen, 10 Push-Geräte, 50 Kursalarme); Wiederherstellen räumt Reste früherer Durchläufe ab; Kurse und Suchen im Data Cache; kleiner Pool mit 5 s Leerlauf; Import: ≤ 500 Buchungen je Speichern, ≤ 5 neue Instrumente je Vorbereitung; Preview hinter Vercel-Login | ✅ Phase 6f · Restrisiko: anonyme Login-Anfragen wecken Neon (siehe Phase 6f) |
 | T12 | **Admin-Missbrauch** | Admin liest fremde Vermögen | Admin-Rolle sieht nur Nutzer/Einladungen, keine Vermögensdaten (Data-Access-Schicht + Tests) | ✅ Phase 2 |
 | T13 | **Preview greift auf Produktionsdaten zu** | Preview-Deploy mit Prod-`DATABASE_URL` | Eigener Neon-Branch `preview` mit Testdaten und eigenem Passwort der App-Rolle; Env-Vars getrennt nach Vercel-Umgebung | ✅ Phase 2 |
 
@@ -73,7 +73,7 @@ Meldeweg für Sicherheitslücken: siehe [`/SECURITY.md`](../SECURITY.md).
 - [x] CSV-Export gegen Formel-Injection (Phase 5: `src/lib/csv-export.ts` – Text mit `= + - @`, auch nach Leerraum und in voller Breite, bekommt ein Apostroph; Beträge als eigener Zelltyp aus Cent; Unit- und E2E-Test)
 
 ### Abschluss (Phase 6)
-- [ ] Vollständiges Security-Review aller Endpunkte, Restrisiko-Bericht an den Betreiber
+- [x] Vollständiges Security-Review aller Endpunkte, Restrisiko-Bericht an den Betreiber (Phase 6f, siehe unten)
 
 ## Security-Check Phase 0 (19.10.2026)
 
@@ -256,10 +256,51 @@ Meldeweg für Sicherheitslücken: siehe [`/SECURITY.md`](../SECURITY.md).
 | Push-Abo: zod-Prüfung von Endpunkt und Schlüsseln; **Endpunkt nur bei bekannten Push-Diensten** (FCM, Mozilla, Apple, Windows) – sonst könnte der Server beliebige URLs (z. B. `169.254.169.254`) anfragen; `redirect: 'error'`, 5 s Timeout, abgelaufene Abos (404/410) werden gelöscht | ✅ (Unit- und DB-Tests) |
 | Push ohne Inhalt: die Mitteilung zeigt nur „Neue Hinweise in rt100k“ – keine Beträge, Namen oder Depots auf dem Sperrbildschirm; Klick öffnet `/app/hinweise` (Anmeldung nötig) | ✅ |
 | VAPID-Signatur (ES256) mit `node:crypto`, keine neue Abhängigkeit; Schlüssel per HKDF aus `BETTER_AUTH_SECRET` mit eigenem Zweck, privater Schlüssel verlässt den Server nie | ✅ (Unit-Test prüft die Signatur) |
-| Abmelden beendet das Push-Abo dieses Geräts (Server und Browser); beim Kontowechsel auf einem Gerät wird ein vorhandenes Abo dem angemeldeten Konto zugeordnet | ✅ |
+| Abmelden beendet das Push-Abo dieses Geräts (Server und Browser); meldet sich auf einem Gerät mit vorhandenem Abo ein anderes Konto an, wird das Abo **zusätzlich** für dieses Konto gespeichert (das alte Konto behält seine Zeile – RLS verhindert das Umhängen) | ✅ |
 | Server Actions mit `requireUser()`; IDs nur aus dem Formular als Eingabe, nie als Berechtigung | ✅ |
 
 **Restrisiken:** Läuft eine Sitzung ab, ohne dass jemand abmeldet, bleibt das Push-Abo bestehen; das Gerät bekommt weiter einen inhaltslosen Ping für das alte Konto, bis jemand dort Mitteilungen ausschaltet oder sich abmeldet. Die Push-Dienste (Google, Mozilla, Apple, Microsoft) sehen, wann ein Gerät einen Ping bekommt – aber keinen Inhalt.
+
+## Security-Check Phase 6f – vollständiges Review aller Endpunkte (20.10.2026)
+
+Unabhängiges Review (eigener Prüfdurchlauf, nur lesend) aller Route-Handler, Server Actions, Seiten, des Proxys, des Service Workers, der DAL und der Migrationen. **Keine kritischen oder hohen Befunde.** Alle mittleren und niedrigen Befunde sind behoben – bis auf M2, der als Restrisiko bleibt.
+
+**Endpunkte**
+
+| Endpunkt | Schutz | Ergebnis |
+|---|---|---|
+| `/api/auth/*` (Better Auth) | Positivliste der genutzten Pfade (`src/server/auth/paths.ts`), Rest → 404 ohne DB; Origin-/CSRF-Prüfung; Rate-Limit je IP; Login-Sperre je E-Mail | ✅ (Unit, DB, E2E) |
+| `/api/cron/daily` | Bearer-`CRON_SECRET` ≥ 32 Zeichen, `timingSafeEqual` | ✅ |
+| `/api/status` | keine DB, keine Nutzerdaten; `s-maxage=300` (CDN) | ✅ |
+| `GET /app/konto/export`, `GET /app/steuer/export` | `requireUser`, `withUser` + `owner_id`, `private, no-store`, Formel-Schutz, Rate-Limit 30/h | ✅ |
+| `POST /app/konto/wiederherstellen` | `requireUser`, Origin, nur JSON, Body begrenzt, zod, Rate-Limit 5/h, Sperre je Nutzer, Aufräumen | ✅ |
+| 33 Server Actions | zuerst `requireUser()`/`requireAdmin()`, IDs über `parseId` + Besitzer-Filter, nie Rollen aus dem Formular; Rate-Limit je Nutzer; Ausnahme `registerAction` (öffentlich, 256-Bit-Einladung) | ✅ |
+| 15 Seiten unter `/app` | `requireUser`/`requireAdmin` je Seite (nicht nur im Layout), Parameter per zod/`parseId`/Regex | ✅ |
+| `src/proxy.ts`, `next.config.ts`, `public/sw.js`, `public/offline.js` | Nonce-CSP, HSTS, `frame-ancestors 'none'`, COOP/CORP; SW nur gleiche Herkunft/GET, Navigation nie gecacht; Offline-Seite nur `textContent` | ✅ |
+| Migrationen 0000–0016 | RLS auf allen Nutzertabellen, App-Rolle nur DML, `SECURITY DEFINER` mit festem `search_path` | ✅ |
+
+**Befunde und Behebung**
+
+| # | Schwere | Befund | Behebung |
+|---|---|---|---|
+| M1 | mittel | Die neuen Zähler je Nutzer lagen in `rate_limit`; Better Auth löscht dort alles außerhalb seiner Minutenfenster → Stundenlimits wirkungslos | eigene Tabelle `user_rate_limit` mit RLS (Migration 0015/0016); DB-Test „Better-Auth-Aufräumen löscht keine Nutzerzähler“ |
+| M2 | mittel | Anonyme Anfragen auf Login/Einladung wecken Neon; ein Skript alle 4 Minuten hält die DB wach → CU-Budget nach ≈ 17 Tagen weg, App bis Monatsende aus (keine Kosten, nur Ausfall) | teilweise: unbekannte Auth-Pfade → 404 ohne DB. **Rest bleibt** (Login muss die DB fragen) → Restrisiko, Empfehlung unten |
+| M3 | mittel | Speicher-DoS: „Depots löschen → Backup einspielen“ in Schleife; Import ohne Gesamtgrenze | Wiederherstellen entfernt vorher private Instrumente und Import-Hashes, eine Sperre je Nutzer verhindert gleichzeitige Läufe; Obergrenzen je Konto (Buchungen, Depots, Zuordnungen); DB-Tests |
+| N1 | niedrig | `/update-user` erlaubte beliebig lange Namen (erscheinen bei Freigaben) | Pfad nicht in der Positivliste → 404 |
+| N2 | niedrig | `/list-sessions` gab Session-Tokens aus | nicht in der Positivliste → 404 (die App nutzt die eigene DAL) |
+| N3 | niedrig | Push-Abos ohne Obergrenze, Pings im Cron nacheinander | höchstens 10 Geräte, Pings parallel, Abos bei 4xx gelöscht; DB-Test |
+| N4 | niedrig | Mit gestohlener Sitzung ließ sich das Passwort über „Passwort ändern“/2FA ohne Sperre raten | Fehlversuche dort zählen zur Login-Sperre, gesperrt ist dann auch dort; DB-Test |
+| N5 | niedrig | Bestandsprüfung nicht atomar (zwei gleichzeitige Verkäufe) | Depot-Zeile wird beim Buchen/Löschen/Import gesperrt (`FOR UPDATE`); DB-Test mit drei gleichzeitigen Verkäufen |
+| I1–I3 | info | Status-Cache, ungeprüfte ID in `revalidatePath`, Formulierung Push-Abo | behoben |
+
+**Restrisiken (Bericht an den Betreiber)**
+1. **Verfügbarkeit (M2):** Wer die öffentliche URL kennt, kann Neon mit wenigen Anfragen wach halten und das CU-Budget aufbrauchen. Es entstehen keine Kosten (Free Tier ohne Kreditkarte), aber die App wäre bis Monatsende aus. Empfehlung: im Vercel-Dashboard eine Firewall-Regel (Rate-Limit je IP für `/api/auth/*` und `/einladung/*`) – **vorher prüfen, ob sie im Hobby-Tarif kostenlos ist** (Rückfrage beim Betreiber); CU-Verbrauch im Admin-Bereich im Blick behalten.
+2. **Login-Sperre als Werkzeug:** Wer eine E-Mail-Adresse kennt, kann deren Passwort-Login für 15 Minuten sperren. Passkeys funktionieren weiter.
+3. **Links im Pfad:** Einladungs- und Freigabe-Links stehen in Server-Logs; deshalb einmalig, kurz gültig und widerrufbar.
+4. **Allgemeine Stammdaten:** Jeder Nutzer kann vom Kursanbieter bestätigte Instrumente anlegen (für alle sichtbar, Rate-Limit 60/h).
+5. **Geräte:** Offline-Stand und Push-Abo bleiben auf einem entsperrten Gerät, bis sich jemand abmeldet.
+6. **Kursquelle:** Yahoo ohne offizielle API (Ausfall möglich, kein Sicherheitsrisiko).
+7. **Secrets:** Vor dem ersten echten Familien-Nutzer `BETTER_AUTH_SECRET` (über `BETTER_AUTH_SECRETS`) und `CRON_SECRET` neu setzen sowie das Passwort der App-Rolle im Preview-Branch tauschen (Ablauf in `docs/EINRICHTUNG.md`).
 
 ## Notfallplan
 

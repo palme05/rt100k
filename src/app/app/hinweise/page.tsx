@@ -52,7 +52,7 @@ export default async function NotificationsPage() {
                   label={n.link ? <TextLink href={n.link}>{n.title}</TextLink> : n.title}
                   sub={
                     <>
-                      {n.read ? null : '● neu · '}
+                      {n.fresh ? '● neu · ' : null}
                       {KIND_LABEL[n.kind]}
                       {n.body ? ` · ${n.body}` : null}
                     </>
