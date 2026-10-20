@@ -30,7 +30,9 @@ export interface CsvMapping {
 export const MAPPING_FIELDS = ['date', 'kind', 'isin', 'name', 'symbol', 'quantity', 'amount', 'fee', 'tax'] as const
 
 const KIND_WORDS: [RegExp, ImportKind][] = [
+  [/steuer ?(?:gutschrift|erstattung|r[üu]ckerstattung)|kest[- ]?(?:gutschrift|erstattung)|tax refund/i, 'tax_refund'],
   [/aussch[üu]ttungsgleich|\bage\b|thesaurierung/i, 'age'],
+  [/kapitalertrags?steuer|quellensteuer|withholding tax/i, 'tax'],
   [/verkauf|\bsell\b|\bsale\b|\bsold\b/i, 'sell'],
   [/kauf|\bbuy\b|purchase|sparplan|savings plan/i, 'buy'],
   [/dividend|aussch[üu]ttung|distribution|ertrag/i, 'dividend'],

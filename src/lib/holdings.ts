@@ -22,6 +22,7 @@ import { mulDiv, QTY_DECIMALS, quantityFromDb } from './quantity'
  * | withdrawal   | –          | –     | Auszahlung (Cash-Konten)              |
  * | fee / tax    | optional   | –     | Gebühr bzw. Steuer                    |
  * | age          | ja         | –     | ausschüttungsgleicher Ertrag (AGE)    |
+ * | tax_refund   | optional   | –     | Steuergutschrift (z. B. KESt-Erstattung) |
  * feeCents und taxCents gelten zusätzlich bei jeder Buchung.
  *
  * AGE (thesaurierende Fonds) fließen nicht zu und ändern weder Bestand noch
@@ -43,6 +44,7 @@ export type LedgerBookingType =
   | 'split'
   | 'staking'
   | 'age'
+  | 'tax_refund'
 
 export interface LedgerBooking {
   id: string
@@ -108,7 +110,8 @@ const ORDER: Record<LedgerBookingType, number> = {
   transfer_out: 9,
   fee: 10,
   tax: 11,
-  withdrawal: 12,
+  tax_refund: 12,
+  withdrawal: 13,
 }
 
 export function sortBookings<T extends LedgerBooking>(bookings: readonly T[]): T[] {
@@ -250,6 +253,12 @@ export function computeLedger(bookings: readonly LedgerBooking[]): Ledger {
         ledger.taxCents += b.amountCents
         if (b.instrumentId) position(b).taxCents += b.amountCents
         else ledger.cashCents -= b.amountCents
+        break
+      case 'tax_refund':
+        // Gutschrift mindert die gezahlten Steuern (z. B. Verlustausgleich der Bank)
+        ledger.taxCents -= b.amountCents
+        if (b.instrumentId) position(b).taxCents -= b.amountCents
+        else ledger.cashCents += b.amountCents
         break
     }
   }

@@ -18,6 +18,7 @@ export type ImportKind =
   | 'transfer_out'
   | 'staking'
   | 'age'
+  | 'tax_refund'
 
 export const IMPORT_KIND_LABEL: Record<ImportKind, string> = {
   buy: 'Kauf',
@@ -32,6 +33,7 @@ export const IMPORT_KIND_LABEL: Record<ImportKind, string> = {
   transfer_out: 'Übertrag aus',
   staking: 'Staking/Prämie',
   age: 'Ausschüttungsgleicher Ertrag',
+  tax_refund: 'Steuergutschrift',
 }
 
 export interface ImportAsset {
@@ -65,6 +67,27 @@ export interface ImportedBooking {
    */
   fingerprint: string
   note: string | null
+}
+
+/**
+ * Steuergutschrift zu einer Abrechnung (z. B. KESt-Erstattung beim
+ * Verlustausgleich der Bank) als eigene Buchung – Steuerfelder sind nie negativ.
+ */
+export function refundBooking(base: ImportedBooking, cents: number, note: string): ImportedBooking {
+  return {
+    kind: 'tax_refund',
+    occurredOn: base.occurredOn,
+    asset: base.asset,
+    quantity: null,
+    amountCents: cents,
+    feeCents: 0,
+    taxCents: 0,
+    netCents: null,
+    confidence: base.confidence,
+    warnings: [],
+    fingerprint: `${base.fingerprint}|gutschrift`,
+    note,
+  }
 }
 
 export type ImportSource = 'traderepublic' | 'flatex' | 'bitpanda' | 'csv'

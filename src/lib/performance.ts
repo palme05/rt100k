@@ -204,6 +204,11 @@ export function dailySeries(portfolios: readonly PerfPortfolio[], prices: PriceH
           if (!b.instrumentId && kind === 'cash') cash[b.portfolio]! -= b.amountCents
           else inflow += b.amountCents + extra
           break
+        case 'tax_refund':
+          // Gegenstück zur Steuerbuchung: Geld fließt zurück
+          if (!b.instrumentId && kind === 'cash') cash[b.portfolio]! += b.amountCents
+          else outflow += b.amountCents
+          break
       }
     }
 
@@ -459,7 +464,7 @@ export function costsByYear(bookings: readonly LedgerBooking[]): { year: string;
     const year = b.occurredOn.slice(0, 4)
     const entry = years.get(year) ?? { feesCents: 0, taxCents: 0 }
     entry.feesCents += b.feeCents + (b.type === 'fee' ? b.amountCents : 0)
-    entry.taxCents += b.taxCents + (b.type === 'tax' ? b.amountCents : 0)
+    entry.taxCents += b.taxCents + (b.type === 'tax' ? b.amountCents : b.type === 'tax_refund' ? -b.amountCents : 0)
     years.set(year, entry)
   }
   return [...years.entries()].sort(([a], [b]) => (a < b ? -1 : 1)).map(([year, v]) => ({ year, ...v }))

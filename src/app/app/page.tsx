@@ -35,8 +35,9 @@ const TYPE_LABEL: Record<string, string> = {
   split: 'Split',
   staking: 'Staking',
   age: 'AGE',
+  tax_refund: 'Steuergutschrift',
 }
-const SIGN: Record<string, number> = { buy: -1, sell: 1, dividend: 1, interest: 1, fee: -1, tax: -1, deposit: 1, withdrawal: -1 }
+const SIGN: Record<string, number> = { buy: -1, sell: 1, dividend: 1, interest: 1, fee: -1, tax: -1, tax_refund: 1, deposit: 1, withdrawal: -1 }
 
 export default async function OverviewPage() {
   const user = await requireUser()
