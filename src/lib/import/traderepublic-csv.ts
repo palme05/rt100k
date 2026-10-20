@@ -290,6 +290,6 @@ export const parseTradeRepublicCsv: CsvParser = (rows) => {
     )
   }
   if (unknownTypes.size > 0) notices.push(`Unbekannte Arten: ${[...unknownTypes].slice(0, 8).join(', ')}.`)
-  const result: ParseResult = { source: 'traderepublic', document: 'Transaktionsexport (CSV)', bookings, notices }
+  const result: ParseResult = { source: 'traderepublic', document: 'Transaktionsexport (CSV)', bookings, notices, tasks: actions.manual.slice(0, 50) }
   return result
 }

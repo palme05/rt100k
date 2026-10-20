@@ -4,7 +4,7 @@ import { headers } from 'next/headers'
 import { revalidatePath } from 'next/cache'
 import { requireUser } from '@/server/auth/session'
 import { NotFoundError, ValidationError } from '@/server/dal/errors'
-import { createPriceAlert, deletePriceAlert, deletePushSubscription, markAllRead, savePushSubscription } from '@/server/dal/notifications'
+import { completeTask, createPriceAlert, deletePriceAlert, deletePushSubscription, markAllRead, savePushSubscription } from '@/server/dal/notifications'
 import { consumeRateLimit } from '@/server/dal/rate-limit'
 
 type Result = { ok: boolean; error: string | null }
@@ -57,5 +57,18 @@ export async function savePushSubscriptionAction(subscription: unknown): Promise
 export async function deletePushSubscriptionAction(endpoint: string): Promise<Result> {
   const user = await requireUser()
   await deletePushSubscription(user, endpoint)
+  return { ok: true, error: null }
+}
+
+/** Aufgabe abhaken (z. B. eine von Hand gebuchte Kapitalmaßnahme). */
+export async function completeTaskAction(id: string): Promise<Result> {
+  const user = await requireUser()
+  try {
+    await consumeRateLimit(user, 'write')
+    await completeTask(user, id)
+  } catch (error) {
+    return fail(error)
+  }
+  revalidatePath('/app', 'layout')
   return { ok: true, error: null }
 }

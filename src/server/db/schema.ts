@@ -547,7 +547,7 @@ export const portfolioShare = pgTable(
   ],
 ).enableRLS()
 
-export const NOTIFICATION_KINDS = ['price_alert', 'dividend', 'milestone', 'speculation_end'] as const
+export const NOTIFICATION_KINDS = ['price_alert', 'dividend', 'milestone', 'speculation_end', 'task', 'savings_plan', 'import_reminder'] as const
 export type NotificationKind = (typeof NOTIFICATION_KINDS)[number]
 
 /**
@@ -574,7 +574,7 @@ export const notification = pgTable(
   (t) => [
     uniqueIndex('notification_owner_dedupe_idx').on(t.ownerId, t.dedupeKey),
     index('notification_owner_idx').on(t.ownerId, t.createdAt),
-    check('notification_kind_check', sql`${t.kind} in ('price_alert', 'dividend', 'milestone', 'speculation_end')`),
+    check('notification_kind_check', sql`${t.kind} in ('price_alert', 'dividend', 'milestone', 'speculation_end', 'task', 'savings_plan', 'import_reminder')`),
     check('notification_text_check', sql`char_length(${t.title}) between 1 and 120 and (${t.body} is null or char_length(${t.body}) <= 500) and char_length(${t.dedupeKey}) between 1 and 200`),
     check('notification_link_check', sql`${t.link} is null or ${t.link} ~ '^/app(/[A-Za-z0-9_/-]*)?$'`),
     pgPolicy('notification_owner', { for: 'all', to: appRole, using: ownRows, withCheck: ownRows }),
