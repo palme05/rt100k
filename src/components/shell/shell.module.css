@@ -131,3 +131,178 @@
   padding: 0 0.4rem;
   line-height: 1.35rem;
 }
+
+/* ── Desktop: Menü „Mehr“ ─────────────────────────────────────────────── */
+
+.more {
+  position: relative;
+  display: flex;
+}
+
+.more > button {
+  background: none;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  padding: 0;
+  font: inherit;
+  font-size: var(--text-md);
+  cursor: pointer;
+  gap: 0.3rem;
+}
+
+.moreList {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  z-index: 30;
+  min-width: 15rem;
+  margin: 0.4rem 0 0;
+  padding: var(--space-2);
+  list-style: none;
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-pop);
+}
+
+.moreLink {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: 2.75rem;
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-sm);
+  color: var(--ink-2);
+  font-size: var(--text-md);
+}
+
+.moreLink:hover,
+.moreLink[aria-current='page'] {
+  background: var(--wash);
+  color: var(--ink);
+}
+
+/* ── Handy: Leiste unten und Blatt „Mehr“ ─────────────────────────────── */
+
+.tabbar {
+  display: none;
+}
+
+.sheet {
+  border: 0;
+  padding: 0;
+  margin: auto 0 0;
+  width: 100%;
+  max-width: 100%;
+  background: transparent;
+}
+
+.sheet::backdrop {
+  background: var(--scrim);
+}
+
+.sheetInner {
+  background: var(--surface);
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  padding: var(--space-4) var(--gutter) calc(var(--space-6) + env(safe-area-inset-bottom, 0px));
+  box-shadow: var(--shadow-pop);
+}
+
+.sheetHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-weight: var(--weight-semibold);
+  margin-bottom: var(--space-2);
+}
+
+.sheetClose {
+  min-width: 2.75rem;
+  min-height: 2.75rem;
+  border: 0;
+  background: none;
+  color: var(--ink-3);
+  font-size: 1.1rem;
+  cursor: pointer;
+}
+
+.sheetList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+}
+
+.sheetLink {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  min-height: 3.25rem;
+  padding: 0 var(--space-2);
+  border-bottom: 1px solid var(--rule);
+  color: var(--ink);
+}
+
+.sheetLink[aria-current='page'] {
+  font-weight: var(--weight-semibold);
+}
+
+.sheetLink svg {
+  color: var(--ink-3);
+}
+
+@media (max-width: 720px) {
+  .nav {
+    display: none;
+  }
+
+  .main {
+    padding-bottom: calc(6rem + env(safe-area-inset-bottom, 0px));
+  }
+
+  .tabbar {
+    position: fixed;
+    inset: auto 0 0;
+    z-index: 20;
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    padding: 0 max(var(--space-2), env(safe-area-inset-left, 0px)) env(safe-area-inset-bottom, 0px) max(var(--space-2), env(safe-area-inset-right, 0px));
+    background: var(--bg);
+    border-top: 1px solid var(--rule);
+  }
+
+  .tab {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.15rem;
+    min-height: 3.5rem;
+    padding: 0.35rem 0 0.3rem;
+    border: 0;
+    border-top: 2px solid transparent;
+    margin-top: -1px;
+    background: none;
+    font: inherit;
+    font-size: var(--text-2xs);
+    color: var(--ink-3);
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .tab span {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .tab[aria-current='page'] {
+    color: var(--ink);
+    border-top-color: var(--accent);
+  }
+
+  .tab:active {
+    background: var(--wash);
+  }
+}
