@@ -1,8 +1,10 @@
+import { cookies } from 'next/headers'
 import { Message } from '@/components/ui/forms'
 import { Grid, PageHead, Section } from '@/components/ui/layout'
 import { Row, Rows } from '@/components/ui/Rows'
 import { auditLabel } from '@/lib/audit-labels'
 import { formatDate, formatTime } from '@/lib/format'
+import { parseTheme, THEME_COOKIE } from '@/lib/theme'
 import { requireUser } from '@/server/auth/session'
 import { isLastAdmin } from '@/server/dal/account'
 import { listAuditEvents, recentNewDeviceLogin } from '@/server/dal/audit'
@@ -15,7 +17,9 @@ import { DeleteAccount } from './DeleteAccount'
 import { PasskeySettings } from './PasskeySettings'
 import { PasswordSettings } from './PasswordSettings'
 import { SessionList } from './SessionList'
+import { ThemeSettings } from './ThemeSettings'
 import { TwoFactorSettings } from './TwoFactorSettings'
+import { setThemeAction } from './actions'
 
 export const metadata = { title: 'Konto und Sicherheit' }
 
@@ -32,6 +36,7 @@ export default async function SecurityPage({ searchParams }: { searchParams: Pro
   ])
   const when = (iso: string) => `${formatDate(new Date(iso))}, ${formatTime(new Date(iso))}`
   const mustSetup2fa = user.role === 'admin' && !user.twoFactorEnabled
+  const theme = parseTheme((await cookies()).get(THEME_COOKIE)?.value)
 
   return (
     <>
@@ -50,6 +55,9 @@ export default async function SecurityPage({ searchParams }: { searchParams: Pro
       ) : null}
 
       <Grid>
+        <Section id="darstellung" title="Darstellung" meta="nur dieses Gerät" span="half">
+          <ThemeSettings theme={theme} save={setThemeAction} />
+        </Section>
         <Section id="passkeys" title="Passkeys" span="half">
           <PasskeySettings passkeys={passkeys} />
         </Section>

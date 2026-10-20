@@ -1,9 +1,10 @@
 /* ═══ rt100k Design-Tokens („Strecke“) ═══════════════════════════════════
    Einzige Quelle für Farben, Schrift, Abstände. Komponenten verwenden nur
-   diese Variablen, nie Hex-Werte. Bewusst nur hell; Begründung und Regeln
-   in docs/DESIGN.md. */
+   diese Variablen, nie Hex-Werte. Hell und dunkel (unten); Regeln in
+   docs/DESIGN.md. */
 
 :root {
+  color-scheme: light;
   /* Flächen & Tinte */
   --bg: #fbfbf9;
   --surface: #ffffff;
@@ -76,4 +77,76 @@
   --shadow-raise: 0 1px 2px rgb(22 24 27 / 10%);
   --shadow-pop: 0 24px 60px rgb(22 24 27 / 18%);
   --shadow-tip: drop-shadow(0 4px 12px rgb(22 24 27 / 10%));
+}
+
+/* ═══ Dunkles Design ══════════════════════════════════════════════════════
+   Eigene, geprüfte Stufen (kein Invertieren): Text ≥ 6:1 auf --bg, Akzent und
+   Zweitfarbe heller, Kategorie-Farben gegen den dunklen Grund validiert
+   (Helligkeitsband, Farbsehschwäche ΔE ≥ 10 benachbart und beim Ringschluss).
+   Gilt bei „System“ + dunklem Gerät oder bei ausdrücklich „Dunkel“. */
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --bg: #131416;
+    --surface: #1c1d20;
+    --wash: #25272a;
+    --ink: #ecebe6;
+    --ink-2: #bdbcb5;
+    --ink-3: #97968f;
+    --rule: #2b2d31;
+    --rule-strong: #3d4045;
+    --accent: #f0802f;
+    --accent-wash: rgb(240 128 47 / 14%);
+    --accent-band: rgb(240 128 47 / 20%);
+    --second: #79a6dc;
+    --second-wash: #2a3a4e;
+    --pos: #4cc38a;
+    --neg: #f2786d;
+    --cat-1: #3277dd;
+    --cat-2: #c98500;
+    --cat-3: #9a4aa0;
+    --cat-4: #26ad7d;
+    --cat-5: #b8336a;
+    --cat-6: #2ca5b4;
+    --cat-7: #a24f24;
+    --cat-8: #c96f9c;
+    --cat-rest: #3a3c40;
+    --scrim: rgb(0 0 0 / 55%);
+    --shadow-raise: 0 1px 2px rgb(0 0 0 / 45%);
+    --shadow-pop: 0 24px 60px rgb(0 0 0 / 55%);
+    --shadow-tip: drop-shadow(0 4px 12px rgb(0 0 0 / 50%));
+    color-scheme: dark;
+  }
+}
+
+:root[data-theme='dark'] {
+  --bg: #131416;
+  --surface: #1c1d20;
+  --wash: #25272a;
+  --ink: #ecebe6;
+  --ink-2: #bdbcb5;
+  --ink-3: #97968f;
+  --rule: #2b2d31;
+  --rule-strong: #3d4045;
+  --accent: #f0802f;
+  --accent-wash: rgb(240 128 47 / 14%);
+  --accent-band: rgb(240 128 47 / 20%);
+  --second: #79a6dc;
+  --second-wash: #2a3a4e;
+  --pos: #4cc38a;
+  --neg: #f2786d;
+  --cat-1: #3277dd;
+  --cat-2: #c98500;
+  --cat-3: #9a4aa0;
+  --cat-4: #26ad7d;
+  --cat-5: #b8336a;
+  --cat-6: #2ca5b4;
+  --cat-7: #a24f24;
+  --cat-8: #c96f9c;
+  --cat-rest: #3a3c40;
+  --scrim: rgb(0 0 0 / 55%);
+  --shadow-raise: 0 1px 2px rgb(0 0 0 / 45%);
+  --shadow-pop: 0 24px 60px rgb(0 0 0 / 55%);
+  --shadow-tip: drop-shadow(0 4px 12px rgb(0 0 0 / 50%));
+  color-scheme: dark;
 }
