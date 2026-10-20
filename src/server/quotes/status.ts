@@ -1,5 +1,6 @@
 import 'server-only'
 import { providerFetch } from './fetch'
+import { parseCoinGeckoChart, parseEcbHistoryCsv, parseYahooHistory } from './history-parsers'
 import { parseCoinGeckoPrices, parseEcbXml, parseYahooChart } from './parsers'
 
 /**
@@ -31,4 +32,22 @@ export async function providerStatus() {
     check('Yahoo Gold', async () => parseYahooChart(await providerFetch('Yahoo', 'https://query1.finance.yahoo.com/v8/finance/chart/GC=F?range=1d&interval=1d&status=1', { revalidate: TTL }))?.currency === 'USD'),
   ])
   return { yahoo, coingecko, ecb, edelmetalle }
+}
+
+/**
+ * Kurshistorie für die Analyse – dieselben Abfrageformen wie im Betrieb
+ * (Yahoo mit Splits, CoinGecko 365 Tage, EZB-SDMX), ebenfalls 10 Minuten gecacht.
+ */
+export async function historyStatus() {
+  // Ab Dezember des Vorjahres: auch Anfang Jänner gibt es schon Werte
+  const since = `${new Date().getUTCFullYear() - 1}-12-01`
+  const [yahoo, coingecko, ezb] = await Promise.all([
+    check('Yahoo-Historie', async () => (parseYahooHistory(await providerFetch('Yahoo', 'https://query1.finance.yahoo.com/v8/finance/chart/VWCE.DE?range=1y&interval=1d&events=split&status=1', { revalidate: TTL }))?.points.length ?? 0) >= 100),
+    check('CoinGecko-Historie', async () => (parseCoinGeckoChart(await providerFetch('CoinGecko', 'https://api.coingecko.com/api/v3/coins/bitcoin/market_chart?vs_currency=eur&days=365&interval=daily&status=1', { revalidate: TTL }))?.points.length ?? 0) >= 300),
+    check('EZB-Historie', async () => {
+      const csv = await providerFetch('EZB', `https://data-api.ecb.europa.eu/service/data/EXR/D.USD.EUR.SP00.A?startPeriod=${since}&format=csvdata&detail=dataonly`, { revalidate: TTL, as: 'text' })
+      return typeof csv === 'string' && (parseEcbHistoryCsv(csv).get('USD')?.length ?? 0) > 0
+    }),
+  ])
+  return { yahoo, coingecko, ezb }
 }
