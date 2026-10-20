@@ -7,6 +7,7 @@ import { createBooking, deleteBooking } from '@/server/dal/bookings'
 import { ValidationError, NotFoundError } from '@/server/dal/errors'
 import { ensureGlobalInstrument } from '@/server/dal/instruments'
 import { createPortfolio, deletePortfolio, updatePortfolio } from '@/server/dal/portfolios'
+import { consumeRateLimit, withinLimit } from '@/server/dal/rate-limit'
 import { searchInstruments, verifyCandidate } from '@/server/quotes/service'
 import type { InstrumentCandidate } from '@/server/quotes/types'
 
@@ -37,6 +38,7 @@ export async function createPortfolioAction(_prev: ActionResult, formData: FormD
   const user = await requireUser()
   let id: string
   try {
+    await consumeRateLimit(user, 'write')
     id = (await createPortfolio(user, portfolioForm(formData))).id
   } catch (error) {
     return fail(error)
@@ -48,6 +50,7 @@ export async function createPortfolioAction(_prev: ActionResult, formData: FormD
 export async function updatePortfolioAction(id: string, _prev: ActionResult, formData: FormData): Promise<ActionResult> {
   const user = await requireUser()
   try {
+    await consumeRateLimit(user, 'write')
     await updatePortfolio(user, id, portfolioForm(formData))
   } catch (error) {
     return fail(error)
@@ -60,6 +63,7 @@ export async function deletePortfolioAction(id: string, _prev: ActionResult, for
   const user = await requireUser()
   if (formData.get('confirm') !== 'löschen') return { ok: false, error: 'Zum Bestätigen bitte „löschen“ eintippen.', field: 'confirm' }
   try {
+    await consumeRateLimit(user, 'write')
     await deletePortfolio(user, id)
   } catch (error) {
     return fail(error)
@@ -75,6 +79,7 @@ export async function createBookingAction(_prev: ActionResult, formData: FormDat
     return typeof v === 'string' ? v : null
   }
   try {
+    await consumeRateLimit(user, 'write')
     await createBooking(user, {
       portfolioId: field('portfolioId'),
       type: field('type'),
@@ -97,6 +102,7 @@ export async function createBookingAction(_prev: ActionResult, formData: FormDat
 export async function deleteBookingAction(id: string): Promise<ActionResult> {
   const user = await requireUser()
   try {
+    await consumeRateLimit(user, 'write')
     await deleteBooking(user, id)
   } catch (error) {
     return fail(error)
@@ -107,8 +113,9 @@ export async function deleteBookingAction(id: string): Promise<ActionResult> {
 
 /** Instrumentsuche (ISIN, Name, Symbol) – nur für angemeldete Nutzer. */
 export async function searchInstrumentsAction(query: string): Promise<InstrumentCandidate[]> {
-  await requireUser()
+  const user = await requireUser()
   if (typeof query !== 'string') return []
+  if (!(await withinLimit(user, 'search'))) return []
   return searchInstruments(query)
 }
 
@@ -117,7 +124,8 @@ export async function searchInstrumentsAction(query: string): Promise<Instrument
  * die allgemeinen Stammdaten an. Aus dem Browser kommen nur Anbieter und Kennung.
  */
 export async function selectInstrumentAction(provider: string, key: string, isin: string | null): Promise<{ id: string; name: string } | { error: string }> {
-  await requireUser()
+  const user = await requireUser()
+  if (!(await withinLimit(user, 'instrument'))) return { error: 'Zu viele Anfragen in kurzer Zeit. Bitte später erneut versuchen.' }
   const verified = await verifyCandidate(String(provider), String(key), isin ? String(isin).toUpperCase().trim() : null)
   if (!verified) return { error: 'Dieses Wertpapier konnte beim Kursanbieter nicht bestätigt werden. Bitte später erneut versuchen.' }
   const instrument = await ensureGlobalInstrument(verified)

@@ -5,6 +5,7 @@ import { formatCents, type Cents } from '@/lib/money'
 import { requireUser } from '@/server/auth/session'
 import { NotFoundError, ValidationError } from '@/server/dal/errors'
 import { createAgeFromReport } from '@/server/dal/tax'
+import { consumeRateLimit } from '@/server/dal/rate-limit'
 
 export interface AgeActionResult {
   ok: boolean
@@ -21,6 +22,7 @@ export async function createAgeReportAction(_prev: AgeActionResult, formData: Fo
   }
   const [portfolioId, instrumentId] = (text('fund') ?? '').split('|')
   try {
+    await consumeRateLimit(user, 'write')
     const booking = await createAgeFromReport(user, {
       portfolioId,
       instrumentId,

@@ -6,6 +6,7 @@ import { requireUser } from '@/server/auth/session'
 import { recordAudit } from '@/server/dal/audit'
 import { NotFoundError, ValidationError } from '@/server/dal/errors'
 import { acceptShare, createShareLink, leaveShare, revokeShare } from '@/server/dal/shares'
+import { consumeRateLimit } from '@/server/dal/rate-limit'
 
 type Result = { ok: true; token?: string } | { ok: false; error: string }
 
@@ -18,6 +19,7 @@ function fail(error: unknown): Result {
 export async function createShareLinkAction(portfolioId: string): Promise<Result> {
   const user = await requireUser()
   try {
+    await consumeRateLimit(user, 'share')
     const { token } = await createShareLink(user, portfolioId)
     await recordAudit({ userId: user.id, actorId: user.id, type: 'share_created' })
     revalidatePath(`/app/depots/${portfolioId}`)
@@ -43,6 +45,7 @@ export async function acceptShareAction(token: string): Promise<Result> {
   const user = await requireUser()
   let portfolioId: string
   try {
+    await consumeRateLimit(user, 'share')
     portfolioId = await acceptShare(user, token)
   } catch (error) {
     return fail(error)
