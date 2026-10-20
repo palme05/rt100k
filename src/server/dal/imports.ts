@@ -1,5 +1,5 @@
 import 'server-only'
-import { and, asc, count, eq, inArray, ne } from 'drizzle-orm'
+import { and, asc, count, eq, inArray, max, ne } from 'drizzle-orm'
 import { z } from 'zod'
 import { withUser } from '../db/client'
 import { booking, csvMapping, IMPORT_SOURCES, importFile, BOOKING_TYPES } from '../db/schema'
@@ -71,6 +71,17 @@ export async function findImported(actor: Actor, keys: readonly string[], fileHa
             .where(and(eq(importFile.ownerId, actor.id), inArray(importFile.fileHash, f)))
     return { keys: new Set(existing.map((r) => r.key).filter((v): v is string => !!v)), files: new Set(files.map((r) => r.hash)) }
   })
+}
+
+/** Zeitpunkt des letzten Datei-Imports des Nutzers (für die monatliche Erinnerung), sonst null. */
+export async function lastImportAt(actor: Actor): Promise<Date | null> {
+  const [row] = await withUser(actor.id, (tx) =>
+    tx
+      .select({ at: max(importFile.createdAt) })
+      .from(importFile)
+      .where(eq(importFile.ownerId, actor.id)),
+  )
+  return row?.at ?? null
 }
 
 /** Mit diesen Instrumenten würde der Bestand negativ (z. B. fehlender Split oder Depotübertrag). */
