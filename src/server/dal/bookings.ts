@@ -31,7 +31,7 @@ export interface BookingDto {
 const NEEDS_INSTRUMENT: ReadonlySet<BookingType> = new Set(['buy', 'sell', 'transfer_in', 'transfer_out', 'staking', 'split', 'dividend', 'age'])
 const NEEDS_QUANTITY: ReadonlySet<BookingType> = new Set(['buy', 'sell', 'transfer_in', 'transfer_out', 'staking'])
 const NO_INSTRUMENT: ReadonlySet<BookingType> = new Set(['deposit', 'withdrawal'])
-const NEEDS_AMOUNT: ReadonlySet<BookingType> = new Set(['buy', 'sell', 'dividend', 'interest', 'fee', 'tax', 'deposit', 'withdrawal', 'age'])
+const NEEDS_AMOUNT: ReadonlySet<BookingType> = new Set(['buy', 'sell', 'dividend', 'interest', 'fee', 'tax', 'deposit', 'withdrawal', 'age', 'tax_refund'])
 
 const optionalText = z
   .string()

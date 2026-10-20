@@ -1,5 +1,5 @@
 {
-  "id": "dbef6da9-b235-4b42-ac15-8b1756303e8b",
+  "id": "47d8ab2a-1c0c-4029-98e7-e964c5cc5047",
   "prevId": "00a3b1c9-34ba-48c2-8b0e-869ecf83d39a",
   "version": "7",
   "dialect": "postgresql",
@@ -603,7 +603,7 @@
         },
         "booking_type_check": {
           "name": "booking_type_check",
-          "value": "\"booking\".\"type\" in ('buy', 'sell', 'dividend', 'interest', 'fee', 'tax', 'deposit', 'withdrawal', 'transfer_in', 'transfer_out', 'split', 'staking', 'age')"
+          "value": "\"booking\".\"type\" in ('buy', 'sell', 'dividend', 'interest', 'fee', 'tax', 'deposit', 'withdrawal', 'transfer_in', 'transfer_out', 'split', 'staking', 'age', 'tax_refund')"
         },
         "booking_amounts_check": {
           "name": "booking_amounts_check",

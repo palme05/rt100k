@@ -1,6 +1,7 @@
+import { applyBasisPoints, type Cents } from '../money'
 import { foreignToEurCents, NUM, toCents, toDecimal } from './numbers'
 import { cleanName, CURRENCY, DATE, isValidIsin, ISIN, normalizeLines, parseDate } from './text'
-import type { Confidence, ImportedBooking, ParseResult, PdfParser } from './types'
+import { refundBooking, type Confidence, type ImportedBooking, type ParseResult, type PdfParser } from './types'
 
 /**
  * flatex / flatexDEGIRO (Niederlassung Österreich und Deutschland):
@@ -98,15 +99,11 @@ function parseTrades(lines: readonly string[], title: string): ParseResult {
     }
     const feeCents = (cents(text, AMOUNT('Provision')) ?? 0) + (cents(text, AMOUNT('Eigene Spesen')) ?? 0) + (cents(text, AMOUNT('Fremde Spesen')) ?? 0)
     const tax = cents(text, AMOUNT(String.raw`Einbeh\. *(?:KESt|Steuer)`)) ?? 0
-    let taxCents = tax
-    if (tax < 0) {
-      warnings.push(`KESt-Gutschrift von ${(-tax / 100).toFixed(2).replace('.', ',')} € nicht übernommen – bitte separat prüfen.`)
-      taxCents = 0
-    }
+    const taxCents = Math.max(0, tax)
     const net = cents(text, AMOUNT('Endbetrag'))
     const expected = kind === 'buy' ? -(amountCents + feeCents + taxCents) : amountCents - feeCents - taxCents - Math.min(tax, 0)
     const confidence = check(expected, net, 1, warnings)
-    bookings.push({
+    const trade: ImportedBooking = {
       kind,
       occurredOn,
       asset: { kind: 'security', isin: id.isin, symbol: null, name: id.name },
@@ -119,7 +116,9 @@ function parseTrades(lines: readonly string[], title: string): ParseResult {
       warnings,
       fingerprint: `flatex|${head.nr}|${kind}|${occurredOn}|${id.isin}|${quantity}`,
       note: null,
-    })
+    }
+    bookings.push(trade)
+    if (tax < 0) bookings.push(refundBooking(trade, -tax, 'KESt-Gutschrift laut Abrechnung (Verlustausgleich)'))
   }
   if (starts.length === 0) notices.push('Abrechnung erkannt, aber kein Auftrag lesbar.')
   return { source: 'flatex', document: title, bookings, notices }
@@ -154,7 +153,7 @@ function parseIncome(lines: readonly string[], title: string): ParseResult {
     const consistent = -netCents === kestCents
     if (ageCents && ageCents > 0) {
       // KESt sollte 27,5 % der AGE sein (± 1 Cent Rundung pro Umrechnung)
-      const plausible = Math.abs(Math.round(ageCents * 0.275) - kestCents) <= 2
+      const plausible = Math.abs(applyBasisPoints(ageCents as Cents, 2_750) - kestCents) <= 2
       return {
         source: 'flatex',
         document: title,
@@ -211,7 +210,6 @@ function parseIncome(lines: readonly string[], title: string): ParseResult {
   if (!gross || !grossDecimal) return { source: 'flatex', document: title, bookings: [], notices: [`${id.name}: Bruttobetrag nicht lesbar.`] }
   let amountCents: number | null
   let taxCents = Math.max(0, kestCents)
-  if (kestCents < 0) warnings.push('KESt-Erstattung nicht übernommen – bitte separat prüfen.')
   const withholding = first(text, new RegExp(String.raw`Gez\. *Quellenst\. *: *(?<amount>${NUM}) *(?<cur>${CURRENCY})`))?.groups
   if (gross.cur === 'EUR') {
     amountCents = toCents(grossDecimal, 'en')
@@ -225,30 +223,26 @@ function parseIncome(lines: readonly string[], title: string): ParseResult {
   }
   if (amountCents === null || amountCents <= 0) return { source: 'flatex', document: title, bookings: [], notices: [`${id.name}: Betrag in ${gross.cur} ohne Devisenkurs.`] }
   if (net && net.cur !== 'EUR') warnings.push(`Endbetrag in ${net.cur} – Gutschrift auf einem Fremdwährungskonto.`)
-  const confidence = check(amountCents - taxCents, netCents, gross.cur === 'EUR' ? 1 : 2, warnings)
+  const refundCents = Math.max(0, -kestCents)
+  const confidence = check(amountCents - taxCents + refundCents, netCents, gross.cur === 'EUR' ? 1 : 2, warnings)
   const isInterest = /Zinsgutschrift/i.test(text)
   const quantity = new RegExp(String.raw`St\.(?:\/Nominale)? *: *(?<qty>${NUM})`).exec(text)?.groups?.qty
-  return {
-    source: 'flatex',
-    document: title,
-    notices: [],
-    bookings: [
-      {
-        kind: isInterest ? 'interest' : 'dividend',
-        occurredOn,
-        asset: { kind: 'security', isin: id.isin, symbol: null, name: id.name },
-        quantity: null,
-        amountCents,
-        feeCents: 0,
-        taxCents,
-        netCents,
-        confidence,
-        warnings,
-        fingerprint: `flatex|inc|${head.nr}|${occurredOn}|${id.isin}`,
-        note: [quantity ? `${quantity} St.` : null, gross.cur === 'EUR' ? null : `Brutto ${gross.amount} ${gross.cur}, Devisenkurs ${fx}`].filter(Boolean).join(' · ') || null,
-      },
-    ],
+  const income: ImportedBooking = {
+    kind: isInterest ? 'interest' : 'dividend',
+    occurredOn,
+    asset: { kind: 'security', isin: id.isin, symbol: null, name: id.name },
+    quantity: null,
+    amountCents,
+    feeCents: 0,
+    taxCents,
+    netCents,
+    confidence,
+    warnings,
+    fingerprint: `flatex|inc|${head.nr}|${occurredOn}|${id.isin}`,
+    note: [quantity ? `${quantity} St.` : null, gross.cur === 'EUR' ? null : `Brutto ${gross.amount} ${gross.cur}, Devisenkurs ${fx}`].filter(Boolean).join(' · ') || null,
   }
+  const refund = refundCents > 0 ? [refundBooking(income, refundCents, 'KESt-Gutschrift laut Ertragsmitteilung (Verlustausgleich)')] : []
+  return { source: 'flatex', document: title, notices: [], bookings: [income, ...refund] }
 }
 
 export const parseFlatex: PdfParser = (raw) => {

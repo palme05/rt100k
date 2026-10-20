@@ -104,6 +104,31 @@ export const TR_VERKAUF_AT = [
   `${IBAN_AT} 2026-05-19 1.001,95 EUR`,
 ]
 
+/** Verkauf mit Verlust: Trade Republic schreibt die KESt aus dem Verlustausgleich gut (positiver Steuerbetrag). */
+export const TR_VERKAUF_VERLUST_AT = [
+  TR_AT,
+  'Erika Beispiel SEITE 1 von 2',
+  'Beispielgasse 1 DATUM 02.06.2026',
+  '1010 Wien AUFTRAG 2b3c-4d5e',
+  'AUSFÜHRUNG 6f7a-8b9c',
+  'DEPOT 0000000000',
+  'WERTPAPIERABRECHNUNG',
+  'ÜBERSICHT',
+  'Market-Order Verkauf am 02.06.2026, um 11:05 Uhr (Europe/Berlin) mit der Lang und Schwarz Exchange, die zugleich Kontrahent der Transaktion ist.',
+  'POSITION ANZAHL PREIS BETRAG',
+  'iShares Core MSCI World UCITS ETF USD (Acc) 5 Stk. 98,00 EUR 490,00 EUR',
+  'ISIN: IE00B4L5Y983',
+  'GESAMT 490,00 EUR',
+  'ABRECHNUNG',
+  'POSITION BETRAG',
+  'Fremdkostenzuschlag -1,00 EUR',
+  'Kapitalertragsteuer 8,25 EUR',
+  'GESAMT 497,25 EUR',
+  'BUCHUNG',
+  'VERRECHNUNGSKONTO WERTSTELLUNG BETRAG',
+  `${IBAN_AT} 2026-06-04 497,25 EUR`,
+]
+
 export const TR_CRYPTO_SPARPLAN = [
   TR_DE,
   'Erika Beispiel SEITE 1 von 1',
@@ -203,6 +228,33 @@ export const FLATEX_KAUF_AT = [
   'Gewinn/Verlust: 0,00 EUR ** Einbeh. KESt: 0,00 EUR',
   'Endbetrag: -648,15 EUR',
   '** Einbehaltene Kapitalertragsteuer. Details dazu finden Sie im Steuerreport unter der Transaktion-Nr.: 0000000001.',
+  'Die Verrechnung der Endbeträge erfolgt über Ihr Konto Nr.: 00000000000',
+]
+
+/** Verkauf mit Verlust: flatex weist die KESt-Gutschrift negativ aus. */
+export const FLATEX_VERKAUF_VERLUST_AT = [
+  ...FLATEX_HEAD,
+  'Graz, 03.06.2026',
+  'Erika Beispiel',
+  'Beispielgasse 1',
+  '1010 Wien Auftragsdatum 03.06.2026',
+  'ÖSTERREICH Handelstag 03.06.2026',
+  'Ausführungszeit 14:02 Uhr',
+  'Valuta 05.06.2026',
+  'Auftragsnummer 400000009/1',
+  'Ausf.platz/-art Xetra',
+  'Wertpapierabrechnung Verkauf',
+  'Ihre Depotnummer: 00000000000',
+  'Depotinhaber: Beispiel, Erika',
+  'Nr. 400000009/1 Verkauf VANGUARD FTSE ALL-WORLD U.ETF (IE00BK5BQT80/A2PKXG)',
+  'Ausgeführt: 2 St. Kurswert: 230,00 EUR',
+  'Kurs: 115,000000 EUR Provision: 5,90 EUR',
+  'Devisenkurs: 1,000000 Eigene Spesen: 0,00 EUR',
+  '* Fremde Spesen: 0,00 EUR',
+  'Verwahrart: Wertpapierrechnung',
+  'Gewinn/Verlust: -26,90 EUR ** Einbeh. KESt: -7,40 EUR',
+  'Endbetrag: 231,50 EUR',
+  '** Einbehaltene Kapitalertragsteuer. Details dazu finden Sie im Steuerreport unter der Transaktion-Nr.: 0000000009.',
   'Die Verrechnung der Endbeträge erfolgt über Ihr Konto Nr.: 00000000000',
 ]
 

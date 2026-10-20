@@ -24,13 +24,14 @@ const LABEL: Record<string, string> = {
   split: 'Split / Reverse Split',
   staking: 'Staking-Ertrag',
   age: 'Ausschüttungsgleicher Ertrag (AGE)',
+  tax_refund: 'Steuergutschrift (KESt-Erstattung)',
 }
 
 const TYPES: Record<Kind, string[]> = {
-  depot: ['buy', 'sell', 'dividend', 'age', 'interest', 'fee', 'tax', 'transfer_in', 'transfer_out', 'split'],
+  depot: ['buy', 'sell', 'dividend', 'age', 'interest', 'fee', 'tax', 'tax_refund', 'transfer_in', 'transfer_out', 'split'],
   krypto: ['buy', 'sell', 'staking', 'fee', 'transfer_in', 'transfer_out'],
   sachwert: ['buy', 'sell', 'transfer_in', 'transfer_out', 'fee'],
-  cash: ['deposit', 'withdrawal', 'interest', 'tax', 'fee'],
+  cash: ['deposit', 'withdrawal', 'interest', 'tax', 'tax_refund', 'fee'],
 }
 
 const AMOUNT_LABEL: Record<string, string> = {
@@ -45,10 +46,11 @@ const AMOUNT_LABEL: Record<string, string> = {
   withdrawal: 'Betrag',
   fee: 'Betrag',
   tax: 'Betrag',
+  tax_refund: 'Gutschrift',
 }
 
 const NEEDS_INSTRUMENT = new Set(['buy', 'sell', 'transfer_in', 'transfer_out', 'staking', 'split', 'dividend', 'age'])
-const OPTIONAL_INSTRUMENT = new Set(['interest', 'fee', 'tax'])
+const OPTIONAL_INSTRUMENT = new Set(['interest', 'fee', 'tax', 'tax_refund'])
 const NEEDS_QUANTITY = new Set(['buy', 'sell', 'transfer_in', 'transfer_out', 'staking'])
 const NO_AMOUNT = new Set(['split', 'transfer_out'])
 
@@ -152,7 +154,7 @@ export function BookingForm({ portfolioId, kind, held, today }: { portfolioId: s
           )}
         </FormRow>
 
-        {type === 'split' || type === 'fee' || type === 'tax' ? null : (
+        {type === 'split' || type === 'fee' || type === 'tax' || type === 'tax_refund' ? null : (
           <FormRow>
             <Field id={`${id}-fee`} label="Gebühren in €" hint="optional" error={err('fee')}>
               <Input id={`${id}-fee`} name="fee" inputMode="decimal" {...describedBy(`${id}-fee`, true, err('fee'))} />

@@ -96,6 +96,18 @@ describe('gleitender Durchschnittspreis', () => {
     expect(ledger).toMatchObject({ incomeCents: 0, taxCents: 2_292, realizedCents: 0 })
   })
 
+  it('Steuergutschrift mindert die gezahlte Steuer (Position bzw. Cash-Konto)', () => {
+    const ledger = computeLedger([
+      b({ type: 'buy', occurredOn: '2026-01-02', quantity: '10', amountCents: 100_000 }),
+      b({ type: 'sell', occurredOn: '2026-03-02', quantity: '5', amountCents: 60_000, taxCents: 2_750 }),
+      b({ type: 'sell', occurredOn: '2026-04-02', quantity: '5', amountCents: 40_000 }),
+      b({ type: 'tax_refund', occurredOn: '2026-04-02', amountCents: 2_750 }),
+      b({ type: 'tax_refund', occurredOn: '2026-04-03', instrumentId: null, amountCents: 100 }),
+    ])
+    expect(ledger.positions.get('etf')).toMatchObject({ realizedCents: 0, taxCents: 0 })
+    expect(ledger).toMatchObject({ taxCents: -100, cashCents: 100 })
+  })
+
   it('Depotübertrag nimmt den Einstand mit, ohne Gewinn', () => {
     const ledger = computeLedger([
       b({ type: 'transfer_in', occurredOn: '2026-01-02', quantity: '10', amountCents: 90_000 }),

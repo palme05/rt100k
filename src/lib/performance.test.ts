@@ -131,6 +131,20 @@ describe('Tagesreihe und zeitgewichtete Rendite', () => {
     expect(s.income).toEqual([])
   })
 
+  it('Steuergutschrift: Geld fließt zurück (Abfluss im Depot, Gutschrift am Cash-Konto)', () => {
+    const prices: PriceHistory = new Map([['etf', series({ '2026-01-08': 100, '2026-01-09': 100 })]])
+    const s = dailySeries(
+      [
+        depot(b('buy', '2026-01-08', { instrumentId: 'etf', quantity: '1', amountCents: 10_000 }), b('tax_refund', '2026-01-09', { instrumentId: 'etf', amountCents: 300 })),
+        { kind: 'cash', bookings: [b('deposit', '2026-01-08', { amountCents: 1_000 }), b('tax_refund', '2026-01-09', { amountCents: 50 })] },
+      ],
+      prices,
+      '2026-01-09',
+    )
+    expect(s.days[1]).toMatchObject({ valueCents: 11_050, inflowCents: 0, outflowCents: 300 })
+    expect(costsByYear([b('tax', '2026-01-08', { amountCents: 500 }), b('tax_refund', '2026-01-09', { amountCents: 200 })])).toEqual([{ year: '2026', feesCents: 0, taxCents: 300 }])
+  })
+
   it('Cash-Konto: Ein- und Auszahlungen sind Ströme, Zinsen und Gebühren Rendite', () => {
     const s = dailySeries(
       [

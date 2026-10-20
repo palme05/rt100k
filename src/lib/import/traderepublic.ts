@@ -1,6 +1,6 @@
 import { detectNumberStyle, foreignToEurCents, NUM, toCents, toDecimal, type NumberStyle } from './numbers'
 import { cleanName, CURRENCY, DATE, findLine, isValidIsin, ISIN, normalizeLines, parseDate } from './text'
-import type { Confidence, ImportAsset, ImportedBooking, ParseResult, PdfParser } from './types'
+import { refundBooking, type Confidence, type ImportAsset, type ImportedBooking, type ParseResult, type PdfParser } from './types'
 
 /**
  * Trade Republic (Deutschland und Branch Austria), deutsche und englische
@@ -151,7 +151,6 @@ function parseTrade(lines: readonly string[], style: NumberStyle, title: string)
 
   const charges = readCharges(lines, indexOf(lines, /^(?:ABRECHNUNG|BILLING)$/, rowIdx), style)
   warnings.push(...charges.warnings)
-  if (charges.refundCents > 0) warnings.push(`Steuergutschrift von ${(charges.refundCents / 100).toFixed(2).replace('.', ',')} € nicht übernommen – bitte separat prüfen.`)
   const { netCents } = readBooking(lines, style)
   const expected = kind === 'buy' ? -(amountCents + charges.feeCents + charges.taxCents) : amountCents - charges.feeCents - charges.taxCents + charges.refundCents
   const confidence = plausibility(expected, netCents, 1, warnings)
@@ -173,7 +172,8 @@ function parseTrade(lines: readonly string[], style: NumberStyle, title: string)
     fingerprint: `tr|${documentId(lines)}|${kind}|${occurredOn}|${a.isin ?? a.symbol ?? a.name}|${quantity}|${amountCents}`,
     note: special ? `Trade Republic ${special}` : null,
   }
-  return { source: 'traderepublic', document: title, bookings: [booking], notices }
+  const refund = charges.refundCents > 0 ? [refundBooking(booking, charges.refundCents, 'Steuergutschrift laut Abrechnung (Verlustausgleich)')] : []
+  return { source: 'traderepublic', document: title, bookings: [booking, ...refund], notices }
 }
 
 function parseDividend(lines: readonly string[], style: NumberStyle, title: string): ParseResult {

@@ -36,8 +36,9 @@ const TYPE_LABEL: Record<string, string> = {
   split: 'Split',
   staking: 'Staking',
   age: 'AGE',
+  tax_refund: 'Steuergutschrift',
 }
-const SIGN: Record<string, 1 | -1 | 0> = { buy: -1, sell: 1, dividend: 1, interest: 1, fee: -1, tax: -1, deposit: 1, withdrawal: -1, transfer_in: 0, transfer_out: 0, split: 0, staking: 0 }
+const SIGN: Record<string, 1 | -1 | 0> = { buy: -1, sell: 1, dividend: 1, interest: 1, fee: -1, tax: -1, tax_refund: 1, deposit: 1, withdrawal: -1, transfer_in: 0, transfer_out: 0, split: 0, staking: 0 }
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
   const user = await requireUser()

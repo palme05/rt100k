@@ -70,6 +70,12 @@ describe('Buchungen', () => {
     await expect(createBooking(user, { portfolioId: depot, type: 'age', occurredOn: '2026-01-09', instrumentId: etf, amount: '0' })).rejects.toBeInstanceOf(ValidationError)
   })
 
+  it('Steuergutschrift: Betrag nötig, Wertpapier optional, keine Stückzahl', async () => {
+    const b = await createBooking(user, { portfolioId: depot, type: 'tax_refund', occurredOn: '2026-06-02', instrumentId: etf, quantity: '5', amount: '8,25' })
+    expect(b).toMatchObject({ type: 'tax_refund', quantity: null, amountCents: 825 })
+    await expect(createBooking(user, { portfolioId: depot, type: 'tax_refund', occurredOn: '2026-06-02', amount: '0' })).rejects.toBeInstanceOf(ValidationError)
+  })
+
   it('Ein- und Auszahlungen auf Cash-Konten', async () => {
     const cash = (await createPortfolio(user, { name: 'Tagesgeld', kind: 'cash' })).id
     await createBooking(user, { portfolioId: cash, type: 'deposit', occurredOn: '2026-01-02', amount: '5.000' })

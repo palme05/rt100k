@@ -118,6 +118,14 @@ describe('Trade Republic', () => {
     expect(b).toMatchObject({ kind: 'sell', occurredOn: '2026-05-15', quantity: '10', amountCents: 104200, feeCents: 100, taxCents: 3905, netCents: 100195, confidence: 'hoch' })
   })
 
+  it('Verkauf mit Verlust: KESt-Gutschrift als eigene Buchung', () => {
+    const [sell, refund, ...rest] = parsePdfLines(F.TR_VERKAUF_VERLUST_AT)!.bookings
+    expect(rest).toEqual([])
+    expect(sell).toMatchObject({ kind: 'sell', quantity: '5', amountCents: 49000, feeCents: 100, taxCents: 0, netCents: 49725, confidence: 'hoch', warnings: [] })
+    expect(refund).toMatchObject({ kind: 'tax_refund', occurredOn: '2026-06-02', asset: { isin: 'IE00B4L5Y983' }, quantity: null, amountCents: 825, feeCents: 0, taxCents: 0 })
+    expect(refund!.fingerprint).not.toBe(sell!.fingerprint)
+  })
+
   it('Krypto-Sparplan', () => {
     const b = only(parsePdfLines(F.TR_CRYPTO_SPARPLAN))
     expect(b).toMatchObject({ kind: 'buy', asset: { kind: 'crypto', symbol: 'BTC', name: 'Bitcoin', isin: null }, quantity: '0.000294', amountCents: 2499, confidence: 'hoch' })
@@ -154,6 +162,13 @@ describe('flatex', () => {
   it('Wertpapierabrechnung Kauf (Niederlassung Österreich)', () => {
     const b = only(parsePdfLines(F.FLATEX_KAUF_AT))
     expect(b).toMatchObject({ kind: 'buy', occurredOn: '2026-03-12', asset: { isin: 'IE00BK5BQT80', name: 'VANGUARD FTSE ALL-WORLD U.ETF' }, quantity: '5', amountCents: 64225, feeCents: 590, taxCents: 0, netCents: -64815, confidence: 'hoch' })
+  })
+
+  it('Verkauf mit Verlust: negative KESt wird zur Steuergutschrift', () => {
+    const r = parsePdfLines(F.FLATEX_VERKAUF_VERLUST_AT)
+    expect(r?.bookings).toHaveLength(2)
+    expect(r?.bookings[0]).toMatchObject({ kind: 'sell', occurredOn: '2026-06-03', quantity: '2', amountCents: 23000, feeCents: 590, taxCents: 0, netCents: 23150, confidence: 'hoch', warnings: [] })
+    expect(r?.bookings[1]).toMatchObject({ kind: 'tax_refund', asset: { isin: 'IE00BK5BQT80' }, amountCents: 740, taxCents: 0 })
   })
 
   it('Sammelabrechnung mit zwei Aufträgen und umbrochenem Namen', () => {
@@ -222,6 +237,9 @@ describe('Generischer CSV-Import', () => {
     expect(kindFromText('Wertpapierkauf')).toBe('buy')
     expect(kindFromText('Verkauf')).toBe('sell')
     expect(kindFromText('Ausschüttung')).toBe('dividend')
+    expect(kindFromText('KESt-Gutschrift')).toBe('tax_refund')
+    expect(kindFromText('Steuererstattung')).toBe('tax_refund')
+    expect(kindFromText('Kapitalertragsteuer')).toBe('tax')
     expect(kindFromText('Irgendwas')).toBeNull()
   })
 
@@ -244,7 +262,7 @@ describe('Registry und Datenschutz', () => {
   })
 
   it('kein Ergebnis enthält Namen, Adressen, IBAN oder Depotnummern', () => {
-    const results = [F.TR_KAUF_AT, F.TR_SPARPLAN_2026, F.TR_BUY_EN, F.TR_VERKAUF_AT, F.TR_CRYPTO_SPARPLAN, F.TR_DIVIDENDE_USD, F.TR_ZINSEN_AT, F.FLATEX_KAUF_AT, F.FLATEX_SAMMEL_AT, F.FLATEX_DIVIDENDE_USD, F.FLATEX_AGE].map(parsePdfLines)
+    const results = [F.TR_KAUF_AT, F.TR_SPARPLAN_2026, F.TR_BUY_EN, F.TR_VERKAUF_AT, F.TR_CRYPTO_SPARPLAN, F.TR_DIVIDENDE_USD, F.TR_ZINSEN_AT, F.FLATEX_KAUF_AT, F.FLATEX_VERKAUF_VERLUST_AT, F.TR_VERKAUF_VERLUST_AT, F.FLATEX_SAMMEL_AT, F.FLATEX_DIVIDENDE_USD, F.FLATEX_AGE].map(parsePdfLines)
     results.push(parseCsvText(F.BITPANDA_CSV).result)
     const json = JSON.stringify(results)
     for (const secret of ['Erika', 'Beispiel', 'Jane', 'Example Street', 'AT000000000000000000', 'DE00000000000000000000', '0000000000', '00000000-0000']) expect(json).not.toContain(secret)
