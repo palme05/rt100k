@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { z } from 'zod'
 import { Amount } from '@/components/privacy/privacy'
 import { AgeReportForm } from '@/components/tax/AgeReportForm'
+import { SaleSimulator } from '@/components/tax/SaleSimulator'
 import { Countdown, EstimateNotice, TaxHints, Toolbar, YearNav } from '@/components/tax/TaxParts'
 import button from '@/components/ui/button.module.css'
 import { DataTable, NameCell, Td, Th } from '@/components/ui/DataTable'
@@ -105,6 +106,12 @@ export default async function TaxPage({ searchParams }: { searchParams: Promise<
         {tax.hints.length > 0 ? (
           <Section id="hinweise" title="Hinweise" meta={`${tax.hints.length} für ${year}`}>
             <TaxHints hints={tax.hints} />
+          </Section>
+        ) : null}
+
+        {tax.simulator.length > 0 ? (
+          <Section id="simulator" title="Verkauf durchspielen" meta="≈ Schätzung · wird nirgends gespeichert">
+            <SaleSimulator positions={tax.simulator} year={year} />
           </Section>
         ) : null}
 

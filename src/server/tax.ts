@@ -43,10 +43,32 @@ export interface TaxPageDto {
   sales: { key: string; day: string; name: string; portfolio: string; category: string; proceeds: number; cost: number; gain: number; speculation: number | null }[]
   metalLots: { key: string; name: string; portfolio: string; acquiredOn: string; quantity: string; taxFreeFrom: string; daysLeft: number }[]
   hints: TaxHintDto[]
+  /** Verkaufs-Simulator (nur laufendes Jahr, nur Werte mit Kurs; Wertpapiere und Krypto) */
+  simulator: SimulatorPositionDto[]
   /** ETFs/Fonds im Bestand – für die AGE-Erfassung aus der OeKB-Meldung */
   funds: { key: string; portfolioId: string; instrumentId: string; label: string; isin: string | null; currency: string; taxSimple: boolean }[]
   invalid: string[]
 }
+
+/** Offene Position für den Verkaufs-Simulator; Ganzzahlen als Text (BigInt). */
+export interface SimulatorPositionDto {
+  key: string
+  label: string
+  groupLabel: string
+  /** Stück, skaliert wie in der DB (×10¹²) */
+  quantityScaled: string
+  quantityInput: string
+  taxCostCents: number
+  /** aktueller Kurs in Mikro-Euro */
+  priceMicros: string
+  priceInput: string
+  groupBaseCents: number
+  groupBankInterestCents: number
+  legacy: boolean
+}
+
+/** Cent → „1234,56“ (Eingabeformat ohne Tausenderpunkte). */
+const centsInput = (c: number) => `${Math.trunc(c / 100)},${String(Math.abs(c) % 100).padStart(2, '0')}`
 
 export const CATEGORY_LABEL: Record<TaxCategory, string> = {
   securities: 'Wertpapier',
@@ -225,6 +247,28 @@ export async function loadTax(actor: Actor, requestedYear: number | null): Promi
         daysLeft: daysBetween(today, l.taxFreeFrom),
       })),
     hints: r.hints.map((h) => hintText(h, year, nameOf)),
+    simulator: open
+      ? r.openPositions.flatMap((pos) => {
+          const price = prices?.get(pos.instrumentId)
+          const group = r.groups.find((g) => g.key === pos.groupKey)
+          if (pos.category === 'private' || !price || !group) return []
+          return [
+            {
+              key: `${pos.portfolioId}|${pos.instrumentId}`,
+              label: `${nameOf(pos.instrumentId)} – ${portfolioName.get(pos.portfolioId) ?? ''}`,
+              groupLabel: group.label,
+              quantityScaled: pos.quantity.toString(),
+              quantityInput: formatQuantity(pos.quantity, 12).replace(/\./g, ''),
+              taxCostCents: pos.taxCostCents,
+              priceMicros: price.toString(),
+              priceInput: centsInput(Number((price + 5_000n) / 10_000n)),
+              groupBaseCents: group.baseCents,
+              groupBankInterestCents: group.figures.bankInterestCents,
+              legacy: pos.legacy,
+            },
+          ]
+        })
+      : [],
     funds,
     invalid: r.invalidPortfolioIds.map((id) => portfolioName.get(id) ?? id),
   }
