@@ -547,6 +547,86 @@ export const portfolioShare = pgTable(
   ],
 ).enableRLS()
 
+export const NOTIFICATION_KINDS = ['price_alert', 'dividend', 'milestone', 'speculation_end'] as const
+export type NotificationKind = (typeof NOTIFICATION_KINDS)[number]
+
+/**
+ * Hinweise in der App (vom täglichen Lauf erzeugt). Beträge stehen getrennt in
+ * `amount_cents`, damit die Oberfläche sie über den Privatsphäre-Modus zeigt.
+ * `dedupe_key` verhindert doppelte Hinweise für dasselbe Ereignis.
+ */
+export const notification = pgTable(
+  'notification',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    ownerId: text('owner_id')
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    kind: text('kind').$type<NotificationKind>().notNull(),
+    title: text('title').notNull(),
+    body: text('body'),
+    amountCents: bigint('amount_cents', { mode: 'number' }),
+    link: text('link'),
+    dedupeKey: text('dedupe_key').notNull(),
+    createdAt: createdAt(),
+    readAt: timestamp('read_at', { withTimezone: true }),
+  },
+  (t) => [
+    uniqueIndex('notification_owner_dedupe_idx').on(t.ownerId, t.dedupeKey),
+    index('notification_owner_idx').on(t.ownerId, t.createdAt),
+    check('notification_kind_check', sql`${t.kind} in ('price_alert', 'dividend', 'milestone', 'speculation_end')`),
+    check('notification_text_check', sql`char_length(${t.title}) between 1 and 120 and (${t.body} is null or char_length(${t.body}) <= 500) and char_length(${t.dedupeKey}) between 1 and 200`),
+    check('notification_link_check', sql`${t.link} is null or ${t.link} ~ '^/app(/[A-Za-z0-9_/-]*)?$'`),
+    pgPolicy('notification_owner', { for: 'all', to: appRole, using: ownRows, withCheck: ownRows }),
+  ],
+).enableRLS()
+
+/** Kursalarm je Instrument: über oder unter einem Kurs in Mikro-Euro, einmalig. */
+export const priceAlert = pgTable(
+  'price_alert',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    ownerId: text('owner_id')
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    instrumentId: uuid('instrument_id')
+      .notNull()
+      .references(() => instrument.id, { onDelete: 'cascade' }),
+    direction: text('direction').$type<'above' | 'below'>().notNull(),
+    thresholdMicros: bigint('threshold_micros', { mode: 'bigint' }).notNull(),
+    createdAt: createdAt(),
+    triggeredAt: timestamp('triggered_at', { withTimezone: true }),
+  },
+  (t) => [
+    index('price_alert_owner_idx').on(t.ownerId),
+    check('price_alert_direction_check', sql`${t.direction} in ('above', 'below')`),
+    check('price_alert_threshold_check', sql`${t.thresholdMicros} > 0`),
+    pgPolicy('price_alert_owner', { for: 'all', to: appRole, using: ownRows, withCheck: ownRows }),
+  ],
+).enableRLS()
+
+/** Web-Push-Abo eines Geräts (nur bekannte Push-Dienste, siehe src/lib/push.ts). */
+export const pushSubscription = pgTable(
+  'push_subscription',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    ownerId: text('owner_id')
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    endpoint: text('endpoint').notNull(),
+    p256dh: text('p256dh').notNull(),
+    auth: text('auth').notNull(),
+    userAgent: text('user_agent'),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    uniqueIndex('push_subscription_owner_endpoint_idx').on(t.ownerId, t.endpoint),
+    check('push_subscription_endpoint_check', sql`${t.endpoint} ~ '^https://' and char_length(${t.endpoint}) <= 1000`),
+    check('push_subscription_keys_check', sql`${t.p256dh} ~ '^[A-Za-z0-9_-]{80,100}$' and ${t.auth} ~ '^[A-Za-z0-9_-]{16,32}$'`),
+    pgPolicy('push_subscription_owner', { for: 'all', to: appRole, using: ownRows, withCheck: ownRows }),
+  ],
+).enableRLS()
+
 /** Annahmen für Road to 100k (eine Zeile je Nutzer). */
 export const roadSettings = pgTable(
   'road_settings',
