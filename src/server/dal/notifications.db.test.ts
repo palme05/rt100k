@@ -3,13 +3,14 @@ import { viennaDay } from '@/lib/format'
 import { addDays } from '@/lib/days'
 import { createUser, vwce } from '@/test/fixtures'
 import { getDb, withUser } from '../db/client'
-import { instrument, notification, portfolioSnapshot, priceAlert, pushSubscription } from '../db/schema'
+import { importFile, instrument, notification, portfolioSnapshot, priceAlert, pushSubscription } from '../db/schema'
 import { generateNotifications } from '../notifications'
 import { valuePortfolios } from '../overview'
 import type { Quote } from '../quotes/types'
 import type { Actor } from './actor'
 import { createBooking } from './bookings'
 import { NotFoundError, ValidationError } from './errors'
+import { lastImportAt } from './imports'
 import {
   addNotifications,
   addTasks,
@@ -174,5 +175,27 @@ describe('Täglicher Lauf', () => {
 
     // zweiter Lauf am selben Tag: nichts Neues
     expect((await generateNotifications(carol, valuation, { quotes, fx: null }, today)).created).toBe(0)
+  })
+
+  it('meldet einen ausgelassenen Sparplan und erinnert monatlich an den Import – je einmal, nur für den Nutzer', async () => {
+    const erin = await createUser('Erin')
+    const today = viennaDay()
+    const depot = (await createPortfolio(erin, { name: 'TR', kind: 'depot' })).id
+    // drei Ausführungen im Monatsabstand, die letzte vor 40 Tagen → überfällig
+    for (const back of [100, 70, 40]) await createBooking(erin, { portfolioId: depot, type: 'buy', occurredOn: addDays(today, -back), instrumentId: etf, quantity: '1', amount: '100' })
+    expect(await lastImportAt(erin)).toBeNull()
+    await withUser(erin.id, (tx) => tx.insert(importFile).values({ ownerId: erin.id, fileHash: 'e'.repeat(64), source: 'traderepublic', createdAt: new Date(Date.now() - 40 * 86_400_000) }))
+    expect(await lastImportAt(erin)).toBeInstanceOf(Date)
+    expect(await lastImportAt(bob)).toBeNull()
+
+    const quotes = new Map<string, Quote>([[etf, { priceMicros: 100_000_000n, currency: 'EUR', asOf: new Date(), source: 'testdaten', delayed: false }]])
+    const valuation = await valuePortfolios(erin, { quotes, fx: null })
+    await generateNotifications(erin, valuation, { quotes, fx: null }, today)
+    const list = await listNotifications(erin)
+    expect(list.find((n) => n.kind === 'savings_plan')).toMatchObject({ title: expect.stringContaining('Sparplan ausgelassen?'), amount: 100, link: `/app/depots/${depot}` })
+    // ab dem 3. des Monats (der Import liegt 40 Tage zurück, also vor diesem Monat)
+    expect(list.some((n) => n.kind === 'import_reminder')).toBe(Number(today.slice(8, 10)) >= 3)
+    expect((await generateNotifications(erin, valuation, { quotes, fx: null }, today)).created).toBe(0)
+    expect((await listNotifications(bob)).some((n) => n.kind === 'savings_plan' || n.kind === 'import_reminder')).toBe(false)
   })
 })

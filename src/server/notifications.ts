@@ -1,9 +1,12 @@
 import 'server-only'
-import { addDays } from '@/lib/days'
+import { addDays, daysBetween } from '@/lib/days'
 import { dayLabel } from '@/lib/display'
+import { viennaDay } from '@/lib/format'
+import { detectSavingsPlans } from '@/lib/savings'
 import { alertTriggered, milestonesCrossed, speculationEnded } from '@/lib/notify'
 import { estimateTaxYear, type TaxInstrument } from '@/lib/tax'
 import type { Actor } from './dal/actor'
+import { lastImportAt } from './dal/imports'
 import { addNotifications, deletePushSubscription, listPriceAlerts, listPushEndpoints, markAlertTriggered, pruneNotifications, type NewNotification } from './dal/notifications'
 import { listDailyTotals } from './dal/snapshots'
 import type { PortfolioValuation } from './overview'
@@ -18,7 +21,8 @@ export const NOTIFICATION_RETENTION_DAYS = 365
 /**
  * Hinweise des täglichen Laufs je Nutzer (in dessen RLS-Kontext):
  * Kursalarm, Dividende eingegangen, Meilenstein erreicht, Spekulationsfrist
- * abgelaufen. Neue Hinweise lösen einen Push-Ping an die Geräte aus.
+ * abgelaufen, Sparplan ausgelassen, monatliche Import-Erinnerung. Neue
+ * Hinweise lösen einen Push-Ping an die Geräte aus.
  */
 export async function generateNotifications(
   actor: Actor,
@@ -77,6 +81,34 @@ export async function generateNotifications(
       link: '/app/steuer',
       dedupeKey: `spekulation:${lot.portfolioId}:${lot.instrumentId}:${lot.acquiredOn}`,
     })
+  }
+
+  // Erkannte Sparpläne, deren Ausführung überfällig ist (einmal je erwarteter Ausführung)
+  for (const plan of detectSavingsPlans(valuation.bookings, today)) {
+    if (!plan.overdue) continue
+    items.push({
+      kind: 'savings_plan',
+      title: `Sparplan ausgelassen? ${nameOf(plan.instrumentId)}`,
+      body: `Erwartet um den ${dayLabel(plan.nextOn)}, zuletzt am ${dayLabel(plan.lastOn)}. Noch nicht gebucht oder importiert?`,
+      amountCents: plan.amountCents,
+      link: `/app/depots/${plan.portfolioId}`,
+      dedupeKey: `sparplan:${plan.portfolioId}:${plan.instrumentId}:${plan.nextOn}`,
+    })
+  }
+
+  // Import-Erinnerung: ab dem 3. eines Monats, wer in den letzten 90 Tagen importiert hat, diesen Monat aber noch nicht
+  const lastImport = await lastImportAt(actor)
+  if (lastImport && Number(today.slice(8, 10)) >= 3) {
+    const lastDay = viennaDay(lastImport)
+    if (lastDay < `${today.slice(0, 7)}-01` && daysBetween(lastDay, today) <= 90) {
+      items.push({
+        kind: 'import_reminder',
+        title: 'Neue Abrechnungen importieren?',
+        body: `Der letzte Import war am ${dayLabel(lastDay)}. Abrechnungen und Exporte des Vormonats lassen sich jetzt übernehmen.`,
+        link: '/app/import',
+        dedupeKey: `import:${today.slice(0, 7)}`,
+      })
+    }
   }
 
   const created = await addNotifications(actor, items)

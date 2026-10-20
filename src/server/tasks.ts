@@ -1,5 +1,7 @@
 import 'server-only'
 import { dayLabel } from '@/lib/display'
+import { viennaDay } from '@/lib/format'
+import { detectSavingsPlans } from '@/lib/savings'
 import type { Actor } from './dal/actor'
 import { listTasks } from './dal/notifications'
 import { valuePortfolios, type PortfolioValuation } from './overview'
@@ -33,6 +35,12 @@ export async function loadOpenTasks(actor: Actor, valuation?: PortfolioValuation
   for (const p of v.portfolios) for (const pos of p.value.positions) if (!pos.priced) unpriced.add(pos.instrumentId)
   for (const id of unpriced) {
     tasks.push({ key: `kurs-${id}`, title: `Kein Kurs: ${name(id)}`, body: 'Zählt nur mit dem Einstand. Auf der Wertpapier-Seite die Buchungen einem Wert mit Kurs zuordnen.', href: `/app/wertpapier/${id}`, taskId: null })
+  }
+
+  // erkannte Sparpläne, deren Ausführung fehlt
+  for (const plan of detectSavingsPlans(v.bookings, viennaDay())) {
+    if (!plan.overdue) continue
+    tasks.push({ key: `sparplan-${plan.portfolioId}-${plan.instrumentId}`, title: `Sparplan fehlt: ${name(plan.instrumentId)}`, body: `Erwartet um den ${dayLabel(plan.nextOn)} – buchen oder importieren`, href: `/app/buchen?depot=${plan.portfolioId}`, taskId: null })
   }
 
   for (const t of stored) tasks.push({ key: `aufgabe-${t.id}`, title: t.title, body: t.body, href: null, taskId: t.id })
