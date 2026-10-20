@@ -34,7 +34,7 @@ test('Steuer-Cockpit: Schätzung, Verkauf, AGE aus OeKB-Meldung, CSV ohne Formel
   await page.goto('/app/steuer')
   const year = new Date().getFullYear()
   await expect(page.getByRole('heading', { name: `Steuer ${year}`, level: 1 })).toBeVisible()
-  await expect(page.getByText('≈ Schätzung, keine Steuerberatung.')).toBeVisible()
+  await expect(page.getByText('≈ Schätzung, keine Steuerberatung.', { exact: true })).toBeVisible()
   await expect(page.getByRole('navigation', { name: 'Steuerjahr' }).getByRole('link', { name: String(year) })).toHaveAttribute('aria-current', 'page')
   const sales = page.getByRole('table', { name: `Verkäufe ${year}` })
   await expect(sales).toContainText('Vanguard')
