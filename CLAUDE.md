@@ -29,7 +29,7 @@ node scripts/create-invitation.ts admin <URL>      # erste Einladung (Owner-Zuga
 gitleaks git --redact --config .gitleaks.toml   # Secret-Scan der Historie
 ```
 
-Im Cloud-Container: `pg_ctlcluster 16 main start` (lokales Postgres, Passwort für `postgres` = `postgres`), dann `PW_CHROMIUM_PATH=/opt/pw-browsers/chromium pnpm exec playwright test` (kein `playwright install`). Kurs-APIs sind aus dem Container nicht erreichbar – live prüfen über `/api/status` der Preview.
+Im Cloud-Container richtet `.claude/hooks/session-start.sh` beim Start alles ein: `pnpm install`, gitleaks (Version/Prüfsumme aus der CI), lokales Postgres (`postgres`/`postgres`, nur Testdaten), `PW_CHROMIUM_PATH` für Playwright (kein `playwright install`). Kurs-APIs sind aus dem Container nicht erreichbar – live prüfen über `/api/status` der Preview.
 
 ## Konventionen
 
