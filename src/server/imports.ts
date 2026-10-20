@@ -1,8 +1,8 @@
 import 'server-only'
 import { z } from 'zod'
-import { assetKey, type AssetRef } from '@/lib/import/assets'
+import { assetKey, PREPARE_MAX_ASSETS, PREPARE_MAX_KEYS, type AssetRef } from '@/lib/import/assets'
 import type { Actor } from './dal/actor'
-import { findImported } from './dal/imports'
+import { findImported, MAX_IMPORT_FILES } from './dal/imports'
 import { ensureGlobalInstrument, findGlobalInstrumentsByIsin } from './dal/instruments'
 import { METALS } from './quotes/parsers'
 import { searchInstruments, verifyCandidate } from './quotes/service'
@@ -14,18 +14,18 @@ import type { InstrumentCandidate } from './quotes/types'
  * Namen und Stammdaten bestätigt der Server beim Kursanbieter.
  */
 
-export const MAX_ASSETS = 50
-
 const assetRef = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('security'), isin: z.string().regex(/^[A-Z]{2}[A-Z0-9]{9}\d$/) }),
   z.object({ kind: z.literal('crypto'), symbol: z.string().regex(/^[A-Z0-9]{2,10}$/) }),
   z.object({ kind: z.literal('metal'), symbol: z.string().regex(/^X(?:AU|AG|PT)$/) }),
 ])
 
+// Alles vor dem ersten Anbieter-Abruf prüfen – ungültige Anfragen lösen keine externen Abrufe aus
+const hex64 = z.string().regex(/^[0-9a-f]{64}$/)
 const prepareInput = z.object({
-  assets: z.array(assetRef).max(MAX_ASSETS, `Höchstens ${MAX_ASSETS} verschiedene Wertpapiere je Import.`),
-  keys: z.array(z.string()),
-  files: z.array(z.string()),
+  assets: z.array(assetRef).max(PREPARE_MAX_ASSETS),
+  keys: z.array(hex64).max(PREPARE_MAX_KEYS),
+  files: z.array(hex64).max(MAX_IMPORT_FILES),
 })
 
 /** Bester Börsenplatz für EUR-Anleger: Xetra, dann Frankfurt, Wien, sonst der erste Treffer. */

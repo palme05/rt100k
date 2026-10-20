@@ -5,7 +5,7 @@ import { useState, useTransition } from 'react'
 import { FileDrop } from '@/components/ui/FileDrop'
 import { Actions, Button, Field, Message, Select } from '@/components/ui/forms'
 import { Grid, Note, Section } from '@/components/ui/layout'
-import { assetRefOf, assetKey, type AssetRef } from '@/lib/import/assets'
+import { assetRefOf, assetKey, PREPARE_MAX_ASSETS, PREPARE_MAX_KEYS, type AssetRef } from '@/lib/import/assets'
 import { applyMapping, type CsvMapping } from '@/lib/import/generic'
 import { IMPORT_SOURCE_LABEL } from '@/lib/import/types'
 import { commitImportAction, prepareImportAction } from './actions'
@@ -44,16 +44,30 @@ export function ImportFlow({ portfolios, mappings: initialMappings }: { portfoli
       if (ref) refs.set(assetKey(ref), ref)
     }
     const hashes = entries.map((e) => e.hash).filter((h): h is string => !!h)
-    const result = await prepareImportAction({ assets: [...refs.values()], keys: fresh.map((r) => r.key), files: hashes })
-    if (!result.ok) {
-      setNotice({ tone: 'error', text: result.error })
-      return fresh
+    const assets = [...refs.values()]
+    const keys = fresh.map((r) => r.key)
+    // In Teilen: der Server begrenzt Instrumente und Schlüssel je Aufruf
+    const rounds = Math.max(1, Math.ceil(assets.length / PREPARE_MAX_ASSETS), Math.ceil(keys.length / PREPARE_MAX_KEYS))
+    const instruments: Record<string, { id: string; name: string } | null> = {}
+    const duplicates = new Set<string>()
+    const known = new Set<string>()
+    for (let i = 0; i < rounds; i++) {
+      const result = await prepareImportAction({
+        assets: assets.slice(i * PREPARE_MAX_ASSETS, (i + 1) * PREPARE_MAX_ASSETS),
+        keys: keys.slice(i * PREPARE_MAX_KEYS, (i + 1) * PREPARE_MAX_KEYS),
+        files: i === 0 ? hashes : [],
+      })
+      if (!result.ok) {
+        setNotice({ tone: 'error', text: result.error })
+        return fresh
+      }
+      Object.assign(instruments, result.instruments)
+      for (const k of result.duplicateKeys) duplicates.add(k)
+      for (const h of result.knownFiles) known.add(h)
     }
-    const duplicates = new Set(result.duplicateKeys)
-    const known = new Set(result.knownFiles)
     setFiles((fs) => fs.map((f) => (f.hash && known.has(f.hash) ? { ...f, known: true } : f)))
     return fresh.map((r) => {
-      const next = { ...r, instrument: r.assetKey ? (result.instruments[r.assetKey] ?? null) : null, duplicate: duplicates.has(r.key) }
+      const next = { ...r, instrument: r.assetKey ? (instruments[r.assetKey] ?? null) : null, duplicate: duplicates.has(r.key) }
       return { ...next, selected: defaultSelected(next) }
     })
   }

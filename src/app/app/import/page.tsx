@@ -5,6 +5,8 @@ import { listPortfolios } from '@/server/dal/portfolios'
 import { ImportFlow } from './ImportFlow'
 
 export const metadata = { title: 'Import' }
+// Vorbereitung fragt Kursanbieter nacheinander ab (siehe PREPARE_MAX_ASSETS)
+export const maxDuration = 60
 
 export default async function ImportPage() {
   const user = await requireUser()
