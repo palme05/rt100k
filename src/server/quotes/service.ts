@@ -1,5 +1,5 @@
 import 'server-only'
-import { desc, inArray } from 'drizzle-orm'
+import { and, desc, gte, inArray, lt } from 'drizzle-orm'
 import { isWeekend, quoteTtlSeconds } from '@/lib/markets'
 import { toEurMicros } from '@/lib/quantity'
 import { getDb } from '../db/client'
@@ -106,6 +106,20 @@ async function lastCloses(instrumentIds: readonly string[]): Promise<Map<string,
     .where(inArray(priceDaily.instrumentId, [...instrumentIds]))
     .orderBy(priceDaily.instrumentId, desc(priceDaily.day))
   return new Map(rows.map((r) => [r.instrumentId, { priceMicros: BigInt(r.closeMicros), currency: '', asOf: new Date(`${r.day}T22:00:00Z`), source: 'schlusskurs' as const, delayed: true }]))
+}
+
+/**
+ * Letzter gespeicherter Schlusskurs je Instrument vor `beforeDay`, höchstens
+ * bis `notBefore` zurück (Kurswährung) – Grundlage der Tagesveränderung.
+ */
+export async function previousCloses(instrumentIds: readonly string[], beforeDay: string, notBefore: string): Promise<Map<string, bigint>> {
+  if (instrumentIds.length === 0) return new Map()
+  const rows = await getDb()
+    .selectDistinctOn([priceDaily.instrumentId], { instrumentId: priceDaily.instrumentId, closeMicros: priceDaily.closeMicros })
+    .from(priceDaily)
+    .where(and(inArray(priceDaily.instrumentId, [...instrumentIds]), lt(priceDaily.day, beforeDay), gte(priceDaily.day, notBefore)))
+    .orderBy(priceDaily.instrumentId, desc(priceDaily.day))
+  return new Map(rows.map((r) => [r.instrumentId, BigInt(r.closeMicros)]))
 }
 
 /** Aktuelle Kurse für Instrumente (Kurswährung). Fehlende Kurse fallen auf den letzten Schlusskurs zurück. */
