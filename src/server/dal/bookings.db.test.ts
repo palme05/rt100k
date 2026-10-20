@@ -3,7 +3,7 @@ import { createUser, vwce } from '@/test/fixtures'
 import type { Actor } from './actor'
 import { booking } from '../db/schema'
 import { withUser } from '../db/client'
-import { createBooking, deleteBooking, getBooking, listBookings, MAX_BOOKINGS_PER_USER, updateBooking } from './bookings'
+import { createBooking, deleteBooking, getBooking, listBookings, MAX_BOOKINGS_PER_USER, RECONCILE_NOTE, reconcileCashBalance, updateBooking } from './bookings'
 import { NotFoundError, ValidationError } from './errors'
 import { createPortfolio, MAX_PORTFOLIOS_PER_USER } from './portfolios'
 
@@ -156,5 +156,40 @@ describe('Buchung bearbeiten', () => {
     const { instrument } = await import('../db/schema')
     const [foreign] = await withUser(other.id, (tx) => tx.insert(instrument).values({ ownerId: other.id, kind: 'other', name: 'Fremdes Bild', currency: 'EUR' }).returning({ id: instrument.id }))
     await expect(updateBooking(owner, b.id, { type: 'buy', occurredOn: '2026-03-02', instrumentId: foreign!.id, quantity: '5', amount: '500,00' })).rejects.toBeInstanceOf(NotFoundError)
+  })
+})
+
+describe('Kontostand abgleichen', () => {
+  it('bucht den Unterschied als Ein- oder Auszahlung, bei gleichem Stand nichts', async () => {
+    const owner = await createUser('Lena')
+    const cash = (await createPortfolio(owner, { name: 'Tagesgeld', kind: 'cash' })).id
+    await createBooking(owner, { portfolioId: cash, type: 'deposit', occurredOn: '2026-01-02', amount: '1.000,00' })
+
+    const up = await reconcileCashBalance(owner, cash, '1.012,34')
+    expect(up.diffCents).toBe(1_234)
+    expect(up.booking).toMatchObject({ type: 'deposit', amountCents: 1_234, note: RECONCILE_NOTE, source: 'manual' })
+
+    const down = await reconcileCashBalance(owner, cash, '900')
+    expect(down).toMatchObject({ diffCents: -11_234, booking: { type: 'withdrawal', amountCents: 11_234 } })
+
+    expect(await reconcileCashBalance(owner, cash, '900,00')).toEqual({ diffCents: 0, booking: null })
+    expect(await listBookings(owner, cash)).toHaveLength(3)
+  })
+
+  it('nur Cash-Konten, nur eigene; ungültige Beträge abgelehnt', async () => {
+    const owner = await createUser('Mara')
+    const other = await createUser('Nils')
+    const cash = (await createPortfolio(owner, { name: 'Konto', kind: 'cash' })).id
+    const depotOnly = (await createPortfolio(owner, { name: 'Depot', kind: 'depot' })).id
+
+    await expect(reconcileCashBalance(owner, depotOnly, '100')).rejects.toBeInstanceOf(ValidationError)
+    await expect(reconcileCashBalance(other, cash, '100')).rejects.toBeInstanceOf(NotFoundError)
+    await expect(reconcileCashBalance(owner, 'keine-id', '100')).rejects.toBeInstanceOf(NotFoundError)
+    await expect(reconcileCashBalance(owner, cash, '')).rejects.toBeInstanceOf(ValidationError)
+    await expect(reconcileCashBalance(owner, cash, 'viel')).rejects.toBeInstanceOf(ValidationError)
+    await expect(reconcileCashBalance(owner, cash, '-5')).rejects.toBeInstanceOf(ValidationError)
+    await expect(reconcileCashBalance(owner, cash, 42)).rejects.toBeInstanceOf(ValidationError)
+    expect(await listBookings(owner, cash)).toEqual([])
+    expect(await listBookings(owner, depotOnly)).toEqual([])
   })
 })

@@ -110,6 +110,8 @@ export interface ParseResult {
   bookings: ImportedBooking[]
   /** Hinweise zum ganzen Dokument (z. B. „Kontoauszug wird nicht importiert“) */
   notices: string[]
+  /** Was von Hand zu buchen ist (z. B. Kapitalmaßnahmen) – wird nach dem Übernehmen als Aufgabe gemerkt */
+  tasks?: string[]
 }
 
 /** Ein Parser erkennt sein Dokument selbst und liefert `null`, wenn es nicht seines ist. */

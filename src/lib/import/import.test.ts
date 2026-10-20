@@ -297,6 +297,7 @@ describe('Trade Republic Transaktionsexport (CSV)', () => {
       expect(exchange.bookings[2]).toMatchObject({ asset: { isin: OLD }, quantity: '49995', note: `Umtausch in ${NEW}` })
       expect(exchange.bookings[3]).toMatchObject({ asset: { isin: NEW }, quantity: '4.9995', amountCents: 49_995 })
       expect(exchange.notices.join(' ')).not.toMatch(/von Hand/)
+      expect(exchange.tasks).toEqual([])
     })
 
     it('Depotübertrag ein: ohne Kosten, nicht vorausgewählt; Abgang ohne Gegenbuchung von Hand; Tilgung gemeldet', () => {
@@ -310,6 +311,8 @@ describe('Trade Republic Transaktionsexport (CSV)', () => {
       const notices = r.notices.join(' | ')
       expect(notices).toMatch(/1 × Kapitalmaßnahme oder Depotübertrag – bitte von Hand buchen.*DELISTING · Testaktie · 02\.01\.2023 · -7 Stück/)
       expect(notices).toMatch(/1 × nicht übernommen: Anleihen-Tilgungen/)
+      // als Aufgabe für „Offene Punkte“
+      expect(r.tasks).toEqual([expect.stringMatching(/DELISTING · Testaktie · 02\.01\.2023 · -7 Stück/)])
     })
   })
 
