@@ -116,7 +116,7 @@ export function BookingForm({ portfolioId, kind, held, today, edit }: { portfoli
   return (
     <div className={styles.stack}>
       {state.error && (!state.field || state.field === 'instrumentId') ? <Message tone="error">{state.error}</Message> : null}
-      {state.ok && !edit ? <Message tone="success">Buchung gespeichert.</Message> : null}
+      {state.ok && !edit && !pending ? <Message tone="success">Buchung gespeichert.</Message> : null}
       <Form action={action} key={formKey}>
         <input type="hidden" name="portfolioId" value={portfolioId} />
         <FormRow>
