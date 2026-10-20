@@ -44,3 +44,18 @@ export function isExchangeOpen(exchange: Exchange, now: Date): boolean {
   if (weekday === 0 || weekday === 6) return false
   return minutes >= exchange.open && minutes < exchange.close
 }
+
+/**
+ * Wie lange ein Live-Kurs (Aktien/ETF) im Cache bleiben darf: 60 s, solange
+ * eine der Börsen offen ist, sonst 15 Minuten – nachts und am Wochenende
+ * ändert sich der Schlusskurs nicht, das spart Abrufe und macht Seiten schneller.
+ */
+export function quoteTtlSeconds(now: Date): number {
+  return EXCHANGES.some((e) => !e.alwaysOpen && isExchangeOpen(e, now)) ? 60 : 900
+}
+
+/** Wochenende in Europa (Edelmetall-Futures ruhen von Freitagabend bis Sonntagabend). */
+export function isWeekend(now: Date): boolean {
+  const { weekday } = localParts(now, 'Europe/Vienna')
+  return weekday === 0 || weekday === 6
+}

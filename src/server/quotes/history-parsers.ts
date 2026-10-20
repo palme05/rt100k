@@ -156,3 +156,27 @@ export function convertToEur(points: readonly HistoryPoint[], currency: string, 
   }
   return out
 }
+
+/**
+ * Reicht die gespeicherte Historie, oder muss der Anbieter gefragt werden?
+ * Gedeckt heißt: beginnt spätestens eine Woche nach `start`, endet höchstens
+ * fünf Tage vor heute (Wochenende, Feiertage; Krypto zwei Tage) und hat keine
+ * großen Lücken (mindestens 60 % der Handelstage). CoinGecko liefert kostenlos
+ * nur 365 Tage – mehr kann auch der Anbieter nicht.
+ */
+export function historyCovered(points: readonly { day: string }[], start: string, today: string, options: { daily?: boolean; maxDays?: number } = {}): boolean {
+  if (points.length === 0) return false
+  const earliest = options.maxDays ? addDaysIso(today, -options.maxDays) : start
+  const from = start > earliest ? start : earliest
+  const first = points[0]!.day
+  const last = points[points.length - 1]!.day
+  if (first > addDaysIso(from, 7)) return false
+  if (last < addDaysIso(today, options.daily ? -2 : -5)) return false
+  const span = Math.max(1, daysBetweenIso(first, last))
+  const expected = options.daily ? span : (span * 5) / 7
+  return points.length >= expected * 0.6
+}
+
+const DAY_MS = 86_400_000
+const addDaysIso = (day: string, n: number) => new Date(Date.parse(`${day}T00:00:00Z`) + n * DAY_MS).toISOString().slice(0, 10)
+const daysBetweenIso = (a: string, b: string) => Math.round((Date.parse(`${b}T00:00:00Z`) - Date.parse(`${a}T00:00:00Z`)) / DAY_MS)

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { convertToEur, parseCoinGeckoChart, parseEcbHistoryCsv, parseYahooHistory } from './history-parsers'
+import { convertToEur, historyCovered, parseCoinGeckoChart, parseEcbHistoryCsv, parseYahooHistory } from './history-parsers'
 import { parseJsonExact } from './json'
 
 /** Aufbau wie die Antwort von v8/finance/chart?interval=1d&events=split (gekürzt). */
@@ -99,5 +99,42 @@ describe('Umrechnung in Euro', () => {
   it('EUR unverändert, unbekannte Währung leer', () => {
     expect(convertToEur([{ day: '2026-10-15', priceMicros: 5n }], 'EUR', fx)).toEqual([{ day: '2026-10-15', eurMicros: 5n }])
     expect(convertToEur([{ day: '2026-10-15', priceMicros: 5n }], 'CHF', fx)).toEqual([])
+  })
+})
+
+describe('Reicht die gespeicherte Historie?', () => {
+  /** Handelstage (Mo–Fr) von `from` bis `to` */
+  const weekdays = (from: string, to: string) => {
+    const out: { day: string }[] = []
+    for (let t = Date.parse(`${from}T00:00:00Z`); t <= Date.parse(`${to}T00:00:00Z`); t += 86_400_000) {
+      const d = new Date(t)
+      if (d.getUTCDay() !== 0 && d.getUTCDay() !== 6) out.push({ day: d.toISOString().slice(0, 10) })
+    }
+    return out
+  }
+
+  it('lückenlos ab dem Start bis gestern → gedeckt', () => {
+    expect(historyCovered(weekdays('2024-01-02', '2026-10-19'), '2024-01-03', '2026-10-20')).toBe(true)
+  })
+
+  it('nur die Schlusskurse der letzten Tage (Cron) → Anbieter fragen', () => {
+    expect(historyCovered(weekdays('2026-10-01', '2026-10-19'), '2024-01-03', '2026-10-20')).toBe(false)
+  })
+
+  it('zu alt (letzter Kurs vor über fünf Tagen) oder große Lücken → Anbieter fragen', () => {
+    expect(historyCovered(weekdays('2024-01-02', '2026-10-09'), '2024-01-03', '2026-10-20')).toBe(false)
+    const sparse = weekdays('2024-01-02', '2026-10-19').filter((_, i) => i % 3 === 0)
+    expect(historyCovered(sparse, '2024-01-03', '2026-10-20')).toBe(false)
+  })
+
+  it('Krypto: täglich, höchstens 365 Tage verlangt', () => {
+    const daily: { day: string }[] = []
+    for (let t = Date.parse('2025-10-21T00:00:00Z'); t <= Date.parse('2026-10-19T00:00:00Z'); t += 86_400_000) daily.push({ day: new Date(t).toISOString().slice(0, 10) })
+    expect(historyCovered(daily, '2021-01-08', '2026-10-20', { daily: true, maxDays: 364 })).toBe(true)
+    expect(historyCovered(daily.slice(0, -3), '2021-01-08', '2026-10-20', { daily: true, maxDays: 364 })).toBe(false)
+  })
+
+  it('leer → nie gedeckt', () => {
+    expect(historyCovered([], '2026-01-01', '2026-10-20')).toBe(false)
   })
 })

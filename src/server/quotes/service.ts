@@ -1,5 +1,6 @@
 import 'server-only'
 import { desc, inArray } from 'drizzle-orm'
+import { isWeekend, quoteTtlSeconds } from '@/lib/markets'
 import { toEurMicros } from '@/lib/quantity'
 import { getDb } from '../db/client'
 import { fxDaily, priceDaily } from '../db/schema'
@@ -87,10 +88,10 @@ async function coingeckoQuotes(ids: readonly string[]): Promise<Map<string, Quot
   return out
 }
 
-async function metalQuote(metal: string): Promise<Quote | null> {
+async function metalQuote(metal: string, ttl = METAL_TTL): Promise<Quote | null> {
   const symbol = METAL_FUTURES[metal]
   if (!symbol) return null
-  const quote = await yahooQuote(symbol, METAL_TTL)
+  const quote = await yahooQuote(symbol, ttl)
   // Nur USD je Feinunze ist eindeutig umrechenbar
   return quote && quote.currency === 'USD' ? { ...quote, ...perGram(quote) } : null
 }
@@ -125,10 +126,13 @@ export async function getQuotes(instruments: readonly InstrumentDto[]): Promise<
   const crypto = unique.filter((i) => i.coingeckoId)
   const metals = unique.filter((i) => i.metal)
 
+  // Außerhalb der Börsenzeiten länger aus dem Cache (Krypto bleibt kurz)
+  const now = new Date()
+  const stockTtl = quoteTtlSeconds(now)
   const [yahooResults, cryptoResults, metalResults] = await Promise.all([
-    inBatches(yahoo, async (i) => [i.id, await yahooQuote(i.symbol!)] as const),
+    inBatches(yahoo, async (i) => [i.id, await yahooQuote(i.symbol!, stockTtl)] as const),
     coingeckoQuotes(crypto.map((i) => i.coingeckoId!)),
-    inBatches(metals, async (i) => [i.id, await metalQuote(i.metal!)] as const),
+    inBatches(metals, async (i) => [i.id, await metalQuote(i.metal!, isWeekend(now) ? 900 : METAL_TTL)] as const),
   ])
   for (const [id, q] of [...yahooResults, ...metalResults]) if (q) result.set(id, q)
   for (const i of crypto) {

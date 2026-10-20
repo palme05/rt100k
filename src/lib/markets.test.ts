@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { EXCHANGES, isExchangeOpen } from './markets'
+import { EXCHANGES, isExchangeOpen, isWeekend, quoteTtlSeconds } from './markets'
 
 const byId = (id: string) => {
   const exchange = EXCHANGES.find((e) => e.id === id)
@@ -25,5 +25,19 @@ describe('isExchangeOpen', () => {
     const saturday = new Date('2026-10-17T10:00:00Z')
     expect(isExchangeOpen(byId('wbag'), saturday)).toBe(false)
     expect(isExchangeOpen(byId('crypto'), saturday)).toBe(true)
+  })
+})
+
+describe('Cache-Dauer für Live-Kurse', () => {
+  it('60 s während der Handelszeiten, 15 min nachts und am Wochenende', () => {
+    expect(quoteTtlSeconds(new Date('2026-10-20T08:00:00Z'))).toBe(60) // Di 10:00 Wien, Xetra offen
+    expect(quoteTtlSeconds(new Date('2026-10-20T19:00:00Z'))).toBe(60) // Di 15:00 New York
+    expect(quoteTtlSeconds(new Date('2026-10-20T23:30:00Z'))).toBe(900) // Nacht, alle zu
+    expect(quoteTtlSeconds(new Date('2026-10-24T12:00:00Z'))).toBe(900) // Samstag
+  })
+
+  it('Wochenende nach Wiener Zeit', () => {
+    expect(isWeekend(new Date('2026-10-24T12:00:00Z'))).toBe(true)
+    expect(isWeekend(new Date('2026-10-23T12:00:00Z'))).toBe(false)
   })
 })
