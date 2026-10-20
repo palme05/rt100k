@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { expandExponent, parseJsonExact } from './json'
-import { METAL_FUTURES, METALS, parseCoinGeckoPrices, parseCoinGeckoSearch, parseEcbXml, parseYahooChart, parseYahooSearch, perGram, toMicros } from './parsers'
+import { METAL_FUTURES, METALS, parseCoinGeckoPrices, parseCoinGeckoSearch, parseEcbXml, parseYahooChart, parseYahooSearch, perGram, toMicros, yahooSymbolsFromFigi } from './parsers'
 
 // Beispielantworten im Format der Anbieter (gekürzt, Werte erfunden)
 const yahooChart = `{"chart":{"result":[{"meta":{"currency":"EUR","symbol":"VWCE.DE","exchangeName":"GER","regularMarketPrice":128.45,"regularMarketTime":1792420320,"previousClose":127.9},"timestamp":[1792420320],"indicators":{"quote":[{}]}}],"error":null}}`
@@ -107,5 +107,32 @@ describe('EZB', () => {
 
   it('lehnt unbekannte Formate ab', () => {
     expect(parseEcbXml('<html>Wartung</html>')).toBeNull()
+  })
+})
+
+describe('OpenFIGI → Yahoo-Symbol', () => {
+  // Antwort nachgebaut nach der öffentlichen API-Doku (v3 /mapping), keine echten Abrufe
+  const response = [
+    {
+      data: [
+        { figi: 'BBG000TEST01', name: 'TEST WORLD ETF', ticker: 'TWLD', exchCode: 'LN', securityType: 'ETP' },
+        { figi: 'BBG000TEST02', name: 'TEST WORLD ETF', ticker: 'TWLD', exchCode: 'GY', securityType: 'ETP' },
+        { figi: 'BBG000TEST03', name: 'TEST WORLD ETF', ticker: 'TWLD', exchCode: 'XX', securityType: 'ETP' },
+        { figi: 'BBG000TEST04', name: 'TEST WORLD ETF', ticker: 'TWLD', exchCode: 'GR', securityType: 'ETP' },
+        { figi: 'BBG000TEST05', name: 'TEST B', ticker: 'TST/B', exchCode: 'US', securityType: 'Common Stock' },
+      ],
+    },
+  ]
+
+  it('beste Börse zuerst, unbekannte Börsen fallen weg, Schrägstrich wird Bindestrich', () => {
+    expect(yahooSymbolsFromFigi(response)).toEqual(['TWLD.DE', 'TWLD.F', 'TST-B'])
+    expect(yahooSymbolsFromFigi(response, 5)).toEqual(['TWLD.DE', 'TWLD.F', 'TST-B', 'TWLD.L'])
+  })
+
+  it('keine Treffer, Warnungen und Unsinn → leer', () => {
+    expect(yahooSymbolsFromFigi([{ warning: 'No identifier found.' }])).toEqual([])
+    expect(yahooSymbolsFromFigi([{ error: 'Invalid idType.' }])).toEqual([])
+    expect(yahooSymbolsFromFigi({ data: [] })).toEqual([])
+    expect(yahooSymbolsFromFigi([{ data: [{ ticker: 'X Y<script>', exchCode: 'GY' }] }])).toEqual([])
   })
 })
