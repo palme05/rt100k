@@ -17,6 +17,17 @@
   color: var(--ink);
 }
 
+.button:active {
+  background: var(--wash);
+}
+
+/* Touch: mindestens 44 px hohe Tippfläche */
+@media (pointer: coarse) {
+  .button {
+    min-height: 2.75rem;
+  }
+}
+
 .button[aria-pressed='true'] {
   background: var(--ink);
   border-color: var(--ink);

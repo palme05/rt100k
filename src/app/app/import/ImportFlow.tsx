@@ -9,7 +9,7 @@ import { Progress } from '@/components/ui/Progress'
 import { assetRefOf, assetKey, PREPARE_MAX_ASSETS, PREPARE_MAX_KEYS, type AssetRef } from '@/lib/import/assets'
 import { applyMapping, type CsvMapping } from '@/lib/import/generic'
 import { IMPORT_SOURCE_LABEL } from '@/lib/import/types'
-import { commitImportAction, prepareImportAction } from './actions'
+import { commitImportAction, prepareImportAction, saveImportTasksAction } from './actions'
 import styles from './import.module.css'
 import { MappingEditor } from './MappingEditor'
 import { defaultSelected, guessPortfolio, rowsFrom, validate, type FileEntry, type PortfolioOption, type ReviewRow, type SavedMapping, type ValidRow } from './model'
@@ -92,7 +92,7 @@ export function ImportFlow({ portfolios, mappings: initialMappings }: { portfoli
     const entries: FileEntry[] = []
     const added: ReviewRow[] = []
     for (const file of take) {
-      const entry: FileEntry = { id: crypto.randomUUID(), name: file.name.slice(0, 120), hash: null, status: 'lesen', source: null, document: null, notices: [], error: null, csvRows: null, known: false, portfolioId: '' }
+      const entry: FileEntry = { id: crypto.randomUUID(), name: file.name.slice(0, 120), hash: null, status: 'lesen', source: null, document: null, notices: [], error: null, csvRows: null, known: false, portfolioId: '', tasks: [] }
       setFiles((fs) => [...fs, entry])
       let done: FileEntry
       try {
@@ -102,7 +102,7 @@ export function ImportFlow({ portfolios, mappings: initialMappings }: { portfoli
           for (const r of fresh) seen.add(r.key)
           added.push(...fresh)
           const empty = read.result.bookings.length === 0 && read.result.notices.length === 0
-          done = { ...entry, hash: read.hash, status: 'fertig', source: read.result.source, document: read.result.document, notices: empty ? ['Keine Buchungen gefunden.'] : read.result.notices, portfolioId: guessPortfolio(read.result.source, portfolios) }
+          done = { ...entry, hash: read.hash, status: 'fertig', source: read.result.source, document: read.result.document, notices: empty ? ['Keine Buchungen gefunden.'] : read.result.notices, portfolioId: guessPortfolio(read.result.source, portfolios), tasks: read.result.tasks ?? [] }
         } else if (read.csvRows) {
           done = { ...entry, hash: read.hash, status: 'zuordnen', source: 'csv', document: 'CSV (unbekanntes Format)', csvRows: read.csvRows, portfolioId: guessPortfolio('csv', portfolios) }
         } else {
@@ -196,6 +196,9 @@ export function ImportFlow({ portfolios, mappings: initialMappings }: { portfoli
         if (p && entries.some((e) => committed.has(e.row.key))) links.push({ href: `/app/depots/${p.id}`, label: p.name })
       }
       setProgress(null)
+      // Was der Import nicht selbst buchen konnte, bleibt als Aufgabe in der Übersicht
+      const tasks = [...new Set(files.filter((f) => f.tasks.length > 0 && rows.some((r) => r.fileId === f.id && committed.has(r.key))).flatMap((f) => f.tasks))].slice(0, 50)
+      if (tasks.length > 0) await saveImportTasksAction(tasks)
       const conflictRows = rows.filter((r) => !committed.has(r.key) && r.selected && inConflict(r))
       if (conflictRows.length > 0) {
         const message = 'Bestand würde negativ – vermutlich fehlt ein Split oder Depotübertrag. Erst diesen von Hand buchen, dann erneut übernehmen.'
@@ -211,7 +214,7 @@ export function ImportFlow({ portfolios, mappings: initialMappings }: { portfoli
           : ''
       setNotice({
         tone: conflictRows.length > 0 ? 'info' : 'success',
-        text: `${created} ${created === 1 ? 'Buchung' : 'Buchungen'} übernommen${duplicates > 0 ? `, ${duplicates} ${duplicates === 1 ? 'war' : 'waren'} schon vorhanden` : ''}.${conflictText}`,
+        text: `${created} ${created === 1 ? 'Buchung' : 'Buchungen'} übernommen${duplicates > 0 ? `, ${duplicates} ${duplicates === 1 ? 'war' : 'waren'} schon vorhanden` : ''}.${conflictText}${tasks.length > 0 ? ` ${tasks.length} ${tasks.length === 1 ? 'Punkt ist' : 'Punkte sind'} von Hand zu buchen – sie stehen in der Übersicht unter „Offene Punkte“.` : ''}`,
         links,
       })
     })

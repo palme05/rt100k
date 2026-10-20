@@ -113,6 +113,11 @@ textarea.control {
   opacity: 0.6;
 }
 
+/* Gedrückt: sichtbare Rückmeldung (iOS hat keine Vibration) */
+.button:active:not(:disabled) {
+  translate: 0 1px;
+}
+
 .primary {
   composes: button;
   background: var(--ink);
