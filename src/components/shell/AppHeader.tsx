@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from 'react'
 import { CommandPalette, GoHotkeys, type Command } from '../command/CommandPalette'
 import { PrivacyToggle } from '../privacy/privacy'
 import { Icon, type IconName } from './icons'
+import { LinkPending } from './LinkPending'
 import styles from './shell.module.css'
 
 export interface NavItem {
@@ -85,6 +86,7 @@ function MoreMenu({ items, pathname }: { items: readonly NavItem[]; pathname: st
               <Link href={item.href} className={styles.moreLink} aria-current={isActive(pathname, item) ? 'page' : undefined}>
                 <Icon name={item.icon} size={18} />
                 {item.label}
+                <LinkPending />
               </Link>
             </li>
           ))}
@@ -125,6 +127,7 @@ export function AppHeader({
             .map((item) => (
               <Link key={item.href} href={item.href} className={styles.navLink} aria-current={isActive(pathname, item) ? 'page' : undefined}>
                 {item.label}
+                <LinkPending />
               </Link>
             ))}
           <MoreMenu items={nav.filter((item) => !item.primary)} pathname={pathname} />
@@ -134,6 +137,7 @@ export function AppHeader({
             <Link href={add} className={styles.addButton} aria-label="Neue Buchung" title="Neue Buchung (G B)">
               <Icon name="plus" size={16} />
               Buchung
+              <LinkPending />
             </Link>
           ) : null}
           <PrivacyToggle />
