@@ -303,3 +303,44 @@ export async function deleteBooking(actor: Actor, id: unknown): Promise<void> {
     await tx.delete(booking).where(and(eq(booking.id, bookingId), eq(booking.ownerId, actor.id)))
   })
 }
+
+export const RECONCILE_NOTE = 'Kontostand-Abgleich'
+
+/**
+ * Kontostand eines Cash-Kontos abgleichen: den Unterschied zwischen gebuchtem
+ * Saldo und echtem Kontostand als Ein- oder Auszahlung mit Datum heute buchen.
+ * Nur für Cash-Konten; gleicher Stand → keine Buchung.
+ */
+export async function reconcileCashBalance(actor: Actor, portfolioId: unknown, balance: unknown): Promise<{ diffCents: number; booking: BookingDto | null }> {
+  const id = parseId(portfolioId)
+  const text = z.string().trim().min(1).max(30).safeParse(balance)
+  if (!text.success) throw new ValidationError('Bitte den aktuellen Kontostand angeben.', 'balance')
+  const target = money(text.data, 'balance', 'Kontostand')
+  return withUser(actor.id, async (tx) => {
+    const owned = await ownedPortfolio(tx, actor, id, { lock: true })
+    if (owned.kind !== 'cash') throw new ValidationError('Den Abgleich gibt es nur für Cash-Konten.', 'balance')
+    const current = computeLedger(await ledgerBookings(tx, actor, id)).cashCents
+    const diffCents = target - current
+    if (diffCents === 0) return { diffCents, booking: null }
+    await assertBookingRoom(tx, actor, 1)
+    const [row] = await tx
+      .insert(booking)
+      .values({
+        type: diffCents > 0 ? 'deposit' : 'withdrawal',
+        occurredOn: viennaDay(),
+        instrumentId: null,
+        quantity: null,
+        factor: null,
+        amountCents: Math.abs(diffCents),
+        feeCents: 0,
+        taxCents: 0,
+        note: RECONCILE_NOTE,
+        portfolioId: id,
+        ownerId: actor.id,
+        source: 'manual',
+      })
+      .returning({ ...ledgerColumns, portfolioId: booking.portfolioId, note: booking.note, source: booking.source })
+    if (!row) throw new Error('Buchung konnte nicht gespeichert werden.')
+    return { diffCents, booking: { ...row, instrumentName: null } }
+  })
+}

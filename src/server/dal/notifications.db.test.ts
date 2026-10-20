@@ -12,12 +12,15 @@ import { createBooking } from './bookings'
 import { NotFoundError, ValidationError } from './errors'
 import {
   addNotifications,
+  addTasks,
+  completeTask,
   createPriceAlert,
   deletePriceAlert,
   deletePushSubscription,
   listNotifications,
   listPriceAlerts,
   listPushEndpoints,
+  listTasks,
   markAllRead,
   pruneNotifications,
   savePushSubscription,
@@ -71,6 +74,42 @@ describe('Hinweise', () => {
     expect(await getDb().select().from(notification)).toEqual([])
     await expect(withUser(bob.id, (tx) => tx.insert(notification).values({ ownerId: alice.id, kind: 'milestone', title: 'x', dedupeKey: 'x' }))).rejects.toThrow()
     await expect(addNotifications(alice, [{ kind: 'milestone', title: 'x', link: 'https://evil.example', dedupeKey: 'link' }])).rejects.toThrow()
+  })
+})
+
+describe('Aufgaben', () => {
+  it('anlegen ohne Duplikate, überdauern das Aufräumen, abhaken nur eigene Aufgaben', async () => {
+    const dave = await createUser('Dave')
+    const text = '01.03.2026 · Spin-off Muster AG → Muster Tochter: von Hand buchen'
+    expect(await addTasks(dave, [text, 'Zweite Aufgabe'])).toBe(2)
+    expect(await addTasks(dave, [text])).toBe(0)
+    const tasks = await listTasks(dave)
+    expect(tasks.map((t) => t.body).sort()).toEqual([text, 'Zweite Aufgabe'].sort())
+    expect(await listTasks(bob)).toEqual([])
+
+    // alte Aufgaben bleiben, bis sie abgehakt sind
+    expect(await pruneNotifications(dave, new Date(Date.now() + 86_400_000))).toBe(0)
+    expect(await listTasks(dave)).toHaveLength(2)
+
+    // fremde, ungültige und andere Hinweise lassen sich nicht abhaken
+    await expect(completeTask(bob, tasks[0]!.id)).rejects.toBeInstanceOf(NotFoundError)
+    await expect(completeTask(dave, 'keine-id')).rejects.toBeInstanceOf(NotFoundError)
+    await addNotifications(dave, [{ kind: 'milestone', title: 'Meilenstein', dedupeKey: 'm' }])
+    const milestone = (await listNotifications(dave)).find((n) => n.kind === 'milestone')!
+    await expect(completeTask(dave, milestone.id)).rejects.toBeInstanceOf(NotFoundError)
+
+    await completeTask(dave, tasks[0]!.id)
+    expect(await listTasks(dave)).toHaveLength(1)
+    await expect(completeTask(dave, tasks[0]!.id)).rejects.toBeInstanceOf(NotFoundError)
+  })
+
+  it('prüft die Eingabe', async () => {
+    await expect(addTasks(alice, 'kein Array')).rejects.toBeInstanceOf(ValidationError)
+    await expect(addTasks(alice, [''])).rejects.toBeInstanceOf(ValidationError)
+    await expect(addTasks(alice, ['x'.repeat(301)])).rejects.toBeInstanceOf(ValidationError)
+    await expect(addTasks(alice, Array.from({ length: 51 }, (_, i) => `Aufgabe ${i}`))).rejects.toBeInstanceOf(ValidationError)
+    expect(await addTasks(alice, [])).toBe(0)
+    expect(await listTasks(alice)).toEqual([])
   })
 })
 

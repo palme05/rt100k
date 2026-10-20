@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { requireUser } from '@/server/auth/session'
 import { NotFoundError, ValidationError } from '@/server/dal/errors'
 import { deleteCsvMapping, ImportConflictError, importBookings, saveCsvMapping, type CsvMappingDto } from '@/server/dal/imports'
+import { addTasks } from '@/server/dal/notifications'
 import { prepareImport, type PreparedImport } from '@/server/imports'
 import { consumeRateLimit } from '@/server/dal/rate-limit'
 
@@ -34,6 +35,19 @@ export async function commitImportAction(input: unknown): Promise<Result<{ creat
     const result = await importBookings(user, input)
     revalidatePath('/app', 'layout')
     return { ok: true, ...result }
+  } catch (error) {
+    return fail(error)
+  }
+}
+
+/** Kapitalmaßnahmen, die der Import nicht selbst buchen konnte, als Aufgaben merken. */
+export async function saveImportTasksAction(texts: unknown): Promise<Result<{ created: number }>> {
+  const user = await requireUser()
+  try {
+    await consumeRateLimit(user, 'import')
+    const created = await addTasks(user, texts)
+    revalidatePath('/app', 'layout')
+    return { ok: true, created }
   } catch (error) {
     return fail(error)
   }
