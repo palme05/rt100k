@@ -2,7 +2,7 @@
 
 Selbst gehosteter, quelloffener Vermögenstracker für Familie und Freunde: Depots, Krypto, Cash und Sachwerte an einem Ort, mit Performance-Analyse, österreichischem Steuer-Cockpit und dem Herzstück **Road to 100k** (Meilensteine, Prognosekegel, Zinseszins-Kipppunkt). Ohne Abo, ohne Broker-Logins, auf Free Tiers.
 
-> **Status:** Phase 3 (Import) und Phase 4 (Analyse) fertig. Abrechnungen von Trade Republic und flatex (PDF), Bitpanda-Export und beliebige CSV-Dateien werden im Browser gelesen, vor dem Speichern geprüft und ohne Duplikate übernommen. Davor Phase 2 (Kern): Anmeldung mit Passkey/2FA per Einladung, Depots, Buchungen, Kurse, Übersicht, Road to 100k. Phase 4: Rendite (zeitgewichtet und geldgewichtet) je Zeitraum mit Vergleichswert, Risiko, Dividenden mit Prognose, Kosten und Aufteilung sind da; dazu Dividendenkalender, Rebalancing-Assistent und ETF-Durchschau (Länder, Branchen, Einzeltitel aus selbst geladenen Bestandslisten). Vor echten Familiendaten folgt das vollständige Security-Review (Phase 6).
+> **Status:** Phase 5 (Steuer-Cockpit Österreich) fertig: KESt-Schätzung je Jahr mit Verlustausgleich je Bank, AGE (inkl. halbautomatischer Erfassung aus der OeKB-Meldung), Quellensteuer, Krypto- und Edelmetallregeln, Werte für die E 1kv und CSV-Export – alles als Schätzung gekennzeichnet. Davor Phase 3 (Import) und Phase 4 (Analyse). Abrechnungen von Trade Republic und flatex (PDF), Bitpanda-Export und beliebige CSV-Dateien werden im Browser gelesen, vor dem Speichern geprüft und ohne Duplikate übernommen. Davor Phase 2 (Kern): Anmeldung mit Passkey/2FA per Einladung, Depots, Buchungen, Kurse, Übersicht, Road to 100k. Phase 4: Rendite (zeitgewichtet und geldgewichtet) je Zeitraum mit Vergleichswert, Risiko, Dividenden mit Prognose, Kosten und Aufteilung sind da; dazu Dividendenkalender, Rebalancing-Assistent und ETF-Durchschau (Länder, Branchen, Einzeltitel aus selbst geladenen Bestandslisten). Vor echten Familiendaten folgt das vollständige Security-Review (Phase 6).
 
 ## Grundsätze
 
@@ -43,6 +43,7 @@ Repo-Einstellungen (Sichtbarkeit, Sicherheitsfunktionen, Branch-Schutz) setzt de
 | [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | Architektur, Entscheidungen, Free-Tier-Budget |
 | [`docs/DESIGN.md`](docs/DESIGN.md) | Designsystem: Tokens, Komponenten, Diagramm-Regeln |
 | [`docs/DATA_SOURCES.md`](docs/DATA_SOURCES.md) | Kurs- und Steuerdatenquellen |
+| [`docs/TAX_AT.md`](docs/TAX_AT.md) | Steuerregeln Österreich mit Quellen und E 1kv-Kennzahlen |
 | [`docs/SECURITY.md`](docs/SECURITY.md) | Bedrohungsmodell, Checkliste, Notfallplan |
 | [`docs/IDEAS.md`](docs/IDEAS.md) | Ideen außerhalb des Scopes |
 | [`docs/EINRICHTUNG.md`](docs/EINRICHTUNG.md) | Einmalige Einrichtung im GitHub- und Vercel-UI |
