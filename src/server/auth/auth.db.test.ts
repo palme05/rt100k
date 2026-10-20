@@ -40,7 +40,7 @@ async function register(email: string, role: 'member' | 'admin' = 'member') {
 }
 
 beforeAll(async () => {
-  admin = await createUser('Tom', 'admin')
+  admin = await createUser('Admin', 'admin')
 })
 
 describe('Registrierung nur per Einladung', () => {

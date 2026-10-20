@@ -1,4 +1,4 @@
-# Einmalige Einrichtung (für Tom)
+# Einmalige Einrichtung (für den Betreiber)
 
 Diese Schritte kann nur der Repo-Besitzer im Browser erledigen. Claude Code darf aus seiner Umgebung keine Repo-Einstellungen ändern und keine Pull Requests mergen. Dauer: etwa 10 Minuten. Reihenfolge einhalten, Schritt 3 funktioniert erst nach Schritt 1.
 

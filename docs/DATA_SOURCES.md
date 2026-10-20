@@ -6,7 +6,7 @@ Stand: **20.10.2026** (Phase 2 umgesetzt). Alle Quellen müssen **kostenlos ohne
 
 ## Entscheidung (19.10.2026)
 
-Tom braucht **aktuelle Kurse** (nicht nur Tagesschluss). Deshalb wird **Yahoo Finance** die Primärquelle für Aktien und ETFs (EU und US). Tom kennt und akzeptiert das Risiko: Es gibt keine offizielle API, die Nutzungsbedingungen sind unklar, und die Endpunkte können sich ohne Vorwarnung ändern.
+Der Betreiber braucht **aktuelle Kurse** (nicht nur Tagesschluss). Deshalb wird **Yahoo Finance** die Primärquelle für Aktien und ETFs (EU und US). Er kennt und akzeptiert das Risiko: Es gibt keine offizielle API, die Nutzungsbedingungen sind unklar, und die Endpunkte können sich ohne Vorwarnung ändern.
 
 Schutzmaßnahmen, damit das Risiko klein bleibt:
 - Abruf **nur serverseitig**, nie aus dem Browser; nur für gehaltene oder beobachtete Instrumente.
@@ -26,7 +26,7 @@ Schutzmaßnahmen, damit das Risiko klein bleibt:
 | Aktien-Kurse | **Alpha Vantage** Free | kostenlos mit Key | **25 Calls/Tag**, 5/Min, „compact“ | nur persönliche Nutzung | teilweise (`.DEX`) | Tagesdaten | Notfall-Fallback für Tagesschlusskurse |
 | Krypto | **CoinGecko** Demo-API | kostenlos mit Key, keine Karte | ≈ 10.000 Credits/Monat, 100 Calls/Min (Changelog 5/2026) | **Attribution Pflicht** („Data provided by CoinGecko“) | global, EUR direkt | ~1–5 Min | **Primär** für Krypto |
 | Edelmetall-Spot | **gold-api.com** | frei, kein Key, keine Karte | laut Anbieter kein Limit für Echtzeitkurse | prüfen | XAU/XAG (Platin prüfen) | Echtzeit | ❌ **verworfen** (20.10.2026): aus Vercel HTTP 404, Domain nicht auflösbar. Eine verwaiste Domain könnte von Dritten übernommen werden und falsche Kurse liefern |
-| Edelmetalle | **Yahoo Finance** Futures (`GC=F`, `SI=F`, `PL=F`) | wie Yahoo oben | wie Yahoo oben | wie Yahoo oben (von Tom akzeptiert) | USD je Feinunze | ca. 10–15 Min | **Primär**, je Gramm umgerechnet, USD → EUR über EZB; Future weicht meist < 1 % vom Spot ab |
+| Edelmetalle | **Yahoo Finance** Futures (`GC=F`, `SI=F`, `PL=F`) | wie Yahoo oben | wie Yahoo oben | wie Yahoo oben (vom Betreiber akzeptiert) | USD je Feinunze | ca. 10–15 Min | **Primär**, je Gramm umgerechnet, USD → EUR über EZB; Future weicht meist < 1 % vom Spot ab |
 | Edelmetall-Spot | **MetalpriceAPI** Free | kostenlos mit Key | ≈ 100 Calls/Monat (prüfen) | prüfen | XAU, XAG, XPT, XPD in EUR | täglich/Echtzeit je Plan | Fallback (1×/Tag) |
 | ISIN/WKN → Ticker | **OpenFIGI** (Bloomberg) | frei, Key optional (kostenlos) | ohne Key ≈ 25 Req/Min, max. 10 Jobs/Req; mit Key mehr | kostenlos, keine Mengenlimits pro Tag | global | — | **Primär** fürs Instrument-Mapping, Ergebnis dauerhaft cachen |
 | AGE / Steuerdaten Meldefonds | **OeKB my.oekb.at** | frei einsehbar und downloadbar | — | Nutzungsregeln (v3.1, 11/2023) regeln v. a. Meldungen; **automatisierter Abruf nicht geklärt** | alle Meldefonds AT | bei Meldung | Phase 5: zunächst halbautomatisch (Direktlink + CSV-Upload); Automatisierung nur nach Klärung (Anfrage an fondsdaten@oekb.at) |

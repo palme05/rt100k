@@ -15,7 +15,7 @@ Meldeweg für Sicherheitslücken: siehe [`/SECURITY.md`](../SECURITY.md).
 
 | # | Bedrohung | Angriffsweg | Gegenmaßnahmen | Status |
 |---|---|---|---|---|
-| T1 | **Kontoübernahme** | Credential Stuffing, Phishing, Session-Diebstahl | Passkeys bevorzugt; TOTP-2FA (Admin Pflicht); Rate-Limit + temporäre Sperre; Session-Cookies `httpOnly`/`Secure`/`SameSite=Lax`, begrenzte Laufzeit, Erneuerung; Session-Liste + „Überall abmelden“; Hinweis bei neuem Gerät (in der App, keine E-Mails – Entscheidung Tom); keine Enumeration bei Login | ✅ Phase 2 |
+| T1 | **Kontoübernahme** | Credential Stuffing, Phishing, Session-Diebstahl | Passkeys bevorzugt; TOTP-2FA (Admin Pflicht); Rate-Limit + temporäre Sperre; Session-Cookies `httpOnly`/`Secure`/`SameSite=Lax`, begrenzte Laufzeit, Erneuerung; Session-Liste + „Überall abmelden“; Hinweis bei neuem Gerät (in der App, keine E-Mails – Entscheidung des Betreibers); keine Enumeration bei Login | ✅ Phase 2 |
 | T2 | **Zugriff auf fremde Depots (IDOR)** | IDs in URLs/Server Actions manipulieren | Zentrale Data-Access-Schicht, *deny by default*, jede Abfrage auf den Besitzer gefiltert; nicht erratbare IDs (UUIDv4) als zusätzliche Hürde, nie als Schutz; Postgres RLS als zweite Linie; **Negativ-Tests**: lesen/ändern/löschen/exportieren fremder Daten muss scheitern | ✅ Phase 2 (Freigaben folgen in Phase 6) |
 | T3 | **Missbrauch von Freigaben** | „ansehen“-Recht zum Ändern nutzen, Freigabe nach Widerruf | Rechte serverseitig je Aktion geprüft; Widerruf wirkt sofort (keine gecachten Rechte); Audit-Log für Freigaben | 🔜 Phase 2/6 |
 | T4 | **Bösartige Uploads** | präparierte PDFs/CSVs (Exploits, Zip-Bomben, Formel-Injection) | Magic-Byte-Prüfung, Größen-/Seiten-/Zeitlimit; pdf.js mit `isEvalSupported: false`, nur Textextraktion; Upload nie gespeichert; CSV-Export entschärft `= + - @` | 🔜 Phase 3 |
@@ -42,7 +42,7 @@ Meldeweg für Sicherheitslücken: siehe [`/SECURITY.md`](../SECURITY.md).
 - [x] Supply Chain: Release-Age 7 Tage, Build-Skripte nur freigegeben, Lockfile, `pnpm audit`, Dependabot (Cooldown), Actions per SHA, Dependency Review
 - [x] CodeQL-Workflow (aktiv seit das Repo öffentlich ist), ZAP-Baseline in der CI gegen den lokalen Produktions-Build (ohne Bypass-Secret, vor jedem Merge)
 - [x] `SECURITY.md` mit Meldeweg
-- [ ] **Tom:** Repo öffentlich schalten, Secret Scanning + Push Protection, Dependabot Alerts, Private Vulnerability Reporting aktivieren, Branch-Schutz für `main` (siehe README „Einmalige Einrichtung“)
+- [x] Repo öffentlich, Private Vulnerability Reporting, Dependency Graph, Regeln für `main` aktiv (19./20.10.2026, Betreiber)
 
 ### Authentifizierung & Sessions (Phase 2) – ✅
 - [x] Passkeys (WebAuthn, inkl. Autofill) und TOTP + Backup-Codes; Admins müssen TOTP einrichten und können es nicht abschalten
@@ -70,7 +70,7 @@ Meldeweg für Sicherheitslücken: siehe [`/SECURITY.md`](../SECURITY.md).
 - [ ] CSV-Export gegen Formel-Injection
 
 ### Abschluss (Phase 6)
-- [ ] Vollständiges Security-Review aller Endpunkte, Restrisiko-Bericht an Tom
+- [ ] Vollständiges Security-Review aller Endpunkte, Restrisiko-Bericht an den Betreiber
 
 ## Security-Check Phase 0 (19.10.2026)
 
@@ -119,7 +119,7 @@ Meldeweg für Sicherheitslücken: siehe [`/SECURITY.md`](../SECURITY.md).
 - Admins können fremde Sessions und Konten noch nicht per Oberfläche sperren; im Notfall per SQL (Notfallplan). Kandidat für Phase 6.
 - Konto-Wiederherstellung ohne E-Mail: verliert jemand Passwort und 2FA, hilft nur ein neues Konto per Einladung (Daten bleiben beim alten Konto). Eine Admin-gestützte Wiederherstellung folgt bewusst nicht ohne Rückfrage.
 - Better Auth erlaubt technisch ein „vertrauenswürdiges Gerät“ (30 Tage ohne 2FA) per API-Parameter; die Oberfläche bietet es nicht an. Prüfen, ob abschaltbar (Phase 6).
-- Yahoo Finance ohne offizielle API (von Tom akzeptiert), seit 20.10.2026 auch für Edelmetalle (gold-api.com war nicht mehr erreichbar; eine verwaiste Kurs-Domain wäre ein Einfallstor für falsche Kurse). Ausfälle fängt der letzte Schlusskurs ab.
+- Yahoo Finance ohne offizielle API (vom Betreiber akzeptiert), seit 20.10.2026 auch für Edelmetalle (gold-api.com war nicht mehr erreichbar; eine verwaiste Kurs-Domain wäre ein Einfallstor für falsche Kurse). Ausfälle fängt der letzte Schlusskurs ab.
 
 ## Notfallplan
 

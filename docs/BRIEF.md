@@ -1,7 +1,7 @@
 # rt100k – Build-Brief für Claude Code
 
 ## Kontext
-Du baust **rt100k** („Road to 100k“), einen Vermögenstracker für mich (Tom, Österreich) und meine Familie/Freunde. Ziel: der Funktionsumfang von **Parqet, getquinn und Finanzfluss Copilot inklusive ihrer Premium-Funktionen**, aber ohne Abo, selbst gehostet und Open Source.
+Du baust **rt100k** („Road to 100k“), einen Vermögenstracker für mich und meine Familie/Freunde in Österreich. Ziel: der Funktionsumfang von **Parqet, getquinn und Finanzfluss Copilot inklusive ihrer Premium-Funktionen**, aber ohne Abo, selbst gehostet und Open Source.
 
 Recherchiere selbst den **aktuellen** Funktionsumfang dieser drei Apps (Free + Premium) und lege daraus `docs/FEATURES.md` an: eine Matrix mit den Spalten *Feature | Parqet | getquinn | Finanzfluss | rt100k-Phase | kostenlos umsetzbar?* Alles, was dort an Vermögens-/Depotfunktionen auftaucht und kostenlos machbar ist, kommt in rt100k. Bewusst **nicht** im Scope: Haushaltsbuch/Ausgaben-Tracking, Girokonten, Bank-API-Anbindung.
 
@@ -53,7 +53,7 @@ Du hast Zugriff auf die Konnektoren **GitHub, Neon und Vercel**. Speichere diese
 ---
 
 ## Nutzer & Teilen
-- Mehrere Accounts (Familie/Freunde), **Registrierung nur per Einladungslink**; ich (Tom) bin Admin.
+- Mehrere Accounts (Familie/Freunde), **Registrierung nur per Einladungslink**; ich bin Admin.
 - Jeder sieht standardmäßig nur seine eigenen Daten.
 - **Freigaben:** einzelne Depots oder Ziele für andere Nutzer freigeben, Rechte „ansehen“ oder „bearbeiten“ (Use Cases: Partner, von Eltern verwaltetes Kinderdepot).
 - Autorisierung **serverseitig bei jeder Abfrage** erzwingen, mit eigenen Tests dafür (optional zusätzlich Postgres Row Level Security).
