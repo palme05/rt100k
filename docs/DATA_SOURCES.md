@@ -30,7 +30,7 @@ Schutzmaßnahmen, damit das Risiko klein bleibt:
 | Edelmetall-Spot | **MetalpriceAPI** Free | kostenlos mit Key | ≈ 100 Calls/Monat (prüfen) | prüfen | XAU, XAG, XPT, XPD in EUR | täglich/Echtzeit je Plan | Fallback (1×/Tag) |
 | ISIN/WKN → Ticker | **OpenFIGI** (Bloomberg) | frei, Key optional (kostenlos) | ohne Key ≈ 25 Req/Min, max. 10 Jobs/Req; mit Key mehr | kostenlos, keine Mengenlimits pro Tag | global | — | **Primär** fürs Instrument-Mapping, Ergebnis dauerhaft cachen |
 | AGE / Steuerdaten Meldefonds | **OeKB my.oekb.at** | frei einsehbar und downloadbar | — | Nutzungsregeln (v3.1, 11/2023) regeln v. a. Meldungen; **automatisierter Abruf nicht geklärt** | alle Meldefonds AT | bei Meldung | Phase 5: zunächst halbautomatisch (Direktlink + CSV-Upload); Automatisierung nur nach Klärung (Anfrage an fondsdaten@oekb.at) |
-| ETF-Holdings (Durchschau) | Emittenten-CSVs (iShares, Xtrackers, Vanguard, Amundi …) | frei | — | je Emittent prüfen | ETF-abhängig | täglich/monatlich | Phase 4, nur gecacht + nur aktuellster Stand |
+| ETF-Holdings (Durchschau) | Bestandsliste, die der Nutzer selbst beim Emittenten lädt (CSV) | frei | — | nur persönliche Nutzung, **kein automatischer Abruf** (siehe unten) | ETF-abhängig | wenn der Nutzer eine neue Liste ablegt | Phase 4, nur zusammengefasste Gewichte je Nutzer |
 | Börsenzeiten/Feiertage | eigene Kalenderdatei (Xetra, Wiener Börse, NYSE/Nasdaq) | — | — | — | — | — | Phase 2, jährlich pflegen; keine API nötig |
 
 ## Umsetzung Phase 2
@@ -75,6 +75,20 @@ In der DB landen nur **Tagesschlusskurse** gehaltener oder beobachteter Instrume
 | Wechselkurse | EZB-Datenportal (SDMX) `EXR/D.{Währung}.EUR.SP00.A?format=csvdata&detail=dataonly` | je Währung ab Jahresbeginn des ersten Kaufs, 12 h | Referenzkurse nur an Bankarbeitstagen; dazwischen gilt der letzte Kurs |
 
 Rückfall bei Ausfall: gespeicherte Tagesschlusskurse (`price_daily`) und Wechselkurse (`fx_daily`) des Crons. Live-Prüfung aller drei Historien-Quellen über `/api/status` → `historie` (am 20.10.2026 auf der Preview: alle erreichbar und im erwarteten Format).
+
+## ETF-Durchschau: Nutzungsbedingungen der Emittenten (geprüft 20.10.2026)
+
+Auftrag des Betreibers: prüfen, ob die Bestandslisten der ETF-Anbieter genutzt werden dürfen.
+
+| Anbieter | Was die Bedingungen sagen (sinngemäß) |
+|---|---|
+| iShares/BlackRock (DE, UK, HK, Americas offshore) | Website nur für persönlichen und internen Gebrauch; Herunterladen für den persönlichen Gebrauch erlaubt, wenn Urheberhinweise erhalten bleiben; **jede Vervielfältigung von Informationen oder Daten braucht vorherige Genehmigung**; Indexdaten (z. B. Citigroup) nur mit schriftlicher Erlaubnis |
+| Vanguard (US-Bedingungen; europäische nicht gefunden) | eingeschränkte Lizenz nur für persönliche, nicht kommerzielle Nutzung; Bestandsdaten teils von FactSet geliefert |
+| Amundi | Herunterladen/Drucken für streng persönlichen Gebrauch erlaubt; Wiedergabe, öffentliche oder kommerzielle Nutzung nur mit schriftlicher Zustimmung; Daten teils lizenziert |
+| Xtrackers/DWS | Nutzungsbedingungen regeln Zugriff und Nutzung; Wiedergabe oder öffentliche/kommerzielle Nutzung ohne Zustimmung untersagt (australische Fassung ausdrücklich) |
+| justETF | keine öffentliche API; Bedingungen zu automatischen Abfragen nicht auffindbar → nicht genutzt |
+
+**Entscheidung:** rt100k ruft die Seiten der Anbieter **nicht** automatisch ab (das wäre eine systematische Wiedergabe und bräuchte deren Genehmigung). Stattdessen lädt jeder Nutzer die Bestandsliste seines ETF selbst herunter – das ist der erlaubte persönliche Gebrauch – und legt sie in rt100k ab. Die Datei wird nur im Browser gelesen; gespeichert werden je Nutzer nur die zusammengefassten Gewichte (Länder, Branchen, zehn größte Titel), sichtbar nur für ihn und nie mit anderen Nutzern geteilt. Quellen: Suchergebnisse zu den Nutzungsbedingungen der Anbieter vom 20.10.2026 (die Seiten selbst waren aus der Entwicklungsumgebung nicht abrufbar; vor einem automatischen Abruf wäre eine schriftliche Erlaubnis nötig).
 
 ## Import-Formate (Phase 3)
 

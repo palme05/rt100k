@@ -1,6 +1,6 @@
 # Architektur
 
-Stand: Phase 4, Teil 2 (20.10.2026). Grundsatz: **0 € Kosten, Sicherheit vor Features.** Jede Architekturentscheidung muss in die Free Tiers unten passen.
+Stand: Phase 4, Teil 3 (20.10.2026). Grundsatz: **0 € Kosten, Sicherheit vor Features.** Jede Architekturentscheidung muss in die Free Tiers unten passen.
 
 ## Überblick
 
@@ -57,6 +57,7 @@ GitHub Actions (öffentliches Repo, kostenlos)
 | A20 | **Kurshistorie aus dem Data Cache statt aus der DB** (12 h, Zeitraum-Stufen `1y…max` als stabile Cache-Schlüssel); Rückfall auf die gespeicherten Schlusskurse | Spart DB-Speicher und Schreibzugriffe; gleiche Antworten für alle Nutzer. Brief-Regel bleibt: in der DB nur Tagesschlusskurse gehaltener Instrumente (Cron). |
 | A21 | **Kein Sprung bei fehlender Historie**: Beginnt die Kurshistorie einer Position erst nach dem Kauf (z. B. Krypto 12 Monate), startet die Auswertung am ersten vollständig bewerteten Tag mit dessen Marktwert als Ausgangswert und weist das aus | Sonst entstünde am ersten Kurstag ein Scheingewinn (Einstand → Marktwert). Positionen ganz ohne Kurse zählen durchgehend mit dem Einstand. |
 | A22 | **Rebalancing nach Anlageklasse**, Vorschlag im Browser (`src/lib/rebalance.ts`); gespeichert wird nur die Zielaufteilung (`allocation_target`, Basispunkte) | Klassen (ETF, Krypto, Edelmetall, Cash …) sind die übliche Ebene für Familienportfolios; „Nur nachkaufen“ zuerst, weil Verkäufe in Österreich KESt auslösen. Ziele je Wertpapier wären eine Erweiterung. |
+| A23 | **ETF-Durchschau über selbst geladene Bestandslisten** (`src/lib/lookthrough.ts`), je Nutzer gespeichert (`etf_breakdown`, nur Aggregate) | Die Emittenten erlauben nur die persönliche Nutzung, kein systematisches Abrufen/Vervielfältigen (geprüft 20.10.2026, `docs/DATA_SOURCES.md`). Spalten über die Kopfzeile erkannt statt eines Parsers je Anbieter. Excel (XLSX) bewusst nicht: keine sichere, gepflegte Bibliothek ohne Zusatzabhängigkeit – Nutzer speichern als CSV. |
 | A15 | **Tests gegen echtes Postgres** (`pnpm test:db`, CI-Service Postgres 18) statt Mocks | RLS, Rollen und Constraints lassen sich nur gegen eine echte Datenbank prüfen. |
 
 ## Free-Tier-Grenzen (geprüft am 19.10.2026)
@@ -115,7 +116,7 @@ Gegenmaßnahmen, falls es knapp wird: Alarmregeln außerhalb der DB vorhalten, A
 | Vermögens-Snapshots | 10 Nutzer × 5 Depots × 3.650 Tage, ~60 B | ≈ 11 MB |
 | EZB-Kurse | 30 Währungen × 3.650 Tage | ≈ 7 MB |
 | Audit-Log | 10 Nutzer × 30 Ereignisse/Tag, 2 Jahre Aufbewahrung, ~200 B | ≈ 45 MB |
-| ETF-Holdings | 50 ETFs × 1.500 Positionen, nur aktueller Stand | ≈ 8 MB |
+| ETF-Durchschau | je Nutzer und ETF nur zusammengefasste Gewichte (≈ 60 Einträge), z. B. 10 Nutzer × 10 ETFs | < 1 MB |
 | Auth, Sessions, Ziele, Sonstiges | | < 10 MB |
 | **Summe** | | **≈ 175 MB von 1 GB** |
 
