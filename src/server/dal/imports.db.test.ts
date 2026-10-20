@@ -7,7 +7,7 @@ import { booking, csvMapping, importFile, instrument } from '../db/schema'
 import type { Actor } from './actor'
 import { listBookings } from './bookings'
 import { NotFoundError, ValidationError } from './errors'
-import { deleteCsvMapping, findImported, importBookings, listCsvMappings, saveCsvMapping } from './imports'
+import { deleteCsvMapping, findImported, ImportConflictError, importBookings, listCsvMappings, saveCsvMapping } from './imports'
 import { createPortfolio } from './portfolios'
 
 const key = (s: string) => createHash('sha256').update(s).digest('hex')
@@ -37,6 +37,25 @@ beforeAll(async () => {
   etf = (await vwce()).id
   aliceDepot = (await createPortfolio(alice, { name: 'TR', kind: 'depot' })).id
   bobDepot = (await createPortfolio(bob, { name: 'Bobs Depot', kind: 'depot' })).id
+})
+
+describe('Import mit widersprüchlichem Bestand', () => {
+  it('meldet genau die Wertpapiere, deren Bestand negativ würde – nichts wird gespeichert', async () => {
+    const carol = await createUser('Carol')
+    const depot = (await createPortfolio(carol, { name: 'TR', kind: 'depot' })).id
+    const [other] = await withUser(carol.id, (tx) => tx.insert(instrument).values({ ownerId: carol.id, kind: 'stock', name: 'Testaktie', currency: 'EUR' }).returning({ id: instrument.id }))
+    const items = [
+      buy('k1', { quantity: '2' }),
+      buy('k2', { type: 'sell', occurredOn: '2026-04-01', quantity: '5', amountCents: 50000 }),
+      buy('k3', { instrumentId: other!.id, quantity: '1', amountCents: 1000 }),
+    ]
+    const error = await importBookings(carol, { portfolioId: depot, files: [], items }).catch((e: unknown) => e)
+    expect(error).toBeInstanceOf(ImportConflictError)
+    expect((error as ImportConflictError).instrumentIds).toEqual([etf])
+    expect(await listBookings(carol, depot)).toEqual([])
+    // ohne die widersprüchlichen Zeilen geht der Rest durch
+    expect(await importBookings(carol, { portfolioId: depot, files: [], items: [items[2]] })).toEqual({ created: 1, duplicates: 0 })
+  })
 })
 
 describe('Import von Buchungen', () => {

@@ -249,7 +249,7 @@ describe('Trade Republic Transaktionsexport (CSV)', () => {
     const notices = parseCsvText(F.TR_CSV_EXPORT).result!.notices.join(' | ')
     expect(notices).toMatch(/3 × nicht übernommen: Ein-\/Auszahlungen, Karte und Überweisungen/)
     expect(notices).toMatch(/1 × nicht übernommen: Anleihen/)
-    expect(notices).toMatch(/1 × nicht übernommen: Kapitalmaßnahmen/)
+    expect(notices).toMatch(/1 × Kapitalmaßnahme oder Depotübertrag – bitte von Hand buchen.*SPLIT · Apple · 20\.06\.2026 · \+2 Stück/)
     expect(notices).toMatch(/Junior/)
     expect(notices).toMatch(/Unbekannte Arten: MYSTERY_EVENT/)
   })
@@ -260,6 +260,26 @@ describe('Trade Republic Transaktionsexport (CSV)', () => {
     expect(result!.bookings.map((x) => x.kind)).toEqual(['buy', 'dividend'])
     expect(result!.bookings[0]).toMatchObject({ occurredOn: '2026-09-01', amountCents: 22_400, feeCents: 100 })
     expect(result!.bookings[1]).toMatchObject({ amountCents: 1_234, taxCents: 339, note: 'Ausschüttung' })
+  })
+
+  it('Split als Aus- und Einbuchung derselben ISIN: zusätzliche Stück ohne Kosten; Tilgung und Übertrag von Hand', () => {
+    const head = F.TR_CSV_EXPORT.split('\n')[0]
+    const row = (cells: string[]) => cells.map((c) => `"${c}"`).join(',')
+    const csv = [
+      head,
+      row(['2021-01-08T10:00:00Z', '2021-01-08', 'DEFAULT', 'TRADING', 'BUY', 'STOCK', 'NIO (ADR)', 'US62914V1061', '15', '47.00', '-705.00', '-1.00', '', 'EUR', '', '', '', '', 's1', '', '', '', '']),
+      row(['2022-03-01T06:00:00Z', '2022-03-01', 'DEFAULT', 'CORPORATE_ACTION', 'SPLIT', 'STOCK', 'NIO (ADR)', 'US62914V1061', '-15', '', '', '', '', 'EUR', '', '', '', '', 's2', '', '', '', '']),
+      row(['2022-03-01T06:00:01Z', '2022-03-01', 'DEFAULT', 'CORPORATE_ACTION', 'SPLIT', 'STOCK', 'NIO (ADR)', 'US62914V1061', '45', '', '', '', '', 'EUR', '', '', '', '', 's3', '', '', '', '']),
+      row(['2022-05-02T06:00:00Z', '2022-05-02', 'DEFAULT', 'DELIVERY', 'TRANSFER_IN', 'FUND', 'Weltfonds', 'IE00B4L5Y983', '3', '', '', '', '', 'EUR', '', '', '', '', 's4', '', '', '', '']),
+      row(['2023-06-01T06:00:00Z', '2023-06-01', 'DEFAULT', 'CASH', 'TILG', 'BOND', 'Anleihe', 'DE0001102580', '', '', '100.00', '', '', 'EUR', '', '', '', '', 's5', '', '', '', '']),
+    ].join('\n')
+    const r = parseCsvText(csv).result!
+    expect(r.bookings.map((b) => b.kind)).toEqual(['buy', 'transfer_in'])
+    expect(r.bookings[1]).toMatchObject({ occurredOn: '2022-03-01', quantity: '30', amountCents: 0, confidence: 'mittel', note: 'Split (Transaktionsexport)' })
+    expect(r.bookings[1]!.warnings[0]).toMatch(/etwa 3 : 1/)
+    const notices = r.notices.join(' | ')
+    expect(notices).toMatch(/TRANSFER_IN · Weltfonds · 02\.05\.2022 · \+3 Stück/)
+    expect(notices).toMatch(/1 × nicht übernommen: Anleihen-Tilgungen/)
   })
 
   it('Vorzeichen-Widersprüche und Fremdwährung werden nicht übernommen', () => {
