@@ -2,6 +2,7 @@
 
 import { useId, useMemo, useState, useTransition } from 'react'
 import { eurCompact, eurWhole, monthLabel, share } from '@/lib/display'
+import { durationLabel, monthsBetween } from '@/lib/months'
 import { GOAL, reachedMonth } from '@/lib/road'
 import { Legend, LineChart } from '../charts/charts'
 import { MASK, usePrivacy } from '../privacy/privacy'
@@ -26,7 +27,8 @@ export function RoadPlanner({
   /** Annahmen als Standard speichern (Server Action) */
   onSave?: (settings: RoadSettings) => Promise<void>
 }) {
-  const { settings, setSettings, reset, stale, simulation, nowMonth } = useRoadForecast(data)
+  const [extra, setExtra] = useState(0)
+  const { settings, setSettings, reset, stale, simulation, scenario, nowMonth } = useRoadForecast(data, extra)
   const [saving, startSaving] = useTransition()
   const [saved, setSaved] = useState(false)
   const { hidden } = usePrivacy()
@@ -40,6 +42,9 @@ export function RoadPlanner({
   const pastValues = [...past.map((p) => p.value), ...new Array<null>(FORECAST_MONTHS).fill(null)]
 
   const eta = simulation.eta(GOAL)
+  const scenarioEta = scenario?.eta(GOAL) ?? null
+  const scenarioLabel = `Mit ${hidden ? MASK : eurWhole(extra, { signed: true })} im Monat`
+  const earlier = eta.median && scenarioEta?.median ? monthsBetween(scenarioEta.median, eta.median) : null
   const toGoal = simulation.toGoal()
   const startYear = Number(nowMonth.slice(0, 4))
   const years = [1, 2, 3, 4].map((n) => startYear + n)
@@ -94,6 +99,7 @@ export function RoadPlanner({
               { key: 'ink', label: 'Bisher' },
               { key: 'median', label: 'Median' },
               { key: 'band', label: '8 von 10 Szenarien' },
+              ...(scenario ? [{ key: 'second' as const, label: scenarioLabel }] : []),
             ]}
           />
           <LineChart
@@ -104,6 +110,7 @@ export function RoadPlanner({
             series={[
               { id: 'history', label: 'Bisher', values: pastValues, tone: 'ink' },
               { id: 'median', label: 'Median', values: pad(corridor.p50), tone: 'median' },
+              ...(scenario ? [{ id: 'scenario', label: scenarioLabel, values: pad(scenario.corridor(FORECAST_MONTHS).p50), tone: 'second' as const }] : []),
             ]}
             band={{ label: '8 von 10 Szenarien', lower: pad(corridor.p10), upper: pad(corridor.p90) }}
             thresholds={[
@@ -116,6 +123,12 @@ export function RoadPlanner({
             yTickCount={5}
             thresholdLabelSide={nowIndex < 6 ? "right" : "left"}
           />
+          {scenario ? (
+            <p className={styles.scenario} aria-live="polite">
+              {scenarioLabel}: Ankunft {scenarioEta?.median ? monthLabel(scenarioEta.median, 'long') : 'nicht in 40 Jahren'} (Median)
+              {earlier !== null && earlier > 0 ? ` – ${durationLabel(earlier)} früher` : earlier === 0 ? ' – im selben Monat' : ''}.
+            </p>
+          ) : null}
         </Section>
 
         <Section id={`${ids}-annahmen`} title="Annahmen">
@@ -151,6 +164,17 @@ export function RoadPlanner({
               step={0.01}
               value={settings.annualVolatility}
               onChange={(v) => update('annualVolatility', v)}
+            />
+            <Slider
+              id={`${ids}-extra`}
+              label="Vergleich: mehr sparen pro Monat"
+              output={extra > 0 ? `+${money(extra)}` : 'aus'}
+              hint="Zeigt eine zweite Kurve – wird nicht gespeichert."
+              min={0}
+              max={1000}
+              step={50}
+              value={extra}
+              onChange={setExtra}
             />
             <Slider
               id={`${ids}-lump`}
@@ -193,7 +217,14 @@ export function RoadPlanner({
                   Als Standard speichern
                 </button>
               ) : null}
-              <button type="button" className={button.button} onClick={reset}>
+              <button
+                type="button"
+                className={button.button}
+                onClick={() => {
+                  reset()
+                  setExtra(0)
+                }}
+              >
                 Zurücksetzen
               </button>
               {saved && !saving ? (

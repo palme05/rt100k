@@ -13,3 +13,12 @@ export function monthsBetween(from: string, to: string): number {
   const [y2, m2] = to.split('-').map(Number)
   return ((y2 ?? 0) - (y1 ?? 0)) * 12 + ((m2 ?? 0) - (m1 ?? 0))
 }
+
+/** Dauer in Monaten als Text: „1 Jahr 9 Monate“, „8 Monate“, „2 Jahre“. */
+export function durationLabel(months: number): string {
+  const total = Math.abs(Math.round(months))
+  const years = Math.floor(total / 12)
+  const rest = total % 12
+  const parts = [years > 0 ? `${years} ${years === 1 ? 'Jahr' : 'Jahre'}` : '', rest > 0 || years === 0 ? `${rest} ${rest === 1 ? 'Monat' : 'Monate'}` : ''].filter(Boolean)
+  return parts.join(' ')
+}
