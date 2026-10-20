@@ -133,7 +133,8 @@ const ledgerColumns = {
   taxCents: booking.taxCents,
 }
 
-async function ownedPortfolio(tx: Tx, actor: Actor, portfolioId: string) {
+/** Depot des Nutzers in der laufenden Transaktion, sonst `NotFoundError` (auch für den Import). */
+export async function ownedPortfolio(tx: Tx, actor: Actor, portfolioId: string) {
   const [row] = await tx
     .select({ id: portfolio.id, kind: portfolio.kind })
     .from(portfolio)
@@ -143,7 +144,7 @@ async function ownedPortfolio(tx: Tx, actor: Actor, portfolioId: string) {
   return row
 }
 
-async function ledgerBookings(tx: Tx, actor: Actor, portfolioId: string): Promise<LedgerBooking[]> {
+export async function ledgerBookings(tx: Tx, actor: Actor, portfolioId: string): Promise<LedgerBooking[]> {
   return tx
     .select(ledgerColumns)
     .from(booking)
@@ -151,7 +152,7 @@ async function ledgerBookings(tx: Tx, actor: Actor, portfolioId: string): Promis
     .orderBy(asc(booking.occurredOn), asc(booking.createdAt))
 }
 
-function assertConsistent(bookings: readonly LedgerBooking[]) {
+export function assertConsistent(bookings: readonly LedgerBooking[]) {
   try {
     computeLedger(bookings)
   } catch (error) {
