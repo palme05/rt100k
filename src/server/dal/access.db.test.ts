@@ -11,7 +11,7 @@ import { getInstrument } from './instruments'
 import { createPortfolio, deletePortfolio, getPortfolio, listPortfolios, updatePortfolio } from './portfolios'
 import { getRoadSettings, saveRoadSettings, DEFAULT_ROAD_SETTINGS } from './road'
 import { revokeSession } from './sessions'
-import { listDailyTotals, writeSnapshots } from './snapshots'
+import { listDailyTotals, listPortfolioSeries, writeSnapshots } from './snapshots'
 
 /**
  * Zugriffskontrolle: Bob versucht, Alices Daten zu lesen, zu ändern, zu löschen
@@ -83,6 +83,9 @@ describe('Data-Access-Schicht: fremde Daten', () => {
   it('Export/Übersicht: Bobs Gesamtbuchungen, Verlauf, Annahmen und Audit-Log enthalten nichts von Alice', async () => {
     expect(await listAllLedgerBookings(bob)).toEqual([])
     expect(await listDailyTotals(bob)).toEqual([])
+    expect(await listPortfolioSeries(bob, '2000-01-01')).toEqual(new Map())
+    expect(await listPortfolioSeries(alice, '2026-10-01')).toEqual(new Map([[alicePortfolio, [1_100_00]]]))
+    expect(await listPortfolioSeries(alice, '2026-10-19')).toEqual(new Map())
     expect(await getRoadSettings(bob)).toEqual(DEFAULT_ROAD_SETTINGS)
     expect(await listAuditEvents(bob)).toEqual([])
     expect(await listAuditEvents(alice)).toHaveLength(1)
