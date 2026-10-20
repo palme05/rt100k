@@ -12,3 +12,54 @@
 .benchmark {
   width: min(100%, 20rem);
 }
+
+/* Rebalancing: Betrag und Umschalter über der Tabelle, schmale Prozentfelder */
+.rebalanceHead {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3) var(--space-5);
+  align-items: end;
+  justify-content: space-between;
+  margin-bottom: var(--space-4);
+}
+
+.amount {
+  width: min(100%, 16rem);
+}
+
+.targetInput {
+  display: inline-block;
+  width: 5.5rem;
+}
+
+.targetInput input {
+  text-align: right;
+}
+
+.rebalanceFoot {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3) var(--space-5);
+  align-items: end;
+  justify-content: space-between;
+  margin-top: var(--space-4);
+}
+
+.sumOk,
+.sumOpen {
+  margin: 0;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+}
+
+.sumOk {
+  color: var(--ink-2);
+}
+
+.sumOpen {
+  color: var(--neg);
+}
+
+.addKind {
+  width: min(100%, 14rem);
+}
