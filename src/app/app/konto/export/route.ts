@@ -3,10 +3,17 @@ import { viennaDay } from '@/lib/format'
 import { requireUser } from '@/server/auth/session'
 import { recordAudit } from '@/server/dal/audit'
 import { bookingsCsv, exportBackup } from '@/server/dal/backup'
+import { consumeRateLimit, RateLimitError, tooManyRequests } from '@/server/dal/rate-limit'
 
 /** Eigene Daten herunterladen: `?format=json` (vollständiges Backup) oder `?format=csv` (Buchungen). */
 export async function GET(request: Request): Promise<Response> {
   const user = await requireUser()
+  try {
+    await consumeRateLimit(user, 'export')
+  } catch (error) {
+    if (error instanceof RateLimitError) return tooManyRequests(error)
+    throw error
+  }
   const format = new URL(request.url).searchParams.get('format') === 'csv' ? 'csv' : 'json'
   const backup = await exportBackup(user)
   const h = await headers()

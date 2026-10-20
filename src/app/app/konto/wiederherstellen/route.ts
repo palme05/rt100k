@@ -4,6 +4,7 @@ import { requireUser } from '@/server/auth/session'
 import { recordAudit } from '@/server/dal/audit'
 import { RESTORE_LIMITS, restoreBackup } from '@/server/dal/backup'
 import { ValidationError } from '@/server/dal/errors'
+import { consumeRateLimit, RateLimitError, tooManyRequests } from '@/server/dal/rate-limit'
 
 // Große Backups brauchen etwas Zeit (bis 50 000 Buchungen)
 export const maxDuration = 60
@@ -40,6 +41,12 @@ export async function POST(request: Request): Promise<Response> {
   const allowed = new Set([new URL(request.url).origin, new URL(appBaseUrl()).origin])
   if (!origin || !allowed.has(origin)) return json(403, { error: 'Anfrage von einer fremden Seite abgelehnt.' })
   if (!request.headers.get('content-type')?.startsWith('application/json')) return json(415, { error: 'Bitte die Backup-Datei (JSON) senden.' })
+  try {
+    await consumeRateLimit(user, 'restore')
+  } catch (error) {
+    if (error instanceof RateLimitError) return tooManyRequests(error)
+    throw error
+  }
   if (Number(request.headers.get('content-length') ?? 0) > RESTORE_LIMITS.bytes) return json(413, { error: 'Das Backup ist größer als 10 MB.' })
 
   const text = await readLimited(request, RESTORE_LIMITS.bytes)

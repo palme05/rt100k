@@ -56,6 +56,7 @@ Meldeweg für Sicherheitslücken: siehe [`/SECURITY.md`](../SECURITY.md).
 - [x] IDOR-Testsuite gegen echtes Postgres (fremde Depots/Buchungen/Verlauf/Annahmen/Audit lesen, ändern, löschen, exportieren → alle scheitern) plus E2E über die Oberfläche
 - [x] Postgres RLS mit `app.user_id` pro Transaktion (`set_config(…, true)`), getestet ohne WHERE-Klauseln
 - [x] DB-Rollen: `rt100k_app` (DML, kein DDL, kein BYPASSRLS, keine Mitgliedschaften), Migrationen mit der Owner-Rolle `rt100k_owner`
+- [x] Rate-Limit je Nutzer für alle Server Actions mit Schreibzugriff und die Export-/Restore-Routen (Phase 6f, `src/server/dal/rate-limit.ts`: feste Stundenfenster, atomarer Zähler, 429 mit `Retry-After`; DB- und E2E-Test)
 
 ### Daten (Phase 2–6)
 - [x] TLS erzwungen (`sslmode=require&channel_binding=require`, node-postgres prüft das Zertifikat)
