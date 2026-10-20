@@ -1,22 +1,24 @@
 # Architektur
 
-Stand: Phase 2 (20.10.2026). Grundsatz: **0 € Kosten, Sicherheit vor Features.** Jede Architekturentscheidung muss in die Free Tiers unten passen.
+Stand: Phase 3 (20.10.2026). Grundsatz: **0 € Kosten, Sicherheit vor Features.** Jede Architekturentscheidung muss in die Free Tiers unten passen.
 
 ## Überblick
 
 ```
 Browser / PWA (de-AT, Europe/Vienna)
+   │  Import: PDF/CSV werden hier gelesen (pdf.js, Parser src/lib/import) – nur Buchungen gehen weiter
    │  HTTPS, strikte CSP mit Nonce (src/proxy.ts), Security-Header (next.config.ts)
    ▼
 Vercel Hobby · Region fra1 · Next.js 16 (App Router, alle Seiten dynamisch gerendert)
    ├─ Server Components / Server Actions → Data-Access-Schicht src/server/dal
    │    (Autorisierung zentral, deny by default, withUser() setzt app.user_id je Transaktion)
+   ├─ Import (src/server/imports.ts + dal/imports.ts): Instrumente zuordnen, Duplikate, Speichern
    ├─ Better Auth (selbst gehostet, Passkeys + TOTP, Einladungen) → /api/auth/*
    ├─ Kursdienst src/server/quotes (Yahoo inkl. Metall-Futures · CoinGecko · EZB, Data Cache 60 s,
    │    Fallback letzter Schlusskurs)
    ├─ /api/cron/daily (CRON_SECRET) ← Vercel Cron 22:00 UTC
    └─ /api/status (Erreichbarkeit der Kursquellen, 10 min gecacht)
-   ▼  node-postgres über den Neon-Pooler · TLS (sslmode=require, channel_binding=require)
+   ▼  node-postgres über den Neon-Pooler · TLS (sslmode=verify-full im Code erzwungen, channel_binding=require)
 Neon Postgres 18 · aws-eu-central-1 (Frankfurt) · Projekt rt100k (silent-salad-93686485) · DB rt100k
    ├─ Branch main     → Produktion (0,25–0,5 CU)
    └─ Branch preview  → Vercel-Previews, nur Testdaten (0,25 CU, eigenes App-Passwort)
@@ -47,6 +49,9 @@ GitHub Actions (öffentliches Repo, kostenlos)
 | A12 | **Migrationen**: `pnpm db:migrate` mit `DATABASE_URL_MIGRATIONS` (Owner-Rolle). Aus der Claude-Umgebung ohne direkte DB-Verbindung über `scripts/migration-sql.ts` und die Neon-SQL-API in einer Transaktion, inkl. Drizzle-Buchhaltung | Keine DDL-Rechte zur Laufzeit; kein Migrations-Secret in Vercel. |
 | A13 | **Registrierung nur per Einladung, keine E-Mails** (Entscheidung des Betreibers, 19.10.2026) | Hinweise zu neuen Geräten erscheinen in der App; Passwort-Reset per E-Mail entfällt (Konto-Wiederherstellung: siehe SECURITY.md, Restrisiken). |
 | A14 | **Kurse nie in der DB, Schlusskurse schon**: Live-Kurse im Next-Data-Cache (60 s), Tagesschluss im Cron; Stammdaten nur nach Bestätigung beim Anbieter | Brief-Regel „Live-Kurse nicht in der DB“; kein Nutzer kann Stammdaten für andere verfälschen. |
+| A16 | **Import im Browser parsen** (`src/lib/import`, reine Funktionen): PDF-Text über pdf.js, CSV selbst geparst; an den Server gehen nur Buchungen, ISIN/Symbol und SHA-256-Hashes | Abrechnungen enthalten Namen, Adressen, IBAN und Depotnummern – so verlassen sie das Gerät nie (Datensparsamkeit, keine Upload-Speicherung, keine Function-Laufzeit fürs Parsen). Der Server prüft jede Zeile trotzdem wie eine manuelle Buchung. |
+| A17 | **pdf.js 6 Legacy-Build im Hauptthread** („fake worker“), erst beim ersten PDF nachgeladen | Ältere Handy-Browser; kein zusätzlicher Worker-Ursprung in der CSP; Abrechnungen sind klein. Native Canvas-Bibliothek per `ignoredOptionalDependencies` ausgeschlossen. |
+| A18 | **Parser je Broker × Dokumenttyp** mit Konfidenz (hoch/mittel/niedrig), Warnungen und Plausibilitätsprüfung gegen den Endbetrag; Duplikate über **Import-Schlüssel** = SHA-256(Quelle + Fingerabdruck der Buchung), eindeutig je Nutzer | Gleiche Datei zweimal → nichts doppelt; Sammelabrechnungen und Sparpläne mit mehreren Ausführungen bleiben unterscheidbar. Parser auf Basis öffentlicher Formatreferenzen und synthetischer Beispiele (Entscheidung des Betreibers, 20.10.2026). |
 | A15 | **Tests gegen echtes Postgres** (`pnpm test:db`, CI-Service Postgres 18) statt Mocks | RLS, Rollen und Constraints lassen sich nur gegen eine echte Datenbank prüfen. |
 
 ## Free-Tier-Grenzen (geprüft am 19.10.2026)

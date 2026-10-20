@@ -18,14 +18,14 @@ Meldeweg für Sicherheitslücken: siehe [`/SECURITY.md`](../SECURITY.md).
 | T1 | **Kontoübernahme** | Credential Stuffing, Phishing, Session-Diebstahl | Passkeys bevorzugt; TOTP-2FA (Admin Pflicht); Rate-Limit + temporäre Sperre; Session-Cookies `httpOnly`/`Secure`/`SameSite=Lax`, begrenzte Laufzeit, Erneuerung; Session-Liste + „Überall abmelden“; Hinweis bei neuem Gerät (in der App, keine E-Mails – Entscheidung des Betreibers); keine Enumeration bei Login | ✅ Phase 2 |
 | T2 | **Zugriff auf fremde Depots (IDOR)** | IDs in URLs/Server Actions manipulieren | Zentrale Data-Access-Schicht, *deny by default*, jede Abfrage auf den Besitzer gefiltert; nicht erratbare IDs (UUIDv4) als zusätzliche Hürde, nie als Schutz; Postgres RLS als zweite Linie; **Negativ-Tests**: lesen/ändern/löschen/exportieren fremder Daten muss scheitern | ✅ Phase 2 (Freigaben folgen in Phase 6) |
 | T3 | **Missbrauch von Freigaben** | „ansehen“-Recht zum Ändern nutzen, Freigabe nach Widerruf | Rechte serverseitig je Aktion geprüft; Widerruf wirkt sofort (keine gecachten Rechte); Audit-Log für Freigaben | 🔜 Phase 2/6 |
-| T4 | **Bösartige Uploads** | präparierte PDFs/CSVs (Exploits, Zip-Bomben, Formel-Injection) | Magic-Byte-Prüfung, Größen-/Seiten-/Zeitlimit; pdf.js mit `isEvalSupported: false`, nur Textextraktion; Upload nie gespeichert; CSV-Export entschärft `= + - @` | 🔜 Phase 3 |
+| T4 | **Bösartige Uploads** | präparierte PDFs/CSVs (Exploits, Zip-Bomben, Formel-Injection) | Dateien werden **nur im Browser** gelesen und nie hochgeladen oder gespeichert; Magic-Byte-Prüfung, ≤ 10 MB, ≤ 50 Seiten, 20 s; pdf.js 6 nur zur Textextraktion (keine eval-Pfade mehr, die CSP verbietet `eval` zusätzlich; keine Schriften, kein XFA, kein WebAssembly, keine Bilder); CSV ≤ 20 000 Zeilen, Felder ≤ 2000 Zeichen; der Server prüft jede Zeile wie eine manuelle Buchung; CSV-Export entschärft `= + - @` | ✅ Phase 3 (CSV-Export folgt mit dem Export, Phase 6) |
 | T5 | **Datenleck über das öffentliche Repo** | echte Daten/Secrets committet, Test-PDFs nicht anonymisiert | gitleaks Pre-Commit + CI (gesamte Historie) mit Regeln für Postgres-URLs und IBANs; `.gitignore` für `.env*`, `/private/`, `*.real.*`; GitHub Secret Scanning + Push Protection; Beispiel-Dokumente nur anonymisiert | ✅ gitleaks, .gitignore · ⏳ Secret Scanning (Repo öffentlich schalten) |
 | T6 | **Datenleck über Logs/Artefakte** | Finanzdaten/Tokens in Logs, `.next/` oder DB-Dumps als CI-Artefakt | Keine Artefakt-Uploads in CI (`.next/` enthält Preview-Keys); ZAP-Report nicht hochgeladen; keine Dumps im Repo; Logs nur mit Fehlernamen/-klassen, nie mit Beträgen, Tokens, Verbindungsdaten | ✅ |
 | T7 | **Kompromittierte Abhängigkeiten** | bösartiges npm-Release, gekaperte Action | `minimumReleaseAge` 7 Tage; `onlyBuiltDependencies`; Lockfile + `--frozen-lockfile`; `pnpm audit` (hoch/kritisch blockiert); Dependabot mit 7-Tage-Cooldown; Actions auf Commit-SHA gepinnt; ZAP-Image per Digest; gitleaks-Binary per SHA-256; Dependency Review blockiert High + Nicht-OSS-Lizenzen | ✅ |
 | T8 | **Ungeschützte Cron-/API-Endpunkte** | Cron-URL aufrufen → DB wecken, CU-Budget verbrauchen, Daten verändern | `CRON_SECRET` (Bearer, konstante Vergleichszeit, min. 32 Zeichen, sonst Endpunkt zu); Cron idempotent (Upsert je Tag); `/api/status` ohne Daten, 10 min gecacht | ✅ Phase 2 |
 | T9 | **XSS / Injection** | Nutzereingaben, externe Kurs-/Steuerdaten, Dateinamen | Strikte CSP mit Nonce + `strict-dynamic`, kein `unsafe-inline`; React-Escaping; ESLint verbietet `dangerouslySetInnerHTML`, `eval`; zod-Validierung aller Eingaben und Fremddaten; Drizzle mit Parametern | ✅ |
 | T10 | **CSRF / Clickjacking** | fremde Seite löst Aktionen aus / bettet App ein | Server Actions mit Origin-Prüfung (Next); Better Auth prüft Origin/Fetch-Metadata (ausdrücklich an, auch in Tests); `SameSite`-Cookies; `frame-ancestors 'none'` + `X-Frame-Options: DENY`; eigene Route-Handler nur GET (Cron mit Secret, Status ohne Daten) | ✅ |
-| T11 | **Budget-Erschöpfung (DoS)** | viele Requests wecken Neon / verbrauchen Function-Volumen | Rate-Limits (DB-gestützt); Kurse im Data Cache; kleiner Pool mit 5 s Leerlauf; Preview hinter Vercel-Login; Vercel-Firewall-Regeln prüfen (Phase 6) | ✅ teilweise |
+| T11 | **Budget-Erschöpfung (DoS)** | viele Requests wecken Neon / verbrauchen Function-Volumen | Rate-Limits (DB-gestützt); Kurse und Suchen im Data Cache; kleiner Pool mit 5 s Leerlauf; Import: ≤ 500 Buchungen je Speichern, ≤ 5 neue Instrumente je Vorbereitung (Laufzeit < 60 s), Eingaben vor jedem Anbieter-Abruf geprüft; Preview hinter Vercel-Login; Vercel-Firewall-Regeln prüfen (Phase 6) | ✅ teilweise |
 | T12 | **Admin-Missbrauch** | Admin liest fremde Vermögen | Admin-Rolle sieht nur Nutzer/Einladungen, keine Vermögensdaten (Data-Access-Schicht + Tests) | ✅ Phase 2 |
 | T13 | **Preview greift auf Produktionsdaten zu** | Preview-Deploy mit Prod-`DATABASE_URL` | Eigener Neon-Branch `preview` mit Testdaten und eigenem Passwort der App-Rolle; Env-Vars getrennt nach Vercel-Umgebung | ✅ Phase 2 |
 
@@ -59,15 +59,16 @@ Meldeweg für Sicherheitslücken: siehe [`/SECURITY.md`](../SECURITY.md).
 
 ### Daten (Phase 2–6)
 - [x] TLS erzwungen (`sslmode=require&channel_binding=require`, node-postgres prüft das Zertifikat)
-- [ ] IBAN/Depot-/Kundennummern/Adressen beim Import verwerfen (Phase 3)
+- [x] IBAN/Depot-/Kundennummern/Adressen beim Import verwerfen: Parser lesen nur Buchungsfelder, an den Server gehen nur Buchungen, Instrument-Kennungen und SHA-256-Hashes (Test „kein Ergebnis enthält Namen, Adressen, IBAN oder Depotnummern“)
 - [ ] Konto löschen entfernt alle Daten (Phase 6; Fremdschlüssel kaskadieren bereits)
 - [x] Keine Beträge, Tokens, Session-IDs in Logs (nur Fehlerklassen)
 - [x] Audit-Log (Logins, Fehlversuche, neue Geräte, Sitzungen, 2FA, Passkeys, Passwort, Einladungen, Depot-Löschung), für den Nutzer einsehbar, nur anhängbar, 2 Jahre
 
-### Uploads (Phase 3)
-- [ ] Magic Bytes, Größe ≤ 10 MB, ≤ 50 Seiten, Timeout
-- [ ] pdf.js `isEvalSupported: false`, keine Skripte/Formulare
-- [ ] CSV-Export gegen Formel-Injection
+### Uploads (Phase 3) – ✅ bis auf den Export
+- [x] Magic Bytes, Größe ≤ 10 MB, ≤ 50 Seiten, Timeout 20 s (Unit-Tests mit echten PDFs)
+- [x] pdf.js ohne eval (v6 hat keine eval-Pfade mehr; `isEvalSupported` gibt es nicht mehr), keine Skripte/Formulare (`enableXfa: false`, kein Annotation-Layer), nur `getTextContent`
+- [x] Hochgeladene Dateien nicht speichern – sie verlassen den Browser gar nicht; gespeichert werden nur Buchungen plus Datei-Hash
+- [ ] CSV-Export gegen Formel-Injection (mit dem Export in Phase 6)
 
 ### Abschluss (Phase 6)
 - [ ] Vollständiges Security-Review aller Endpunkte, Restrisiko-Bericht an den Betreiber
@@ -120,6 +121,28 @@ Meldeweg für Sicherheitslücken: siehe [`/SECURITY.md`](../SECURITY.md).
 - Konto-Wiederherstellung ohne E-Mail: verliert jemand Passwort und 2FA, hilft nur ein neues Konto per Einladung (Daten bleiben beim alten Konto). Eine Admin-gestützte Wiederherstellung folgt bewusst nicht ohne Rückfrage.
 - Better Auth erlaubt technisch ein „vertrauenswürdiges Gerät“ (30 Tage ohne 2FA) per API-Parameter; die Oberfläche bietet es nicht an. Prüfen, ob abschaltbar (Phase 6).
 - Yahoo Finance ohne offizielle API (vom Betreiber akzeptiert), seit 20.10.2026 auch für Edelmetalle (gold-api.com war nicht mehr erreichbar; eine verwaiste Kurs-Domain wäre ein Einfallstor für falsche Kurse). Ausfälle fängt der letzte Schlusskurs ab.
+
+## Security-Check Phase 3 (20.10.2026)
+
+| Prüfung | Ergebnis |
+|---|---|
+| PDF und CSV werden im Browser gelesen; der Server erhält nur Buchungen, ISIN/Symbol und SHA-256-Hashes (Import-Schlüssel, Datei-Hash) | ✅ |
+| Datensparsamkeit: kein Parser-Ergebnis enthält Namen, Adressen, IBAN, Depot- oder Kundennummern | ✅ (Unit-Test über alle Beispieldokumente) |
+| Magic Bytes statt Dateiendung (PNG, ZIP, Binärdaten abgewiesen), Größen-, Seiten- und Zeitlimit | ✅ (Unit + E2E) |
+| pdf.js 6.4 (Apache-2.0): keine `eval`/`new Function`-Pfade im Build (per `grep` geprüft), CSP ohne `unsafe-eval`, keine Schriften/XFA/WebAssembly/Bilder; pdf.js läuft im Hauptthread („fake worker“), die CSP braucht keine zusätzliche `worker-src`-Freigabe; native Canvas-Bibliothek ausgeschlossen | ✅ |
+| Server vertraut dem Browser nicht: jede Zeile durch dieselbe Prüfung wie eine manuelle Buchung (Datum, Beträge, Stückzahl, Bestand nie unter null), Depot und Instrument müssen dem Nutzer gehören, alles in einer Transaktion | ✅ (12 DB-Tests) |
+| IDOR/RLS für `import_file` und `csv_mapping`: fremdes Depot, fremdes privates Instrument, fremde Zuordnung, Duplikatprüfung über fremde Importe, Zugriff ohne Nutzerkontext → alle scheitern | ✅ (DB-Tests) |
+| Import-Vorbereitung: ungültige oder zu große Anfragen werden abgewiesen, bevor ein Kursanbieter gefragt wird; Namen und Stammdaten bestätigt der Server beim Anbieter | ✅ (DB-Tests) |
+| Duplikate: eindeutiger Index `(owner_id, import_key)`, erneuter Import derselben Datei legt nichts an | ✅ (DB + E2E) |
+| Testdokumente: nur synthetisch („Erika Beispiel“, Platzhalter-IBANs aus Nullen), keine echten Abrechnungen im Repo; gitleaks über die gesamte Historie | ✅ |
+| Neue Abhängigkeit: nur `pdfjs-dist` (Apache-2.0, keine Install-Skripte) | ✅ |
+| `pnpm audit` | Produktionsabhängigkeiten: 0 Funde. Weiterhin `braces` (hoch) nur in ESLint, ohne Fix, nicht ausnutzbar |
+
+**Restrisiken Phase 3**
+- Die Parser beruhen auf öffentlich dokumentierten Formaten und synthetischen Beispielen (Entscheidung des Betreibers vom 20.10.2026), nicht auf echten Abrechnungen. Abweichungen echter Dokumente führen zu „nicht erkannt“ oder Warnungen, nie zu stillem Speichern – der Review-Screen zeigt jede Buchung vor dem Übernehmen. Erste echte Dokumente prüft der Betreiber lokal in der App.
+- Das Bitpanda-CSV-Format ist nicht offiziell dokumentiert; Spaltennamen werden über die Kopfzeile gesucht. Ändert Bitpanda das Format, meldet der Import „nicht erkannt“ und bietet die eigene Zuordnung an.
+- Kein Rate-Limit je Nutzer für die Server Actions mit Anbieter-Abrufen (Instrumentsuche, Import-Vorbereitung). Abgemildert durch Login-Pflicht (nur eingeladene Nutzer), Data Cache (1 h) und die Grenzen je Aufruf. Kandidat für Phase 6.
+- Stand der Secrets aus Phase 2: Das Produktions-DB-Passwort hat der Betreiber am 20.10.2026 getauscht (verifiziert). `BETTER_AUTH_SECRET` und `CRON_SECRET` stehen weiterhin im Sitzungsverlauf und werden vor dem ersten echten Familien-Account getauscht (Auth-Schlüssel nur über `BETTER_AUTH_SECRETS`). Der Preview-Branch enthält nur Testdaten; sein Passwort ist nicht getauscht.
 
 ## Notfallplan
 

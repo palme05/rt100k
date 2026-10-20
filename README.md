@@ -2,7 +2,7 @@
 
 Selbst gehosteter, quelloffener Vermögenstracker für Familie und Freunde: Depots, Krypto, Cash und Sachwerte an einem Ort, mit Performance-Analyse, österreichischem Steuer-Cockpit und dem Herzstück **Road to 100k** (Meilensteine, Prognosekegel, Zinseszins-Kipppunkt). Ohne Abo, ohne Broker-Logins, auf Free Tiers.
 
-> **Status:** Phase 2 (Kern) fertig: Anmeldung mit Passkey/2FA per Einladung, Depots, Buchungen, Kurse, Übersicht, Road to 100k. Als Nächstes Phase 3 (Import von Abrechnungen). Vor echten Familiendaten folgt das vollständige Security-Review (Phase 6).
+> **Status:** Phase 3 (Import) fertig: Abrechnungen von Trade Republic und flatex (PDF), Bitpanda-Export und beliebige CSV-Dateien werden im Browser gelesen, vor dem Speichern geprüft und ohne Duplikate übernommen. Davor Phase 2 (Kern): Anmeldung mit Passkey/2FA per Einladung, Depots, Buchungen, Kurse, Übersicht, Road to 100k. Als Nächstes Phase 4 (Analyse). Vor echten Familiendaten folgt das vollständige Security-Review (Phase 6).
 
 ## Grundsätze
 
@@ -13,7 +13,7 @@ Selbst gehosteter, quelloffener Vermögenstracker für Familie und Freunde: Depo
 
 ## Stack
 
-Next.js 16 (App Router) · TypeScript 6 strict · Neon Postgres 18 (Frankfurt) mit Row Level Security · Drizzle + node-postgres · Better Auth (Passkeys, TOTP) · zod · Vitest · Playwright · pnpm
+Next.js 16 (App Router) · TypeScript 6 strict · Neon Postgres 18 (Frankfurt) mit Row Level Security · Drizzle + node-postgres · Better Auth (Passkeys, TOTP) · pdf.js (nur Text, im Browser) · zod · Vitest · Playwright · pnpm
 
 ## Entwicklung
 

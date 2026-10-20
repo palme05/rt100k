@@ -89,6 +89,7 @@ Du hast Zugriff auf die Konnektoren **GitHub, Neon und Vercel**. Speichere diese
 - Generischer CSV-Import mit Spalten-Mapping, Mappings speicherbar
 - Inspiration: Das Open-Source-Projekt *Portfolio Performance* hat viele PDF-Importer – zum Verständnis der Dokumentstrukturen nutzbar, Lizenz (EPL) beachten, keinen Code ungeprüft übernehmen
 - **Bitte mich um anonymisierte Beispieldokumente, bevor du einen Parser baust.** Ohne echte Beispiele keine Formate raten.
+  - *Nachtrag 20.10.2026 (Entscheidung des Betreibers):* Statt eigener Beispieldokumente öffentliche Formatreferenzen nutzen und mit synthetischen Testdokumenten arbeiten; die Prüfung mit echten Dokumenten macht der Betreiber lokal in der App. Quellen: `docs/DATA_SOURCES.md` → Import-Formate.
 
 ### C. Kurse & Live-Börse
 - Kostenlose Quellen evaluieren und in `docs/DATA_SOURCES.md` dokumentieren (Limits, Nutzungsbedingungen, Abdeckung europäischer Börsen/ISINs, Verzögerung). Kandidaten: Yahoo Finance (inoffiziell), Finnhub, Twelve Data, Alpha Vantage (Free Tiers), CoinGecko (Krypto), EZB (Wechselkurse), eine Edelmetall-Spotquelle

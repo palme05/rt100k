@@ -65,6 +65,19 @@ Jede Antwort trägt `{ price, currency, asOf, source, delayed: boolean }`, die U
 
 In der DB landen nur **Tagesschlusskurse** gehaltener oder beobachteter Instrumente (täglicher Vercel-Cron).
 
+## Import-Formate (Phase 3)
+
+Entscheidung des Betreibers (20.10.2026): Parser nach öffentlichen Formatreferenzen bauen statt auf eigene Beispieldokumente zu warten; geprüft wird mit echten Dokumenten lokal in der App (nichts wird hochgeladen).
+
+| Quelle | Format | Referenz | Abgedeckt |
+|---|---|---|---|
+| Trade Republic (DE und Branch Austria) | PDF, deutsch/englisch | anonymisierte Beispieldokumente in den Testdaten von *Portfolio Performance* (EPL, nur gelesen, kein Code übernommen) | Kauf, Verkauf, Sparplan, Saveback, Round-up, Krypto-Sparplan, Dividende (auch Fremdwährung mit Quellensteuer), Zinsen; Storno, Kontoauszug → nur Hinweis |
+| flatex / flatexDEGIRO (AT und DE) | PDF, deutsch | wie oben | Kauf, Verkauf, Sammelabrechnung, Dividenden-/Zinsgutschrift, Ertragsmitteilung (ausschüttungsgleiche Erträge → Steuerbuchung); Anleihen → übersprungen mit Hinweis |
+| Bitpanda | CSV (Verlauf → Export) | öffentlich dokumentierte Konverter (z. B. BittyTax) – Bitpanda dokumentiert das Format nicht offiziell | Kauf, Verkauf, Ein-/Auszahlung von Coins, Prämien/Staking; Euro-Bewegungen, Aktien/ETFs und Fremdwährung → übersprungen mit Zähler |
+| Andere Banken | CSV | – | eigene Spaltenzuordnung, je Nutzer speicherbar |
+
+Echte Abrechnungen kommen nie ins Repo; die Testdokumente in `src/lib/import/fixtures.ts` sind frei erfunden.
+
 ## Offene Punkte
 
 1. ~~Yahoo Finance~~ – entschieden am 19.10.2026: Primärquelle mit Schutzmaßnahmen (siehe oben), umgesetzt in Phase 2.
@@ -81,3 +94,4 @@ In der DB landen nur **Tagesschlusskurse** gehaltener oder beobachteter Instrume
 - [OpenFIGI API](https://www.openfigi.com/api), [Bloomberg Rate Limits (apis.io)](https://apis.io/rate-limits/bloomberg-lp/bloomberg-lp-rate-limits/)
 - [OeKB Steuerdaten](https://www.oekb.at/kapitalmarkt-services/unser-datenangebot/fonds/steuerdaten.html), [OeKB Nutzungsregeln Steuerdaten v3.1](https://www.oekb.at/dam/jcr:3e3c80e1-f95d-440b-b254-ab17d4ad321d/OeKB%20Steuerdaten%20Nutzungsregeln%20DE%20Vers%203.1_20231116.pdf), [OeKB Ertragsteuerliche Behandlung (CSV-Formate)](https://www.oekb.at/dam/jcr:0ac4175d-b596-4738-b7bb-3532607300cd/OeKB-Steuerdaten-Ertragsteuerliche-Behandlung-2016-12.pdf)
 - Yahoo: [yfinance Rate-Limiting-Issue](https://github.com/ranaroussi/yfinance/issues/2128), [Scrapfly Guide 2026](https://scrapfly.io/blog/posts/guide-to-yahoo-finance-api)
+- Import: [Portfolio Performance (GitHub, EPL)](https://github.com/portfolio-performance/portfolio), [BittyTax Bitpanda-Konverter](https://github.com/BittyTax/BittyTax)
