@@ -65,6 +65,17 @@ Jede Antwort trägt `{ price, currency, asOf, source, delayed: boolean }`, die U
 
 In der DB landen nur **Tagesschlusskurse** gehaltener oder beobachteter Instrumente (täglicher Vercel-Cron).
 
+## Kurshistorie für die Analyse (Phase 4)
+
+| Daten | Quelle | Abruf | Grenzen |
+|---|---|---|---|
+| Aktien, ETFs, Fonds | Yahoo `v8/finance/chart?range=1y…max&interval=1d&events=split` | je Instrument, 12 h Data Cache | Kurse sind Split-bereinigt → wird anhand der mitgelieferten Splits rückgängig gemacht, weil rt100k Splits als Buchung führt |
+| Krypto | CoinGecko `coins/{id}/market_chart?vs_currency=eur&days=365&interval=daily` | je Coin, 12 h | kostenlose Schnittstelle: höchstens 365 Tage |
+| Edelmetalle | Yahoo-Futures (`GC=F`, `SI=F`, `PL=F`) wie beim aktuellen Kurs | 12 h | USD je Unze → je Gramm |
+| Wechselkurse | EZB-Datenportal (SDMX) `EXR/D.{Währung}.EUR.SP00.A?format=csvdata&detail=dataonly` | je Währung ab Jahresbeginn des ersten Kaufs, 12 h | Referenzkurse nur an Bankarbeitstagen; dazwischen gilt der letzte Kurs |
+
+Rückfall bei Ausfall: gespeicherte Tagesschlusskurse (`price_daily`) und Wechselkurse (`fx_daily`) des Crons.
+
 ## Import-Formate (Phase 3)
 
 Entscheidung des Betreibers (20.10.2026): Parser nach öffentlichen Formatreferenzen bauen statt auf eigene Beispieldokumente zu warten; geprüft wird mit echten Dokumenten lokal in der App (nichts wird hochgeladen).
