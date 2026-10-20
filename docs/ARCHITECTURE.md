@@ -1,6 +1,6 @@
 # Architektur
 
-Stand: Phase 3 (20.10.2026). Grundsatz: **0 € Kosten, Sicherheit vor Features.** Jede Architekturentscheidung muss in die Free Tiers unten passen.
+Stand: Phase 4, Teil 1 (20.10.2026). Grundsatz: **0 € Kosten, Sicherheit vor Features.** Jede Architekturentscheidung muss in die Free Tiers unten passen.
 
 ## Überblick
 
@@ -13,6 +13,7 @@ Vercel Hobby · Region fra1 · Next.js 16 (App Router, alle Seiten dynamisch ger
    ├─ Server Components / Server Actions → Data-Access-Schicht src/server/dal
    │    (Autorisierung zentral, deny by default, withUser() setzt app.user_id je Transaktion)
    ├─ Import (src/server/imports.ts + dal/imports.ts): Instrumente zuordnen, Duplikate, Speichern
+   ├─ Analyse (src/server/analysis.ts): Tagesreihe aus Buchungen + Kurshistorie (quotes/history.ts, Data Cache 12 h)
    ├─ Better Auth (selbst gehostet, Passkeys + TOTP, Einladungen) → /api/auth/*
    ├─ Kursdienst src/server/quotes (Yahoo inkl. Metall-Futures · CoinGecko · EZB, Data Cache 60 s,
    │    Fallback letzter Schlusskurs)
@@ -52,6 +53,9 @@ GitHub Actions (öffentliches Repo, kostenlos)
 | A16 | **Import im Browser parsen** (`src/lib/import`, reine Funktionen): PDF-Text über pdf.js, CSV selbst geparst; an den Server gehen nur Buchungen, ISIN/Symbol und SHA-256-Hashes | Abrechnungen enthalten Namen, Adressen, IBAN und Depotnummern – so verlassen sie das Gerät nie (Datensparsamkeit, keine Upload-Speicherung, keine Function-Laufzeit fürs Parsen). Der Server prüft jede Zeile trotzdem wie eine manuelle Buchung. |
 | A17 | **pdf.js 6 Legacy-Build im Hauptthread** („fake worker“), erst beim ersten PDF nachgeladen | Ältere Handy-Browser; kein zusätzlicher Worker-Ursprung in der CSP; Abrechnungen sind klein. Native Canvas-Bibliothek per `ignoredOptionalDependencies` ausgeschlossen. |
 | A18 | **Parser je Broker × Dokumenttyp** mit Konfidenz (hoch/mittel/niedrig), Warnungen und Plausibilitätsprüfung gegen den Endbetrag; Duplikate über **Import-Schlüssel** = SHA-256(Quelle + Fingerabdruck der Buchung), eindeutig je Nutzer | Gleiche Datei zweimal → nichts doppelt; Sammelabrechnungen und Sparpläne mit mehreren Ausführungen bleiben unterscheidbar. Parser auf Basis öffentlicher Formatreferenzen und synthetischer Beispiele (Entscheidung des Betreibers, 20.10.2026). |
+| A19 | **Analyse bei jedem Aufruf neu berechnet** (`src/lib/performance.ts`, reine Funktionen): Tagesreihe aus Buchungen und Kurshistorie, TTWROR (Zuflüsse zu Tagesbeginn, Abflüsse zu Tagesende), IZF taggenau | Keine zusätzlichen Tabellen, keine Cron-Last, immer konsistent mit den Buchungen (auch nach Import alter Abrechnungen). Rechenzeit für Familienportfolios im Millisekundenbereich. |
+| A20 | **Kurshistorie aus dem Data Cache statt aus der DB** (12 h, Zeitraum-Stufen `1y…max` als stabile Cache-Schlüssel); Rückfall auf die gespeicherten Schlusskurse | Spart DB-Speicher und Schreibzugriffe; gleiche Antworten für alle Nutzer. Brief-Regel bleibt: in der DB nur Tagesschlusskurse gehaltener Instrumente (Cron). |
+| A21 | **Kein Sprung bei fehlender Historie**: Beginnt die Kurshistorie einer Position erst nach dem Kauf (z. B. Krypto 12 Monate), startet die Auswertung am ersten vollständig bewerteten Tag mit dessen Marktwert als Ausgangswert und weist das aus | Sonst entstünde am ersten Kurstag ein Scheingewinn (Einstand → Marktwert). Positionen ganz ohne Kurse zählen durchgehend mit dem Einstand. |
 | A15 | **Tests gegen echtes Postgres** (`pnpm test:db`, CI-Service Postgres 18) statt Mocks | RLS, Rollen und Constraints lassen sich nur gegen eine echte Datenbank prüfen. |
 
 ## Free-Tier-Grenzen (geprüft am 19.10.2026)
