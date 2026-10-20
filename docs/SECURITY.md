@@ -157,6 +157,16 @@ Meldeweg für Sicherheitslücken: siehe [`/SECURITY.md`](../SECURITY.md).
 | Funktionslaufzeit: Seite mit `maxDuration` 60 s; Anbieter-Abrufe gebündelt (4 parallel) und gecacht | ✅ |
 | Privatsphäre-Modus: alle Beträge über `Amount`, Diagramm in Prozent | ✅ |
 
+**Teil 2: Rebalancing-Assistent (20.10.2026)**
+
+| Prüfung | Ergebnis |
+|---|---|
+| Neue Tabelle `allocation_target`: `owner_id`, RLS-Policy, Rechte in eigener Migration (`0007`); auf Neon `preview` und `main` angewendet und geprüft (RLS an, App-Rolle ohne Nutzerkontext sieht nichts, kein TRUNCATE) | ✅ |
+| Server Action `saveAllocationTargetsAction`: zuerst `requireUser()`, Eingabe mit zod (bekannte Klassen, ganze Basispunkte 1–10 000, jede Klasse einmal, Summe genau 100 %); fremde Nutzer-IDs kommen nie aus dem Formular | ✅ (DB-Tests) |
+| Negativ-Tests: fremde Zielaufteilung lesen/überschreiben, Einfügen mit fremder `owner_id`, Löschen ohne Filter (trifft nur eigene Zeilen), Zugriff ohne Nutzerkontext | ✅ (4 DB-Tests) |
+| Vorschläge rechnet der Browser aus bereits angezeigten Werten (reine Funktion, 6 Tests); keine Kurse oder Buchungen gehen zusätzlich über die Leitung | ✅ |
+| Kein Steuerwert berechnet; der Hinweis nennt nur den KESt-Satz bei Verkäufen | ✅ |
+
 **Restrisiken Phase 4, Teil 1**
 - Die Formate der Historien-Schnittstellen (Yahoo `range`/`events=split`, CoinGecko `market_chart`, EZB-SDMX-CSV) sind nach Dokumentation und Beispielen gebaut; aus der Entwicklungsumgebung waren die Anbieter nicht erreichbar. Fällt eine Quelle aus oder ändert ihr Format, greift der Rückfall auf gespeicherte Schlusskurse; der Zeitraum wird dann sichtbar verkürzt („Ausgewertet ab …“), es entstehen keine falschen Sprünge.
 - Krypto-Historie über die kostenlose CoinGecko-Schnittstelle nur 12 Monate.

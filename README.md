@@ -2,7 +2,7 @@
 
 Selbst gehosteter, quelloffener Vermögenstracker für Familie und Freunde: Depots, Krypto, Cash und Sachwerte an einem Ort, mit Performance-Analyse, österreichischem Steuer-Cockpit und dem Herzstück **Road to 100k** (Meilensteine, Prognosekegel, Zinseszins-Kipppunkt). Ohne Abo, ohne Broker-Logins, auf Free Tiers.
 
-> **Status:** Phase 3 (Import) fertig: Abrechnungen von Trade Republic und flatex (PDF), Bitpanda-Export und beliebige CSV-Dateien werden im Browser gelesen, vor dem Speichern geprüft und ohne Duplikate übernommen. Davor Phase 2 (Kern): Anmeldung mit Passkey/2FA per Einladung, Depots, Buchungen, Kurse, Übersicht, Road to 100k. Phase 4 (Analyse) läuft: Rendite (zeitgewichtet und geldgewichtet) je Zeitraum mit Vergleichswert, Risiko, Dividenden mit Prognose, Kosten und Aufteilung sind da; Rebalancing und ETF-Durchschau folgen. Vor echten Familiendaten folgt das vollständige Security-Review (Phase 6).
+> **Status:** Phase 3 (Import) fertig: Abrechnungen von Trade Republic und flatex (PDF), Bitpanda-Export und beliebige CSV-Dateien werden im Browser gelesen, vor dem Speichern geprüft und ohne Duplikate übernommen. Davor Phase 2 (Kern): Anmeldung mit Passkey/2FA per Einladung, Depots, Buchungen, Kurse, Übersicht, Road to 100k. Phase 4 (Analyse) läuft: Rendite (zeitgewichtet und geldgewichtet) je Zeitraum mit Vergleichswert, Risiko, Dividenden mit Prognose, Kosten und Aufteilung sind da; dazu ein Rebalancing-Assistent; ETF-Durchschau, Region und Branche folgen. Vor echten Familiendaten folgt das vollständige Security-Review (Phase 6).
 
 ## Grundsätze
 
