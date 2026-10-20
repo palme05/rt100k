@@ -50,7 +50,8 @@ Gewichte: 400, 500 (Zahlen, Titel), 600 (Abschnittstitel, Diagramm-Werte). Diagr
 
 - **Raster:** am Handy eine Spalte; ab 820 px 12 Spalten (Abschnitte halb), ab 1120 px Drittel/zwei Drittel. `Section span="twoThirds" | "third" | "half" | "full"`.
 - Jeder Abschnitt: Haarlinie oben, Titel links (600), Meta rechts (`--ink-3`), optional Werkzeuge (Segment-Umschalter).
-- Kopfzeile: Logo (Strecke mit Position), drei Navigationspunkte mit Akzent-Unterstrich, rechts Privatsphäre und Suche (`⌘K`). Am Handy rutscht die Navigation in eine zweite Zeile, die Suche entfällt.
+- Kopfzeile: Logo (Strecke mit Position), Navigation mit Akzent-Unterstrich und Menü „Mehr“, rechts Privatsphäre und Suche (`⌘K`). Am Handy (≤ 720 px) steht die Navigation als Leiste unten (Safe-Area beachtet), weitere Seiten im Blatt „Mehr“; die Suche entfällt dort.
+- **Alle Funktionen auf allen Geräten:** Was am Handy per Tippen oder Wischen geht, geht am Desktop per Maus und Tastatur – und umgekehrt. Tippflächen mindestens 44 px hoch.
 - Kein seitliches Scrollen am Handy (E2E-Test mit Pixel-7-Viewport, 412 px). Breite Tabellen scrollen in ihrem eigenen Container, Spalten zweiter Ordnung blenden sich am Handy aus (`hideSm`).
 
 ## Komponenten
@@ -67,6 +68,9 @@ Alle unter `src/components/`. Seiten setzen sich nur daraus zusammen, eigene CSS
 | `Trend` | `ui/Trend.tsx` | Veränderung mit Pfeil, Vorzeichen, Farbe |
 | `Rows`, `Row` | `ui/Rows.tsx` | Listen „Bezeichnung … Wert“ (optional Datum, Untertitel) |
 | `WeightBar` | `ui/AllocationBars.tsx` | Kleiner Gewichtsbalken in Tabellenzellen |
+| `TabBar` | `shell/TabBar.tsx` | Handy: Leiste unten (Übersicht, Depots, Analyse, Road, Mehr) mit Blatt „Mehr“; am Desktop ausgeblendet (dort „Mehr“ in der Kopfzeile) |
+| `BookingList` | `bookings/BookingList.tsx` | Alle Buchungen nach Monat, Filter (Art, Wert, Jahr), Suche, Bearbeiten/Löschen je Zeile, schrittweise anzeigen |
+| `PriceChart` | `charts/PriceChart.tsx` | Kursverlauf eines Wertpapiers (6 M bis Max) mit Kauf-/Verkaufspunkten |
 | `DonutChart` | `charts/DonutChart.tsx` | Anteile als Ring mit Legende (Name, Prozent, Betrag); Segment per Zeiger, Antippen oder Pfeiltasten hervorheben |
 | `DataTable`, `Th`, `Td`, `NameCell` | `ui/DataTable.tsx` | Tabellen (Zahlen rechts, Name links, `hideSm`; `NameCell` nimmt weiteren Inhalt wie Status und Bearbeiten auf, `Th left` für die passende Kopfzeile) |
 | `Segmented` | `ui/Segmented.tsx` | Zeitraum-/Ansichtsumschalter (`aria-pressed`) |
