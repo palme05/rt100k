@@ -16,6 +16,8 @@ export interface RoadPlannerData {
   goals: readonly number[]
   /** gespeicherte Vorgabe, Standard: Sachwerte zählen mit */
   includeTangibles?: boolean
+  /** erkannte Sparpläne (Summe je Monat) – Vorschlag für die Sparrate */
+  savingsPlans?: { monthly: number; count: number } | undefined
 }
 
 export interface RoadSettings {

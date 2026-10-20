@@ -265,3 +265,21 @@
   font-size: var(--text-sm);
   color: var(--ink-2);
 }
+
+.inlineButton {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.75rem;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: var(--ink-2);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+
+.inlineButton:hover {
+  color: var(--ink);
+}
