@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { LedgerBooking } from './holdings'
 import { parseScaled, PRICE_ONE, RATE_DECIMALS } from './quantity'
-import { ageFromReport, e1kvLines, estimateTaxYear, quantityOn, taxFreeFrom, taxYears, type TaxHint, type TaxInstrument, type TaxPortfolio } from './tax'
+import { ageFromReport, e1kvLines, estimateTaxYear, quantityOn, simulateSale, taxFreeFrom, taxYears, type TaxHint, type TaxInstrument, type TaxPortfolio } from './tax'
 
 let n = 0
 function b(type: LedgerBooking['type'], occurredOn: string, fields: Partial<LedgerBooking> = {}): LedgerBooking {
@@ -305,3 +305,46 @@ function emptyLike() {
     speculationCents: 0,
   }
 }
+
+describe('Verkauf durchspielen', () => {
+  const Q = 10n ** 12n
+  const price = (euro: number) => BigInt(euro) * 1_000_000n
+
+  it('offene Positionen mit steuerlichem Einstand (inkl. AGE), Kreis und Altbestand', () => {
+    const r = run([
+      portfolio('d', [buy('2025-03-01', 'etf', '10', 100_000), b('age', '2025-12-15', { instrumentId: 'etf', amountCents: 10_000 }), buy('2010-05-01', 'us', '5', 20_000)]),
+      portfolio('k', [buy('2020-06-01', 'btc', '1', 900_000), buy('2026-01-02', 'eth', '2', 400_000)], { kind: 'krypto', taxSimple: true, broker: 'Börse' }),
+      portfolio('m', [buy('2026-01-02', 'gold', '100', 700_000)], { kind: 'sachwert' }),
+    ])
+    const pos = (id: string) => r.openPositions.find((p) => p.instrumentId === id)!
+    expect(pos('etf')).toMatchObject({ portfolioId: 'd', quantity: 10n * Q, taxCostCents: 110_000, category: 'securities', legacy: false })
+    expect(pos('us').legacy).toBe(true)
+    expect(pos('btc')).toMatchObject({ category: 'crypto', legacy: true })
+    expect(pos('eth')).toMatchObject({ category: 'crypto', legacy: false })
+    // Edelmetalle laufen über Lose mit Frist, nicht über den Durchschnitt
+    expect(r.openPositions.some((p) => p.instrumentId === 'gold')).toBe(false)
+    expect(pos('etf').groupKey).not.toBe(pos('eth').groupKey)
+  })
+
+  it('Gewinn: KESt 27,5 % auf den Gewinn, anteiliger Einstand', () => {
+    const s = simulateSale({ quantity: 5n * Q, heldQuantity: 10n * Q, taxCostCents: 100_000, priceMicros: price(120), groupBaseCents: 0, groupBankInterestCents: 0 })
+    expect(s).toEqual({ proceedsCents: 60_000, costCents: 50_000, gainCents: 10_000, taxBeforeCents: 0, taxAfterCents: 2_750, taxChangeCents: 2_750, netCents: 57_250 })
+  })
+
+  it('Verluste im Kreis werden gegengerechnet – ein Verlust spart Steuer', () => {
+    // 200 € Verlust im Kreis schlucken den Gewinn von 100 €
+    expect(simulateSale({ quantity: 10n * Q, heldQuantity: 10n * Q, taxCostCents: 100_000, priceMicros: price(110), groupBaseCents: -20_000, groupBankInterestCents: 0 })?.taxChangeCents).toBe(0)
+    // Verlustverkauf bei 400 € Gewinnen im Kreis: 100 € weniger Basis → 27,50 € Ersparnis
+    const loss = simulateSale({ quantity: 10n * Q, heldQuantity: 10n * Q, taxCostCents: 100_000, priceMicros: price(90), groupBaseCents: 40_000, groupBankInterestCents: 5_000 })
+    expect(loss).toMatchObject({ gainCents: -10_000, taxChangeCents: -2_750, netCents: 90_000 + 2_750 })
+    // Bankzinsen werden nie verrechnet
+    expect(loss!.taxBeforeCents - loss!.taxAfterCents).toBe(2_750)
+  })
+
+  it('ungültige Mengen → keine Rechnung', () => {
+    const base = { heldQuantity: 10n * Q, taxCostCents: 100_000, priceMicros: price(100), groupBaseCents: 0, groupBankInterestCents: 0 }
+    expect(simulateSale({ ...base, quantity: 0n })).toBeNull()
+    expect(simulateSale({ ...base, quantity: 11n * Q })).toBeNull()
+    expect(simulateSale({ ...base, quantity: Q, priceMicros: -1n })).toBeNull()
+  })
+})

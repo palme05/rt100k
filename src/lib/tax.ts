@@ -144,6 +144,19 @@ export type TaxHint =
   | { kind: 'domestic-dividend'; instrumentIds: string[] }
   | { kind: 'speculation'; cents: number; overLimit: boolean }
 
+/** Offene Position mit steuerlichem Einstand (heute) – für den Verkaufs-Simulator. */
+export interface OpenTaxPosition {
+  portfolioId: string
+  instrumentId: string
+  quantity: bigint
+  taxCostCents: number
+  category: TaxCategory
+  /** Ausgleichskreis des Depots */
+  groupKey: string
+  /** Altbestand (Krypto bis Feb. 2021, Wertpapiere vor 2011) – Schätzung zu hoch */
+  legacy: boolean
+}
+
 export interface E1kvLine {
   code: string | null
   label: string
@@ -169,6 +182,8 @@ export interface TaxYearResult {
   sales: TaxSale[]
   metalLots: MetalLot[]
   hints: TaxHint[]
+  /** offene Positionen mit steuerlichem Einstand (Stand heute) */
+  openPositions: OpenTaxPosition[]
   /** Depots mit widersprüchlichen Buchungen (nicht gerechnet) */
   invalidPortfolioIds: string[]
 }
@@ -257,7 +272,7 @@ interface Replay {
   figures: TaxFigures
   sales: TaxSale[]
   lots: MetalLot[]
-  open: { instrumentId: string; quantity: bigint; taxCostCents: number; category: TaxCategory }[]
+  open: { instrumentId: string; quantity: bigint; taxCostCents: number; category: TaxCategory; firstAcquired: string | null }[]
   heldAtYearEnd: Set<string>
   ageInYear: Set<string>
   legacyCrypto: Set<string>
@@ -447,7 +462,7 @@ function replay(portfolio: TaxPortfolio, instruments: ReadonlyMap<string, TaxIns
   snapshot()
 
   for (const [id, s] of averages) {
-    if (s.quantity > 0n) out.open.push({ instrumentId: id, quantity: s.quantity, taxCostCents: s.taxCostCents, category: categoryFor(id) })
+    if (s.quantity > 0n) out.open.push({ instrumentId: id, quantity: s.quantity, taxCostCents: s.taxCostCents, category: categoryFor(id), firstAcquired: s.firstAcquired })
   }
   for (const [id, l] of lotsOf) {
     for (const lot of l) {
@@ -529,6 +544,7 @@ export function estimateTaxYear(input: {
   const domesticDividends = new Set<string>()
   const swapDays = new Set<string>()
   const harvest = new Map<string, HarvestCandidate[]>()
+  const openPositions: OpenTaxPosition[] = []
 
   for (const p of input.portfolios) {
     try {
@@ -562,6 +578,10 @@ export function estimateTaxYear(input: {
     for (const id of r.legacySecurities) legacySecurities.add(id)
     for (const id of r.domesticDividends) domesticDividends.add(id)
     for (const day of r.swapDays) swapDays.add(day)
+    for (const pos of r.open) {
+      const legacy = Boolean(pos.firstAcquired) && ((pos.category === 'crypto' && pos.firstAcquired! <= CRYPTO_LEGACY_UNTIL) || (pos.category === 'securities' && pos.firstAcquired! < SECURITIES_LEGACY_BEFORE))
+      openPositions.push({ portfolioId: p.id, instrumentId: pos.instrumentId, quantity: pos.quantity, taxCostCents: pos.taxCostCents, category: pos.category, groupKey: key, legacy })
+    }
 
     if (open && input.prices) {
       for (const pos of r.open) {
@@ -641,6 +661,39 @@ export function estimateTaxYear(input: {
     sales: sales.sort((a, b) => (a.day < b.day ? -1 : a.day > b.day ? 1 : 0)),
     metalLots: metalLots.sort((a, b) => (a.taxFreeFrom < b.taxFreeFrom ? -1 : 1)),
     hints,
+    openPositions,
     invalidPortfolioIds,
   }
+}
+
+export interface SaleSimulation {
+  proceedsCents: number
+  /** anteiliger steuerlicher Einstand (gleitender Durchschnitt inkl. AGE) */
+  costCents: number
+  gainCents: number
+  /** Steuer des Ausgleichskreises vor bzw. nach dem Verkauf */
+  taxBeforeCents: number
+  taxAfterCents: number
+  /** zusätzliche Steuer (negativ: Ersparnis durch Verlustausgleich) */
+  taxChangeCents: number
+  /** Erlös abzüglich der zusätzlichen Steuer */
+  netCents: number
+}
+
+/**
+ * Verkauf durchspielen: Gewinn gegen den anteiligen steuerlichen Einstand,
+ * Steuer mit allem, was im Ausgleichskreis dieses Jahr schon realisiert ist.
+ * Nebenkosten mindern den Gewinn im Privatvermögen nicht. Nur Wertpapiere
+ * und Krypto – Edelmetalle folgen der Spekulationsfrist.
+ */
+export function simulateSale(input: { quantity: bigint; heldQuantity: bigint; taxCostCents: number; priceMicros: bigint; groupBaseCents: number; groupBankInterestCents: number }): SaleSimulation | null {
+  const { quantity, heldQuantity, taxCostCents, priceMicros, groupBaseCents, groupBankInterestCents } = input
+  if (quantity <= 0n || heldQuantity <= 0n || quantity > heldQuantity || priceMicros < 0n) return null
+  const proceedsCents = valueCents(quantity, priceMicros)
+  const costCents = quantity === heldQuantity ? taxCostCents : Number(mulDiv(BigInt(taxCostCents), quantity, heldQuantity))
+  const gainCents = proceedsCents - costCents
+  const taxBeforeCents = estimateOf(groupBaseCents, groupBankInterestCents)
+  const taxAfterCents = estimateOf(groupBaseCents + gainCents, groupBankInterestCents)
+  const taxChangeCents = taxAfterCents - taxBeforeCents
+  return { proceedsCents, costCents, gainCents, taxBeforeCents, taxAfterCents, taxChangeCents, netCents: proceedsCents - taxChangeCents }
 }

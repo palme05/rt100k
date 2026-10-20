@@ -90,3 +90,9 @@
   max-width: 44rem;
   margin-top: var(--space-4);
 }
+
+.simulator {
+  display: grid;
+  gap: var(--space-4);
+  max-width: 42rem;
+}
