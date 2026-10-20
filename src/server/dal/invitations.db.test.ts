@@ -20,7 +20,7 @@ let admin: Actor
 let member: Actor
 
 beforeAll(async () => {
-  admin = await createUser('Tom', 'admin')
+  admin = await createUser('Admin', 'admin')
   member = await createUser('Mitglied')
 })
 

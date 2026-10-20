@@ -1,8 +1,8 @@
 # Ideen
 
-Ideen außerhalb des aktuellen Scopes. **Nichts davon wird ohne Toms Freigabe gebaut.** Bewertung: Nutzen / Aufwand (S ≤ 1 Tag, M ≤ 1 Woche, L > 1 Woche) / Kosten (0 € = mit Free Tiers machbar).
+Ideen außerhalb des aktuellen Scopes. **Nichts davon wird ohne Freigabe des Betreibers gebaut.** Bewertung: Nutzen / Aufwand (S ≤ 1 Tag, M ≤ 1 Woche, L > 1 Woche) / Kosten (0 € = mit Free Tiers machbar).
 
-## Toms Startideen
+## Startideen des Betreibers
 
 | Idee | Nutzen | Aufwand | Kosten | Notizen |
 |---|---|---|---|---|

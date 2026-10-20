@@ -21,7 +21,7 @@ import { clearFailures, isLocked, registerFailure } from './lockout'
  *   (durchgesetzt in src/server/auth/session.ts).
  * - Rate-Limit in der Datenbank (gilt über alle Serverless-Instanzen) plus
  *   Sperre je E-Mail nach Fehlversuchen (lockout.ts).
- * - Keine E-Mails (Entscheidung Tom, 19.10.2026): Hinweise erscheinen in der App.
+ * - Keine E-Mails (Entscheidung des Betreibers, 19.10.2026): Hinweise erscheinen in der App.
  */
 
 export const APP_NAME = 'rt100k'

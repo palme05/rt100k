@@ -6,10 +6,11 @@
 
 1. **0 € Kosten** – nur Free Tiers, keine Dienste mit Kreditkarte. Kostenpflichtiges → `docs/IDEAS.md`.
 2. **Öffentliches Repo:** keine echten Finanzdaten, keine Secrets. Test-Dokumente nur anonymisiert. Vor jedem Commit läuft gitleaks.
+   **Keine persönlichen Angaben** des Betreibers oder anderer Nutzer – kein Name, keine E-Mail, kein Wohnort, keine Konten –, auch nicht in Commit-Nachrichten, PRs, Kommentaren oder Test-Fixtures. In Texten heißt er „der Betreiber“.
 3. Kein Girokonto, kein Haushaltsbuch, keine Bank-APIs, keine Broker-Logins.
 4. Steuerwerte sind Schätzungen und in der UI so gekennzeichnet.
-5. **Sicherheit vor Features.** Security-Abkürzungen nur nach Rückfrage bei Tom.
-6. Rückfrage bei Tom vor allem, was Geld kostet, Nutzungsbedingungen verletzen könnte oder ein Daten-/Rechtsrisiko birgt. Parser erst bauen, wenn anonymisierte Beispieldokumente vorliegen.
+5. **Sicherheit vor Features.** Security-Abkürzungen nur nach Rückfrage beim Betreiber.
+6. Rückfrage beim Betreiber vor allem, was Geld kostet, Nutzungsbedingungen verletzen könnte oder ein Daten-/Rechtsrisiko birgt. Parser erst bauen, wenn anonymisierte Beispieldokumente vorliegen.
 
 ## Befehle
 
@@ -52,7 +53,7 @@ Im Cloud-Container: `pg_ctlcluster 16 main start` (lokales Postgres, Passwort f�
 1. Arbeiten in kleinen Commits, Tests grün.
 2. Security-Check gegen `docs/SECURITY.md`, Datei aktualisieren.
 3. Preview-Deploy auf Vercel prüfen.
-4. Kurzer Bericht an Tom: fertig / offen / Security-Befunde / Free-Tier-Verbrauch.
+4. Kurzer Bericht an den Betreiber: fertig / offen / Security-Befunde / Free-Tier-Verbrauch.
 
 ## Struktur
 
