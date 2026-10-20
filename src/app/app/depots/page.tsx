@@ -1,10 +1,13 @@
 import Link from 'next/link'
 import { Amount } from '@/components/privacy/privacy'
 import { DataTable, NameCell, Td, Th } from '@/components/ui/DataTable'
-import { PageHead, Section } from '@/components/ui/layout'
+import { Note, PageHead, Section } from '@/components/ui/layout'
+import { Row, Rows } from '@/components/ui/Rows'
 import { Trend } from '@/components/ui/Trend'
 import button from '@/components/ui/button.module.css'
+import { dayLabel } from '@/lib/display'
 import { requireUser } from '@/server/auth/session'
+import { listSharedWithMe } from '@/server/dal/shares'
 import { valuePortfolios } from '@/server/overview'
 import styles from './depots.module.css'
 
@@ -14,7 +17,7 @@ const KIND_LABEL = { depot: 'Wertpapierdepot', krypto: 'Krypto', cash: 'Cash', s
 
 export default async function PortfoliosPage() {
   const user = await requireUser()
-  const valuation = await valuePortfolios(user)
+  const [valuation, shared] = await Promise.all([valuePortfolios(user), listSharedWithMe(user)])
   return (
     <>
       <PageHead id="depots-titel" title="Depots und Konten" />
@@ -70,6 +73,21 @@ export default async function PortfoliosPage() {
           </DataTable>
         )}
       </Section>
+      {shared.length > 0 ? (
+        <Section id="geteilt" title="Mit mir geteilt" meta="nur lesen, zählt nicht zu deinem Vermögen">
+          <Rows>
+            {shared.map((s) => (
+              <Row
+                key={s.portfolioId}
+                label={<Link href={`/app/geteilt/${s.portfolioId}`}>{s.name}</Link>}
+                sub={`von ${s.ownerName} · ${KIND_LABEL[s.kind]}${s.since ? ` · seit ${dayLabel(s.since.slice(0, 10))}` : ''}`}
+                value={null}
+              />
+            ))}
+          </Rows>
+          <Note>Freigaben bekommst du per Link vom Besitzer des Depots.</Note>
+        </Section>
+      ) : null}
     </>
   )
 }

@@ -16,8 +16,8 @@ Meldeweg für Sicherheitslücken: siehe [`/SECURITY.md`](../SECURITY.md).
 | # | Bedrohung | Angriffsweg | Gegenmaßnahmen | Status |
 |---|---|---|---|---|
 | T1 | **Kontoübernahme** | Credential Stuffing, Phishing, Session-Diebstahl | Passkeys bevorzugt; TOTP-2FA (Admin Pflicht); Rate-Limit + temporäre Sperre; Session-Cookies `httpOnly`/`Secure`/`SameSite=Lax`, begrenzte Laufzeit, Erneuerung; Session-Liste + „Überall abmelden“; Hinweis bei neuem Gerät (in der App, keine E-Mails – Entscheidung des Betreibers); keine Enumeration bei Login | ✅ Phase 2 |
-| T2 | **Zugriff auf fremde Depots (IDOR)** | IDs in URLs/Server Actions manipulieren | Zentrale Data-Access-Schicht, *deny by default*, jede Abfrage auf den Besitzer gefiltert; nicht erratbare IDs (UUIDv4) als zusätzliche Hürde, nie als Schutz; Postgres RLS als zweite Linie; **Negativ-Tests**: lesen/ändern/löschen/exportieren fremder Daten muss scheitern | ✅ Phase 2 (Freigaben folgen in Phase 6) |
-| T3 | **Missbrauch von Freigaben** | „ansehen“-Recht zum Ändern nutzen, Freigabe nach Widerruf | Rechte serverseitig je Aktion geprüft; Widerruf wirkt sofort (keine gecachten Rechte); Audit-Log für Freigaben | 🔜 Phase 2/6 |
+| T2 | **Zugriff auf fremde Depots (IDOR)** | IDs in URLs/Server Actions manipulieren | Zentrale Data-Access-Schicht, *deny by default*, jede Abfrage auf den Besitzer gefiltert; nicht erratbare IDs (UUIDv4) als zusätzliche Hürde, nie als Schutz; Postgres RLS als zweite Linie; **Negativ-Tests**: lesen/ändern/löschen/exportieren fremder Daten muss scheitern | ✅ Phase 2, Freigaben Phase 6d |
+| T3 | **Missbrauch von Freigaben** | „ansehen“-Recht zum Ändern nutzen, Freigabe nach Widerruf, fremdes Depot „freigeben“, Konten über Freigaben ausforschen | Nur lesend: für Empfänger gibt es keinen schreibenden Weg; jede Lese-Abfrage prüft zuerst die angenommene Freigabe (RLS im Kontext des Empfängers); Widerruf/Verlassen wirkt sofort (keine gecachten Rechte); Freigabe nur per Einmal-Link (Hash gespeichert, 72 h) statt E-Mail-Suche; zusammengesetzter Fremdschlüssel (Depot + Besitzer) und RLS verhindern Freigaben fremder Depots; Annehmen nur über eine eng begrenzte Datenbankfunktion; Audit-Log | ✅ Phase 6d |
 | T4 | **Bösartige Uploads** | präparierte PDFs/CSVs (Exploits, Zip-Bomben, Formel-Injection) | Dateien werden **nur im Browser** gelesen und nie hochgeladen oder gespeichert; Magic-Byte-Prüfung, ≤ 10 MB, ≤ 50 Seiten, 20 s; pdf.js 6 nur zur Textextraktion (keine eval-Pfade mehr, die CSP verbietet `eval` zusätzlich; keine Schriften, kein XFA, kein WebAssembly, keine Bilder); CSV ≤ 20 000 Zeilen, Felder ≤ 2000 Zeichen; der Server prüft jede Zeile wie eine manuelle Buchung; CSV-Export entschärft `= + - @` | ✅ Phase 3 (CSV-Export folgt mit dem Export, Phase 6) |
 | T5 | **Datenleck über das öffentliche Repo** | echte Daten/Secrets committet, Test-PDFs nicht anonymisiert | gitleaks Pre-Commit + CI (gesamte Historie) mit Regeln für Postgres-URLs und IBANs; `.gitignore` für `.env*`, `/private/`, `*.real.*`; GitHub Secret Scanning + Push Protection; Beispiel-Dokumente nur anonymisiert | ✅ gitleaks, .gitignore · ⏳ Secret Scanning (Repo öffentlich schalten) |
 | T6 | **Datenleck über Logs/Artefakte** | Finanzdaten/Tokens in Logs, `.next/` oder DB-Dumps als CI-Artefakt | Keine Artefakt-Uploads in CI (`.next/` enthält Preview-Keys); ZAP-Report nicht hochgeladen; keine Dumps im Repo; Logs nur mit Fehlernamen/-klassen, nie mit Beträgen, Tokens, Verbindungsdaten | ✅ |
@@ -227,6 +227,22 @@ Meldeweg für Sicherheitslücken: siehe [`/SECURITY.md`](../SECURITY.md).
 | Fremde IDs im Backup (z. B. Bobs privater Fonds) werden nie übernommen – IDs werden neu vergeben | ✅ (DB-Test) |
 | Konto löschen (Server Action): `requireUser()`, Passwort über Better Auth `verifyPassword`, Fehlversuche → Login-Sperre, Wort „LÖSCHEN“; Buchungen zuerst, dann der Nutzer (Kaskade über alle Tabellen); letzter Admin geschützt; danach Anmeldeseite (löscht auch den Offline-Stand) | ✅ (DB- und E2E-Test) |
 | Abmelden jetzt auch am Handy (Konto-Seite), löscht den Offline-Stand | ✅ |
+
+## Security-Check Phase 6c/6d – Monatsrückblick, Freigaben (20.10.2026)
+
+| Prüfung | Ergebnis |
+|---|---|
+| Monatsrückblick rechnet nur aus eigenen Buchungen (wie die Analyse), speichert nichts; Monat aus der URL per Regex geprüft, ungültige Werte → Standard-Ausgabe | ✅ (E2E) |
+| Highlights sind Bausteine – Beträge laufen über `Amount` (Privatsphäre-Modus), Namen werden von React escaped | ✅ |
+| Neue Tabelle `portfolio_share` mit `owner_id`, RLS (Besitzer: alles; Empfänger: lesen und verlassen), Rechte in eigener Migration (`0012`, ohne UPDATE) | ✅ |
+| Zusammengesetzter Fremdschlüssel `(portfolio_id, owner_id) → portfolio(id, owner_id)`: niemand kann ein fremdes Depot freigeben, auch nicht direkt per SQL mit der App-Rolle | ✅ (DB-Test) |
+| Einmal-Link: 32 Byte Zufall, nur SHA-256 gespeichert, 72 h, einmalig, nicht für das eigene Depot, keine doppelte Freigabe; höchstens 20 je Depot; abgelaufene Links werden aufgeräumt | ✅ (DB-Tests) |
+| `peek_portfolio_share` / `accept_portfolio_share`: `SECURITY DEFINER` mit festem `search_path`, nur mit gesetztem `app_user_id()`, `EXECUTE` nur für `rt100k_app`, liefern nur Depot-/Besitzername bzw. die Depot-ID | ✅ |
+| Lesen geteilter Depots: erst Freigabe im Kontext des Empfängers (RLS), dann nur lesende Abfragen im Kontext des Besitzers mit Depot- **und** Besitzer-Filter; das andere Depot desselben Besitzers bleibt unsichtbar; geteilte Daten erscheinen nie in den eigenen Listen | ✅ (DB-Tests + E2E: Besitzerseite 404) |
+| Widerrufen (nur Besitzer), Verlassen (nur Empfänger), Depot löschen → Zugriff sofort weg | ✅ (DB-Tests + E2E) |
+| Server Actions mit `requireUser()`; Audit-Einträge für Link erstellt/angenommen/widerrufen/verlassen | ✅ |
+
+**Restrisiken:** Wer den Link vor dem Empfänger öffnet, bekommt die Freigabe – deshalb einmalig und kurz gültig, sichtbar in der Liste des Besitzers und jederzeit widerrufbar. Der Link steht im Pfad und kann in Server-Logs auftauchen (wie Einladungslinks).
 
 ## Notfallplan
 

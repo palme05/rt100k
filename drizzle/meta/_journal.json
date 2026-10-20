@@ -78,6 +78,20 @@
       "when": 1792489049468,
       "tag": "0010_booking_age_tax_refund",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1792494238520,
+      "tag": "0011_portfolio_share",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1792494249472,
+      "tag": "0012_portfolio_share_grants",
+      "breakpoints": true
     }
   ]
 }

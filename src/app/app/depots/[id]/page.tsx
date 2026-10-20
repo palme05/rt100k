@@ -13,6 +13,7 @@ import { requireUser } from '@/server/auth/session'
 import { listBookings } from '@/server/dal/bookings'
 import { NotFoundError } from '@/server/dal/errors'
 import { getPortfolio } from '@/server/dal/portfolios'
+import { listShares } from '@/server/dal/shares'
 import { valuePortfolios } from '@/server/overview'
 import { quoteInEur } from '@/server/quotes/service'
 import { updatePortfolioAction } from '../actions'
@@ -20,6 +21,7 @@ import { PortfolioForm } from '../PortfolioForm'
 import { BookingForm } from './BookingForm'
 import { DeleteBookingButton } from './DeleteBookingButton'
 import { DeletePortfolioForm } from './DeletePortfolioForm'
+import { ShareSettings } from './ShareSettings'
 
 const KIND_LABEL = { depot: 'Wertpapierdepot', krypto: 'Krypto', cash: 'Cash-Konto', sachwert: 'Edelmetalle' } as const
 const TYPE_LABEL: Record<string, string> = {
@@ -59,7 +61,7 @@ export default async function PortfolioPage({ params }: { params: Promise<{ id: 
     if (error instanceof NotFoundError) notFound()
     throw error
   }
-  const [valuation, bookings] = await Promise.all([valuePortfolios(user), listBookings(user, portfolio.id)])
+  const [valuation, bookings, shares] = await Promise.all([valuePortfolios(user), listBookings(user, portfolio.id), listShares(user, portfolio.id)])
   const valued = valuation.portfolios.find((p) => p.id === portfolio.id)
   const value = valued?.value
   const gain = value ? value.valueCents - value.investedCents : 0
@@ -180,6 +182,10 @@ export default async function PortfolioPage({ params }: { params: Promise<{ id: 
               })}
             </Rows>
           )}
+        </Section>
+
+        <Section id="freigaben" title="Freigaben" meta="nur lesen" span="half">
+          <ShareSettings portfolioId={portfolio.id} shares={shares} />
         </Section>
 
         <Section id="einstellungen" title="Einstellungen" span="half">
