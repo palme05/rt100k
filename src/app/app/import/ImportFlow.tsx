@@ -124,7 +124,7 @@ export function ImportFlow({ portfolios, mappings: initialMappings }: { portfoli
       const missing = Object.keys(rowErrors).length
       if (missing > 0) {
         setRows((rs) => rs.map((r) => (rowErrors[r.key] ? { ...r, editing: true } : r)))
-        return setNotice({ tone: 'error', text: `${missing} ${missing === 1 ? 'Zeile braucht' : 'Zeilen brauchen'} noch Angaben – siehe Spalte „Prüfung“.` })
+        return setNotice({ tone: 'error', text: `${missing} ${missing === 1 ? 'Zeile braucht' : 'Zeilen brauchen'} noch Angaben – siehe „Buchung und Prüfung“.` })
       }
 
       let created = 0
@@ -203,15 +203,17 @@ export function ImportFlow({ portfolios, mappings: initialMappings }: { portfoli
                     </p>
                   ))}
                   {f.status === 'fertig' || f.status === 'zuordnen' ? (
-                    <Field id={`ziel-${f.id}`} label="Zieldepot">
-                      <Select id={`ziel-${f.id}`} value={f.portfolioId} onChange={(e) => setFiles((fs) => fs.map((x) => (x.id === f.id ? { ...x, portfolioId: e.target.value } : x)))}>
-                        {portfolios.map((p) => (
-                          <option key={p.id} value={p.id}>
-                            {p.name}
-                          </option>
-                        ))}
-                      </Select>
-                    </Field>
+                    <div className={styles.target}>
+                      <Field id={`ziel-${f.id}`} label="Zieldepot">
+                        <Select id={`ziel-${f.id}`} value={f.portfolioId} onChange={(e) => setFiles((fs) => fs.map((x) => (x.id === f.id ? { ...x, portfolioId: e.target.value } : x)))}>
+                          {portfolios.map((p) => (
+                            <option key={p.id} value={p.id}>
+                              {p.name}
+                            </option>
+                          ))}
+                        </Select>
+                      </Field>
+                    </div>
                   ) : null}
                   {f.status === 'zuordnen' && f.csvRows ? (
                     <MappingEditor rows={f.csvRows} saved={mappings} onSavedChange={setMappings} onApply={(m, data) => void applyCsv(f, m, data)} />
