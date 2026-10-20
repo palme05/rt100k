@@ -71,6 +71,7 @@ Alle unter `src/components/`. Seiten setzen sich nur daraus zusammen, eigene CSS
 | `TabBar` | `shell/TabBar.tsx` | Handy: Leiste unten (Übersicht, Depots, Analyse, Road, Mehr) mit Blatt „Mehr“; am Desktop ausgeblendet (dort „Mehr“ in der Kopfzeile) |
 | `BookingList` | `bookings/BookingList.tsx` | Alle Buchungen nach Monat, Filter (Art, Wert, Jahr), Suche, Bearbeiten/Löschen je Zeile, schrittweise anzeigen |
 | `PriceChart` | `charts/PriceChart.tsx` | Kursverlauf eines Wertpapiers (6 M bis Max) mit Kauf-/Verkaufspunkten |
+| `SaleSimulator` | `tax/SaleSimulator.tsx` | Verkauf durchspielen: Position, Stück, Kurs → Erlös, Einstand, Gewinn/Verlust, ≈ KESt-Änderung, Netto (Live-Region, als Schätzung gekennzeichnet) |
 | `TaskList` | `tasks/TaskList.tsx` | Offene Punkte: abgeleitete (verschwinden von selbst, „Beheben →“) und gespeicherte Aufgaben („✓ Erledigt“) |
 | `LinkChips` | `ui/Chips.tsx` | Auswahl als Links (z. B. Depot beim Schnell-Erfassen), `aria-current`, 44 px hoch |
 | `RefreshButton`, `PullToRefresh` | `shell/refresh.tsx` | Daten neu laden per Knopf bzw. Ziehen (nur installierte App) |
@@ -80,7 +81,7 @@ Alle unter `src/components/`. Seiten setzen sich nur daraus zusammen, eigene CSS
 | `DonutChart` | `charts/DonutChart.tsx` | Anteile als Ring mit Legende (Name, Prozent, Betrag); Segment per Zeiger, Antippen oder Pfeiltasten hervorheben |
 | `DataTable`, `Th`, `Td`, `NameCell` | `ui/DataTable.tsx` | Tabellen (Zahlen rechts, Name links, `hideSm`; `NameCell` nimmt weiteren Inhalt wie Status und Bearbeiten auf, `Th left` für die passende Kopfzeile) |
 | `Segmented` | `ui/Segmented.tsx` | Zeitraum-/Ansichtsumschalter (`aria-pressed`) |
-| `LineChart`, `ColumnChart`, `Sparkline`, `Legend` | `charts/charts.tsx` | Diagramm-Grundbausteine |
+| `LineChart`, `ColumnChart`, `Sparkline`, `Legend` | `charts/charts.tsx` | Diagramm-Grundbausteine; `Sparkline` als kleine Verlaufslinie je Depot in der Übersicht (nur mit ≥ 2 Tageswerten) |
 | `HistoryChart`, `IncomeChart` | `charts/` | Vermögensverlauf mit Zeitraum, Erträge je Monat |
 | `RouteLine`, `RouteSummary`, `RoadPlanner` | `road/` | Road to 100k: Linienplan, Ankunftssatz, Planer |
 | `Markets` | `markets/` | Börsen offen/geschlossen (Punkt + Text) |

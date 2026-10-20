@@ -357,6 +357,19 @@ Unabhängiges Review (eigener Prüfdurchlauf, nur lesend) aller Route-Handler, S
 | Gesten: Wischen nach links öffnet nur die Rückfrage, löscht nie direkt; Löschen in der Liste fragt immer einmal nach. Ziehen zum Aktualisieren lädt nur die Seite neu (kein neuer Endpunkt). Vibration nur über die Browser-API ohne Daten | ✅ |
 | Übergänge, Druckzustände und Ziehen-Hinweis nur über CSS-Klassen und Animationen – keine Inline-Styles | ✅ |
 
+## Nachtrag: Paket 3 – Tagesveränderung, Verkaufs-Simulator, Road-Szenario, Sparpläne, OpenFIGI, Import-Erinnerung (20.10.2026)
+
+| Prüfung | Ergebnis |
+|---|---|
+| `previousCloses`: liest nur die allgemeine Kurstabelle `price_daily` (keine Nutzerdaten), Instrument-IDs kommen aus der eigenen Bewertung | ✅ (DB-Test) |
+| `listPortfolioSeries`: `withUser` + `ownerId`-Filter | ✅ (Negativ-Test in `access.db.test.ts`) |
+| `lastImportAt`: `withUser` + `ownerId`-Filter | ✅ (Negativ-Test: fremder Nutzer → null) |
+| Verkaufs-Simulator rechnet nur im Browser mit Daten, die das Steuer-Cockpit ohnehin zeigt; keine neue Action, nichts wird gespeichert. Eingaben werden mit denselben Parsern wie Formulare gelesen (`parseQuantity`, `parseEuroToCents`), Ganzzahlen als Text übergeben | ✅ (Unit-Tests) |
+| Road-Szenario: nur im Browser, nicht gespeichert | ✅ |
+| Sparplan- und Import-Hinweise entstehen im Tageslauf im RLS-Kontext des Nutzers, mit festen internen Links und Dedupe je Ausführung bzw. Monat | ✅ (DB-Test: einmalig, nicht beim anderen Nutzer) |
+| OpenFIGI: nur serverseitig, feste URL (kein nutzergesteuertes Ziel), Zeit- und Größenlimit wie alle Anbieter, Antwort per zod geprüft, Ticker per Positivliste (`[A-Z0-9./-]`, bekannte Börsen). Übernommen wird nur ein Yahoo-Symbol, das Yahoo anschließend bestätigt; Name und Währung kommen nie von OpenFIGI. Nur ISINs gehen hinaus, keine Nutzerdaten. Optionaler Schlüssel nur über Env-Var | ✅ (Unit-Tests) |
+| Übersicht: keine neuen Inline-Styles (Verlaufslinie als SVG-Pfad, Farben über Klassen); „+“ blendet sich über Klassen aus und ist dann weder fokussierbar noch für Screenreader sichtbar | ✅ |
+
 ## Notfallplan
 
 **Bei Verdacht auf Secret-Leak** (Commit, Log, Screenshot):
