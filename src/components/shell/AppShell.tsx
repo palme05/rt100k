@@ -1,5 +1,6 @@
 import type { Command } from '../command/CommandPalette'
 import { AppHeader, type NavItem } from './AppHeader'
+import { PullToRefresh } from './refresh'
 import { TabBar } from './TabBar'
 import styles from './shell.module.css'
 
@@ -15,6 +16,8 @@ export function AppShell({
   nav: readonly NavItem[]
   commands: readonly Command[]
   hotkeys: Readonly<Record<string, string>>
+  /** Ziel für „Neue Buchung“ (Kopfzeile am Desktop, „+“ am Handy) */
+  quickAdd?: string
 }) {
   return (
     <>
@@ -22,7 +25,8 @@ export function AppShell({
       <main className={styles.main} id="inhalt">
         {children}
       </main>
-      <TabBar nav={header.nav} />
+      <TabBar nav={header.nav} quickAdd={header.quickAdd} />
+      <PullToRefresh />
     </>
   )
 }

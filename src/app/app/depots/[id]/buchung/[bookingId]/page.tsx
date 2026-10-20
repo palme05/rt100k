@@ -4,10 +4,10 @@ import { dayLabel } from '@/lib/display'
 import { viennaDay } from '@/lib/format'
 import { formatQuantity, quantityFromDb } from '@/lib/quantity'
 import { requireUser } from '@/server/auth/session'
-import { getBooking, listBookings } from '@/server/dal/bookings'
+import { getBooking } from '@/server/dal/bookings'
 import { NotFoundError } from '@/server/dal/errors'
-import { getInstruments } from '@/server/dal/instruments'
 import { getPortfolio } from '@/server/dal/portfolios'
+import { loadHeldInstruments } from '@/server/held'
 import { BookingForm } from '../../BookingForm'
 import { DeleteBookingButton } from '../../DeleteBookingButton'
 
@@ -32,10 +32,7 @@ export default async function EditBookingPage({ params }: { params: Promise<{ id
   // Buchung muss zu diesem Depot gehören (sonst wäre die Adresse zusammengesetzt)
   if (booking.portfolioId !== portfolio.id) notFound()
 
-  const bookings = await listBookings(user, portfolio.id)
-  const ids = [...new Set(bookings.map((b) => b.instrumentId).filter((v): v is string => !!v))]
-  // Art je Instrument (für die Auswahl in Krypto- und Edelmetall-Depots)
-  const held = (await getInstruments(user, ids)).map((i) => ({ id: i.id, name: i.name, kind: i.kind }))
+  const held = await loadHeldInstruments(user, portfolio.id)
   const instrument = booking.instrumentId ? (held.find((h) => h.id === booking.instrumentId) ?? { id: booking.instrumentId, name: booking.instrumentName ?? 'Unbekannt', kind: 'other' }) : null
 
   return (

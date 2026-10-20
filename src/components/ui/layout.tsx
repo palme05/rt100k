@@ -65,8 +65,15 @@ export function SectionHead({
       <Heading id={id} className={styles.title}>
         {title}
       </Heading>
-      {meta ? <p className={styles.meta}>{meta}</p> : null}
-      {actions}
+      {actions ? (
+        // Zusatz und Aktion rechts zusammen, damit nichts verloren in der Mitte steht
+        <div className={styles.aside}>
+          {meta ? <p className={styles.meta}>{meta}</p> : null}
+          {actions}
+        </div>
+      ) : meta ? (
+        <p className={styles.meta}>{meta}</p>
+      ) : null}
     </div>
   )
 }

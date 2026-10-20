@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation'
 import { BookingList } from '@/components/bookings/BookingList'
 import { Amount } from '@/components/privacy/privacy'
+import { RefreshButton } from '@/components/shell/refresh'
 import { WeightBar } from '@/components/ui/AllocationBars'
 import { DataTable, NameCell, Td, Th } from '@/components/ui/DataTable'
 import { Message } from '@/components/ui/forms'
@@ -21,6 +22,7 @@ import { PortfolioForm } from '../PortfolioForm'
 import { BookingForm } from './BookingForm'
 import { DeleteImportsForm } from './DeleteImportsForm'
 import { DeletePortfolioForm } from './DeletePortfolioForm'
+import { ReconcileForm } from './ReconcileForm'
 import { ShareSettings } from './ShareSettings'
 import styles from '../depots.module.css'
 
@@ -101,6 +103,7 @@ export default async function PortfolioPage({ params, searchParams }: { params: 
             id="positionen"
             title="Positionen"
             meta={oldest ? `Kurse von ${formatDate(oldest)}, ${formatTime(oldest)} Uhr${delayed ? ' · teils verzögert' : ''}` : 'Einstand nach gleitendem Durchschnitt'}
+            actions={oldest ? <RefreshButton label="Kurse aktualisieren" /> : undefined}
           >
             {value && value.positions.length > 0 ? (
               <DataTable
@@ -153,6 +156,12 @@ export default async function PortfolioPage({ params, searchParams }: { params: 
             {hasCrypto ? <Note>Kryptokurse: Data provided by CoinGecko.</Note> : null}
           </Section>
         )}
+
+        {portfolio.kind === 'cash' ? (
+          <Section id="abgleich" title="Kontostand abgleichen" meta="statt jede Bewegung zu buchen" span="half">
+            <ReconcileForm portfolioId={portfolio.id} balance={(value?.cashCents ?? 0) / 100} />
+          </Section>
+        ) : null}
 
         <Section id="buchen" title="Buchen" meta="Beträge in Euro, wie auf der Abrechnung" span="half">
           <BookingForm portfolioId={portfolio.id} kind={portfolio.kind} held={held} today={viennaDay()} />
