@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { Sparkline } from '@/components/charts/charts'
 import { ASSET_KIND_SLOT, DonutChart } from '@/components/charts/DonutChart'
 import { HistoryChart } from '@/components/charts/HistoryChart'
 import { Markets } from '@/components/markets/Markets'
@@ -15,13 +16,17 @@ import { Row, Rows } from '@/components/ui/Rows'
 import { HeroSummary } from '@/components/ui/Summary'
 import { Trend } from '@/components/ui/Trend'
 import { dayLabel } from '@/lib/display'
-import { formatDate, formatTime } from '@/lib/format'
+import { addDays } from '@/lib/days'
+import { formatDate, formatTime, viennaDay } from '@/lib/format'
 import { buildSnapshot } from '@/lib/offline'
 import { requireUser } from '@/server/auth/session'
 import { recentNewDeviceLogin } from '@/server/dal/audit'
+import { listPortfolioSeries } from '@/server/dal/snapshots'
 import { valuePortfolios } from '@/server/overview'
 import { loadRoad } from '@/server/road'
 import { loadOpenTasks } from '@/server/tasks'
+import { loadTax } from '@/server/tax'
+import { loadDayMoves } from '@/server/today'
 import styles from '../depots/depots.module.css'
 import { completeTaskAction } from '../hinweise/actions'
 
@@ -68,7 +73,13 @@ export default async function OverviewPage() {
     )
   }
 
-  const [road, tasks] = await Promise.all([loadRoad(user, valuation), loadOpenTasks(user, valuation)])
+  const [road, tasks, moves, series, tax] = await Promise.all([
+    loadRoad(user, valuation),
+    loadOpenTasks(user, valuation),
+    loadDayMoves(valuation),
+    listPortfolioSeries(user, addDays(viennaDay(), -90)),
+    loadTax(user, null),
+  ])
   const total = valuation.totalCents / 100
   const invested = valuation.investedCents / 100
   const gain = total - invested
@@ -102,13 +113,22 @@ export default async function OverviewPage() {
         eyebrow="Gesamtvermögen"
         value={total}
         stats={[
+          ...(moves.total
+            ? [
+                {
+                  label: 'Heute',
+                  value: <Trend value={moves.total.ratio} />,
+                  note: <Amount value={moves.total.changeCents / 100} signed whole />,
+                },
+              ]
+            : []),
           {
             label: 'Kursgewinn',
             value: invested > 0 ? <Trend value={gain / invested} /> : '–',
             note: <Amount value={gain} signed whole />,
           },
           { label: 'Eingesetzt', value: <Amount value={invested} whole />, note: 'Einstand und Einzahlungen' },
-          { label: 'Erträge', value: <Amount value={income} whole />, note: 'Dividenden und Zinsen' },
+          ...(moves.total ? [] : [{ label: 'Erträge', value: <Amount value={income} whole />, note: 'Dividenden und Zinsen' }]),
           {
             label: 'Kurse',
             value: asOf ? `${formatTime(asOf)} Uhr` : '–',
@@ -169,11 +189,24 @@ export default async function OverviewPage() {
           >
             {valuation.portfolios.map((p) => {
               const g = p.value.valueCents - p.value.investedCents
+              const today = moves.byPortfolio.get(p.id)
+              const line = series.get(p.id) ?? []
               return (
                 <tr key={p.id}>
-                  <NameCell name={p.name} sub={p.broker ?? undefined} href={`/app/depots/${p.id}`} />
+                  <NameCell
+                    name={p.name}
+                    sub={
+                      today ? (
+                        <>
+                          heute <Trend value={today.ratio} />
+                        </>
+                      ) : (p.broker ?? undefined)
+                    }
+                    href={`/app/depots/${p.id}`}
+                  />
                   <Td>
                     <Amount value={p.value.valueCents / 100} />
+                    {line.length >= 2 ? <Sparkline values={line} width={72} height={18} label={`Verlauf ${p.name}, letzte 90 Tage`} /> : null}
                   </Td>
                   <Td>
                     {p.value.investedCents > 0 ? <Trend value={g / p.value.investedCents} /> : '–'}
@@ -211,8 +244,33 @@ export default async function OverviewPage() {
           <Markets />
         </Section>
 
-        <Section id="steuer" title="Steuer" meta="≈ Schätzung" span="third">
-          <Note>Das Steuer-Cockpit (KESt, E1kv, ausschüttungsgleiche Erträge) folgt in Phase 5. Alle Werte dort sind Schätzungen, keine Steuerberatung.</Note>
+        {moves.top.length > 0 ? (
+          <Section id="bewegt" title="Heute bewegt" meta="seit dem letzten Schlusskurs" span="third">
+            <Rows>
+              {moves.top.map((m) => (
+                <Row
+                  key={m.instrumentId}
+                  label={<Link href={`/app/wertpapier/${m.instrumentId}`}>{valuation.instruments.get(m.instrumentId)?.name ?? 'Unbekannt'}</Link>}
+                  sub={<Amount value={m.changeCents / 100} signed />}
+                  value={<Trend value={m.ratio} />}
+                />
+              ))}
+            </Rows>
+          </Section>
+        ) : null}
+
+        <Section id="steuer" title={tax ? `Steuer ${tax.year}` : 'Steuer'} meta="≈ Schätzung" span="third">
+          {tax ? (
+            <Rows>
+              <Row label="≈ Steuer gesamt" value={<Amount value={tax.total.estimate} />} />
+              {tax.total.due > 0 ? <Row label="≈ offen über die Erklärung" value={<Amount value={tax.total.due} />} /> : null}
+              {tax.total.forfeited > 0 ? <Row label="Verluste ohne Ausgleich" value={<Amount value={tax.total.forfeited} />} /> : null}
+              {tax.hints.length > 0 ? <Row label="Hinweise" value={`${tax.hints.length}`} /> : null}
+            </Rows>
+          ) : (
+            <Note>Noch keine Buchungen für eine Schätzung.</Note>
+          )}
+          <TextLink href="/app/steuer">Steuer-Cockpit öffnen</TextLink>
         </Section>
 
         <Section id="sicherheit" title="Sicherheit" span="third">
