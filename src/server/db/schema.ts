@@ -477,6 +477,36 @@ export const allocationTarget = pgTable(
   ],
 ).enableRLS()
 
+/**
+ * ETF-Durchschau: zusammengefasste Gewichte aus einer Bestandsliste, die der
+ * Nutzer selbst beim Anbieter geladen hat (nur für ihn sichtbar, nie geteilt).
+ */
+export const etfBreakdown = pgTable(
+  'etf_breakdown',
+  {
+    ownerId: text('owner_id')
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    instrumentId: uuid('instrument_id')
+      .notNull()
+      .references(() => instrument.id, { onDelete: 'cascade' }),
+    fundName: text('fund_name'),
+    asOf: date('as_of', { mode: 'string' }),
+    rows: integer('rows').notNull(),
+    /** [{ label, bp }] je Land, je Branche und die größten Titel */
+    countries: jsonb('countries').notNull(),
+    sectors: jsonb('sectors').notNull(),
+    top: jsonb('top').notNull(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.ownerId, t.instrumentId] }),
+    check('etf_breakdown_rows_check', sql`${t.rows} between 1 and 20000`),
+    check('etf_breakdown_name_check', sql`${t.fundName} is null or char_length(${t.fundName}) <= 120`),
+    pgPolicy('etf_breakdown_owner', { for: 'all', to: appRole, using: ownRows, withCheck: ownRows }),
+  ],
+).enableRLS()
+
 /** Annahmen für Road to 100k (eine Zeile je Nutzer). */
 export const roadSettings = pgTable(
   'road_settings',
