@@ -3,6 +3,7 @@ import type { RoadPlannerData } from '@/components/road/useRoadForecast'
 import { viennaDay } from '@/lib/format'
 import { monthlyHistory, type MonthlyPoint } from '@/lib/history'
 import { GOAL, milestoneInfo, simulateRoad, type MilestoneInfo } from '@/lib/road'
+import { detectSavingsPlans } from '@/lib/savings'
 import type { Actor } from './dal/actor'
 import { getRoadSettings, type RoadSettingsDto } from './dal/road'
 import { listDailyTotals } from './dal/snapshots'
@@ -48,6 +49,13 @@ export async function loadRoad(actor: Actor, valuation: PortfolioValuation): Pro
       milestones: MILESTONES,
       goals: NEXT_GOALS,
       includeTangibles: settings.includeTangibles,
+      savingsPlans: savingsPlansOf(valuation),
     },
   }
+}
+
+/** Summe der erkannten Sparpläne je Monat – als Vorschlag für die Sparrate. */
+function savingsPlansOf(valuation: PortfolioValuation): { monthly: number; count: number } | undefined {
+  const plans = detectSavingsPlans(valuation.bookings, viennaDay())
+  return plans.length > 0 ? { monthly: plans.reduce((s, p) => s + p.amountCents, 0) / 100, count: plans.length } : undefined
 }
