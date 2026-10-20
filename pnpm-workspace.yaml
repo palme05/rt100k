@@ -11,5 +11,10 @@ onlyBuiltDependencies:
 
 # Better Auth 1.7.7: @better-auth/core verlangt exakt utils 0.4.2 als Peer –
 # eine einzige Version erzwingen, damit keine zwei Kopien im Bundle landen.
+#
+# @esbuild-kit/core-utils (über drizzle-kit) hängt an esbuild 0.18 mit einer Lücke im
+# Dev-Server (GHSA-67mh-4wv8-2f99). Dependabot kann die verschachtelte Version nicht
+# anheben; 0.25 ist API-kompatibel für den Loader (drizzle-kit generate geprüft).
 overrides:
   '@better-auth/utils': 0.4.2
+  '@esbuild-kit/core-utils>esbuild': ^0.25.12
