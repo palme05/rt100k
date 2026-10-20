@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { BookingList } from '@/components/bookings/BookingList'
 import { Amount } from '@/components/privacy/privacy'
@@ -6,10 +7,13 @@ import { WeightBar } from '@/components/ui/AllocationBars'
 import { DataTable, NameCell, Td, Th } from '@/components/ui/DataTable'
 import { Message } from '@/components/ui/forms'
 import { BackLink, Grid, Muted, Note, Section } from '@/components/ui/layout'
+import { Row, Rows } from '@/components/ui/Rows'
 import { HeroSummary } from '@/components/ui/Summary'
 import { Trend } from '@/components/ui/Trend'
+import { dayLabel } from '@/lib/display'
 import { formatDate, formatTime, viennaDay } from '@/lib/format'
 import { formatQuantity, quantityFromDb } from '@/lib/quantity'
+import { detectSavingsPlans } from '@/lib/savings'
 import { requireUser } from '@/server/auth/session'
 import { listBookings } from '@/server/dal/bookings'
 import { NotFoundError } from '@/server/dal/errors'
@@ -78,6 +82,10 @@ export default async function PortfolioPage({ params, searchParams }: { params: 
   const oldest = quotes.length ? new Date(Math.min(...quotes.map((q) => q!.asOf.getTime()))) : null
   const delayed = quotes.some((q) => q!.delayed)
   const hasCrypto = (value?.positions ?? []).some((p) => p.kind === 'crypto')
+  const plans = detectSavingsPlans(
+    valuation.bookings.filter((b) => b.portfolioId === portfolio.id),
+    viennaDay(),
+  )
 
   return (
     <>
@@ -156,6 +164,30 @@ export default async function PortfolioPage({ params, searchParams }: { params: 
             {hasCrypto ? <Note>Kryptokurse: Data provided by CoinGecko.</Note> : null}
           </Section>
         )}
+
+        {plans.length > 0 ? (
+          <Section id="sparplaene" title="Sparpläne" meta="aus den Käufen erkannt">
+            <Rows>
+              {plans.map((plan) => (
+                <Row
+                  key={plan.instrumentId}
+                  label={<Link href={`/app/wertpapier/${plan.instrumentId}`}>{valuation.instruments.get(plan.instrumentId)?.name ?? 'Unbekannt'}</Link>}
+                  sub={
+                    plan.overdue ? (
+                      <>
+                        ! Fehlt seit {dayLabel(plan.nextOn)} · <Link href={`/app/buchen?depot=${portfolio.id}`}>jetzt buchen</Link>
+                      </>
+                    ) : (
+                      `monatlich, nächste ≈ ${dayLabel(plan.nextOn)} · ${plan.executions} Ausführungen erkannt`
+                    )
+                  }
+                  value={<Amount value={plan.amountCents / 100} />}
+                />
+              ))}
+            </Rows>
+            <Note>Erkannt an mindestens drei Käufen im Monatsabstand mit ähnlichem Betrag. Fehlt eine Ausführung, erscheint ein Hinweis.</Note>
+          </Section>
+        ) : null}
 
         {portfolio.kind === 'cash' ? (
           <Section id="abgleich" title="Kontostand abgleichen" meta="statt jede Bewegung zu buchen" span="half">
