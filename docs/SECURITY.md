@@ -167,6 +167,17 @@ Meldeweg für Sicherheitslücken: siehe [`/SECURITY.md`](../SECURITY.md).
 | Vorschläge rechnet der Browser aus bereits angezeigten Werten (reine Funktion, 6 Tests); keine Kurse oder Buchungen gehen zusätzlich über die Leitung | ✅ |
 | Kein Steuerwert berechnet; der Hinweis nennt nur den KESt-Satz bei Verkäufen | ✅ |
 
+**Teil 3: ETF-Durchschau (20.10.2026)**
+
+| Prüfung | Ergebnis |
+|---|---|
+| Nutzungsbedingungen der Emittenten geprüft (Auftrag des Betreibers): kein automatischer Abruf, nur vom Nutzer selbst geladene Listen (`docs/DATA_SOURCES.md`) | ✅ |
+| Bestandsliste wird im Browser gelesen (Magic Bytes, ≤ 5 MB, CSV ≤ 20 000 Zeilen, Excel abgewiesen); an den Server gehen nur aggregierte Gewichte | ✅ (Unit + E2E) |
+| Neue Tabelle `etf_breakdown` mit `owner_id`, RLS, Rechte in eigener Migration (`0009`); auf Neon `preview` und `main` angewendet | ✅ |
+| Server Actions mit `requireUser()`; zod: Instrument muss sichtbar und ETF/Fonds sein, Labels ≤ 60 Zeichen ohne Steuerzeichen, höchstens 300 Einträge, Gewichte je Liste 50–150 %; gespeichertes JSON wird beim Lesen erneut geprüft | ✅ (5 DB-Tests) |
+| Negativ-Tests: fremdes privates Instrument, ungültige ID, fremde Liste lesen/löschen, fremde `owner_id`, Zugriff ohne Nutzerkontext | ✅ |
+| Texte aus der Datei (Fondsname, Titel, Länder, Branchen) werden von React escaped und nur dem Nutzer selbst angezeigt | ✅ |
+
 **Restrisiken Phase 4, Teil 1**
 - Die Historien-Schnittstellen (Yahoo `range`/`events=split`, CoinGecko `market_chart`, EZB-SDMX-CSV) sind nach Dokumentation gebaut und am 20.10.2026 auf der Preview live geprüft: `/api/status` → `historie` liefert für alle drei `true` (dieselben Parser und Abfrageformen wie die Analyse). Fällt eine Quelle aus oder ändert ihr Format, zeigt das `/api/status`; die Analyse greift auf gespeicherte Schlusskurse zurück und verkürzt den Zeitraum sichtbar („Ausgewertet ab …“), ohne falsche Sprünge.
 - Krypto-Historie über die kostenlose CoinGecko-Schnittstelle nur 12 Monate.

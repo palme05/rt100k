@@ -76,6 +76,7 @@ Alle unter `src/components/`. Seiten setzen sich nur daraus zusammen, eigene CSS
 | `Form`, `Field`, `Input`, `Select`, `Textarea`, `Checkbox`, `Button`, `Actions`, `Message` | `ui/forms.tsx` | Formulare: sichtbare Labels, Hinweis und Fehler am Feld (aria-describedby), Meldungen mit Titelwort |
 | `PerformancePanel` | `analysis/PerformancePanel.tsx` | Rendite je Zeitraum: Umschalter, Kennzahlen, kumulierte Rendite gegen Vergleichswert (Prozent-Diagramm) |
 | `RebalancePanel` | `analysis/RebalancePanel.tsx` | Zielanteile je Klasse (Eingabe in der Tabelle), Vorschlag „Nur nachkaufen“/„Voll umschichten“, Abweichung in Prozentpunkten mit Vorzeichen |
+| `LookthroughPanel` | `analysis/LookthroughPanel.tsx` | ETF-Durchschau: Aufteilung nach Land, Branche und Einzeltitel, Bestandslisten je ETF ablegen und entfernen |
 | `FileDrop` | `ui/FileDrop.tsx` | Dateiauswahl per Ziehen oder Tippen (Mehrfachauswahl, Tastatur, Hinweistext); liest nichts selbst |
 | `QrCode` | `ui/QrCode.tsx` | QR-Code als SVG-Pfad (2FA-Einrichtung), CSP-konform |
 | `AuthFrame` | `shell/AuthFrame.tsx` | Schmale Spalte für Anmeldung, 2FA, Einladung |
