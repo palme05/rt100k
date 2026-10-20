@@ -17,7 +17,9 @@ test('Installierbar: Manifest, Icons, Apple-Icon, Themenfarbe', async ({ page, r
   await page.goto('/anmelden')
   await expect(page.locator('link[rel="manifest"]')).toHaveAttribute('href', '/manifest.webmanifest')
   await expect(page.locator('link[rel="apple-touch-icon"]')).toHaveCount(1)
-  await expect(page.locator('meta[name="theme-color"]')).toHaveAttribute('content', '#fbfbf9')
+  // „Wie das Gerät“: Themenfarbe je Farbschema
+  await expect(page.locator('meta[name="theme-color"][media="(prefers-color-scheme: light)"]')).toHaveAttribute('content', '#fbfbf9')
+  await expect(page.locator('meta[name="theme-color"][media="(prefers-color-scheme: dark)"]')).toHaveAttribute('content', '#131416')
 })
 
 test('Offline: letzter Stand ohne Netz, beim Abmelden gelöscht', async ({ page, context, isMobile }) => {
