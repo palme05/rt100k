@@ -201,6 +201,19 @@ Meldeweg für Sicherheitslücken: siehe [`/SECURITY.md`](../SECURITY.md).
 - Die Steuerregeln sind nach Sekundärquellen umgesetzt (BMF-/RIS-Seiten waren aus der Entwicklungsumgebung nicht abrufbar); Kennzahlen mit Sicherheit „mittel/niedrig“ sind markiert. Das ist kein Sicherheits-, aber ein Richtigkeitsrisiko – deshalb überall „Schätzung“.
 - Der Steuer-Export lädt keine Kurse (nur Buchungen). Die Cockpit-Seite holt im laufenden Jahr Kurse für den Jahresend-Hinweis aus dem bestehenden Cache.
 
+## Security-Check Phase 6a – PWA (20.10.2026)
+
+| Prüfung | Ergebnis |
+|---|---|
+| Service Worker (`public/sw.js`) bewusst minimal: nur Anfragen derselben Herkunft, nur GET; Seitenaufrufe immer übers Netz, **nie gecacht**; gecacht werden nur Offline-Skript, -Stil und ein Icon | ✅ (E2E) |
+| Offline-Seite kommt aus dem Service Worker mit eigener, strenger CSP (`default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'`, keine Inline-Skripte), Status 503, `no-store` | ✅ |
+| „Letzter Stand“ (Cache Storage, nur auf dem Gerät): Summen, Kurszeitpunkt und Anteile je Anlageklasse – keine Depotnamen, Positionen oder Buchungen. Gelöscht beim Abmelden und auf der Anmeldeseite (also auch nach „Überall abmelden“ beim nächsten Öffnen); Privatsphäre-Modus blendet Beträge auch offline aus | ✅ (E2E: Abmelden löscht) |
+| `offline.js` rendert nur über `textContent` und prüft die gespeicherten Daten (Version, ganze Cent, höchstens 8 Einträge) | ✅ |
+| Manifest, Icons und `sw.js` sind öffentlich (keine Nutzerdaten) und laufen nicht durch den Proxy; `sw.js` mit `Cache-Control: no-cache`, damit Updates sofort greifen | ✅ |
+| CSP der App unverändert (`worker-src 'self'`, `manifest-src 'self'` waren schon gesetzt) | ✅ |
+
+**Restrisiko:** Wer das entsperrte Handy hat, sieht offline den letzten Stand – dieselbe Gefährdung wie die ohnehin angemeldete App. Nach dem Abmelden ist er weg.
+
 ## Notfallplan
 
 **Bei Verdacht auf Secret-Leak** (Commit, Log, Screenshot):

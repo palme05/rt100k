@@ -3,6 +3,7 @@ import { HistoryChart } from '@/components/charts/HistoryChart'
 import { Markets } from '@/components/markets/Markets'
 import { Amount } from '@/components/privacy/privacy'
 import { RouteSummary } from '@/components/road/RouteSummary'
+import { SaveOfflineSnapshot } from '@/components/shell/pwa'
 import { AllocationBars } from '@/components/ui/AllocationBars'
 import button from '@/components/ui/button.module.css'
 import { DataTable, NameCell, Td, Th } from '@/components/ui/DataTable'
@@ -13,6 +14,7 @@ import { HeroSummary } from '@/components/ui/Summary'
 import { Trend } from '@/components/ui/Trend'
 import { dayLabel } from '@/lib/display'
 import { formatDate, formatTime } from '@/lib/format'
+import { buildSnapshot } from '@/lib/offline'
 import { requireUser } from '@/server/auth/session'
 import { recentNewDeviceLogin } from '@/server/dal/audit'
 import { valuePortfolios } from '@/server/overview'
@@ -81,6 +83,16 @@ export default async function OverviewPage() {
         </Message>
       ) : null}
 
+      <SaveOfflineSnapshot
+        snapshot={buildSnapshot({
+          now: new Date(),
+          quotesAt: asOf,
+          totalCents: valuation.totalCents,
+          investedCents: valuation.investedCents,
+          incomeCents: valuation.portfolios.reduce((s, p) => s + p.value.incomeCents, 0),
+          allocation: valuation.allocation,
+        })}
+      />
       <HeroSummary
         id="vermoegen"
         eyebrow="Gesamtvermögen"

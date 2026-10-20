@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
+import { clearOfflineSnapshot } from '@/components/shell/pwa'
 import button from '@/components/ui/button.module.css'
 import { authClient } from '@/lib/auth-client'
 import styles from './app.module.css'
@@ -22,6 +23,7 @@ export function AccountMenu({ name }: { name: string }) {
           disabled={pending}
           onClick={async () => {
             setPending(true)
+            await clearOfflineSnapshot()
             await authClient.signOut()
             router.push('/anmelden')
             router.refresh()
