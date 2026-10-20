@@ -26,7 +26,7 @@ Ideen außerhalb des aktuellen Scopes. **Nichts davon wird ohne Freigabe des Bet
 | **Versicherungen** (Kapital-/Fondspolizzen mit Rückkaufswert) | mittel | M | 0 € | Parqet (Beta), getquin, Finanzfluss bieten das seit 2026. |
 | **Öffentlicher Link nur in Prozent** (wie Parqet) | niedrig | M | 0 € | Sicherheitsabwägung: zufälliger, widerrufbarer Token, nur Prozente, `noindex`. Erst nach Security-Review. |
 | **Watchlists teilen/folgen** zwischen Nutzern | niedrig | S | 0 € | |
-| **Dunkles Thema** | mittel | M | 0 € | Eigene, gegen den dunklen Grund geprüfte Farbstufen (nicht invertieren), zweiter Wertesatz in `src/styles/tokens.css`; siehe `docs/DESIGN.md`. Frühestens Phase 6. |
+| ~~Dunkles Thema~~ | mittel | M | 0 € | **Umgesetzt** mit Paket 2 (20.10.2026, Freigabe des Betreibers): eigene, geprüfte dunkle Stufen, Wahl unter „Konto und Sicherheit“; siehe `docs/DESIGN.md`. |
 
 ## Nur kostenpflichtig – daher nicht gebaut
 
