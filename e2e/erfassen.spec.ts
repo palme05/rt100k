@@ -129,6 +129,8 @@ test('Offene Punkte: fehlende Kaufkosten beheben, Aufgabe aus dem Import abhaken
     head,
     '"2026-03-10T09:00:00.000Z","2026-03-10","DEFAULT","TRADING","BUY","FUND","FTSE All-World USD (Acc)","IE00BK5BQT80","2.0000000000","120.000000","-240.00","-1.00","","EUR","","","","","e2e-aufgabe-1","","","",""',
     '"2026-04-02T06:00:00.000Z","2026-04-02","DEFAULT","CORPORATE_ACTION","DELISTING","STOCK","Testaktie","FR0000120271","-7","","","","","EUR","","","","","e2e-aufgabe-2","","","",""',
+    // erfundene, gültige ISIN, die kein Kursanbieter kennt → bleibt ohne Zuordnung
+    '"2026-05-04T09:00:00.000Z","2026-05-04","DEFAULT","TRADING","BUY","STOCK","Muster Holding","DE000TEST009","3.0000000000","50.000000","-150.00","-1.00","","EUR","","","","","e2e-aufgabe-3","","","",""',
   ].join('\n')
   await page.goto('/app/import')
   await page.locator('input[type=file]').setInputFiles({ name: 'export.csv', mimeType: 'text/csv', buffer: Buffer.from(csv) })
@@ -139,6 +141,7 @@ test('Offene Punkte: fehlende Kaufkosten beheben, Aufgabe aus dem Import abhaken
   const tasks = page.getByRole('region', { name: 'Offene Punkte' })
   await expect(tasks).toContainText('Kaufkosten fehlen: Vanguard')
   await expect(tasks).toContainText(/DELISTING · Testaktie/)
+  await expect(tasks).toContainText('Kauf Muster Holding (DE000TEST009) vom 04.05.2026: Wertpapier nicht zugeordnet')
   await tasks.getByRole('button', { name: /^Erledigt: .*DELISTING/ }).click()
   await expect(tasks).not.toContainText('DELISTING')
   await expectNoOverflow(page)
