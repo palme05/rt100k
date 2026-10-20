@@ -342,6 +342,21 @@ Unabhängiges Review (eigener Prüfdurchlauf, nur lesend) aller Route-Handler, S
 | Kurshistorie wird nach dem Abruf in `price_daily` gespeichert (allgemeine Marktdaten ohne Nutzerbezug, nur vom Server geholte und geparste Werte, nur in der Kurswährung des Instruments). Kein Eingabeweg für Nutzer | ✅ |
 | Navigation: „Mehr“ als natives `<dialog>` (Fokus bleibt darin, Esc schließt), keine neuen Inline-Styles | ✅ |
 
+## Nachtrag: Paket 2 – Dunkles Design, offene Punkte, Schnell-Erfassung, Kontostand, Gesten (20.10.2026)
+
+| Prüfung | Ergebnis |
+|---|---|
+| `setThemeAction`: `requireUser()` → `consumeRateLimit('write')`; nur die festen Werte `system`/`light`/`dark` (`parseTheme`), Cookie `httpOnly`, `SameSite=Lax`, `Secure` in Produktion. Im HTML landet nur dieser feste Wert (`data-theme`) – kein Inline-Skript, CSP unverändert | ✅ |
+| Aufgaben aus dem Import (`saveImportTasksAction`): `requireUser()` → `consumeRateLimit('import')` → `addTasks` mit zod (höchstens 50 Texte je Aufruf, je 1–300 Zeichen), höchstens 200 offene je Konto, gleiche Texte nur einmal (Hash). Gespeichert als Hinweis der Art `task` mit festem Link – Texte erscheinen nur als Text (React-Escaping) | ✅ (DB-Tests inkl. Validierung) |
+| `completeTask`: `withUser` + `ownerId` + `kind = 'task'` – fremde, ungültige IDs und andere Hinweisarten → `NotFoundError`; Aufräumen alter Hinweise lässt offene Aufgaben stehen | ✅ (Negativ-Tests) |
+| Migration 0017 erweitert nur die Prüfregel `notification_kind_check` (neue Arten `task`, `savings_plan`, `import_reminder`); Tabelle, RLS und Rechte unverändert | ✅ |
+| Schnell-Erfassung `/app/buchen`: Depotauswahl nur aus der eigenen Liste; unbekannte `?depot=`-Werte fallen auf das erste eigene Depot zurück. Gespeichert wird über dieselbe Action wie im Depot (Depot-Sperre, `ownerId`) | ✅ (E2E) |
+| `reconcileCashAction`: `requireUser()` → `consumeRateLimit('write')` → `reconcileCashBalance`; Depot-ID gebunden, nicht aus dem Formular; nur Cash-Konten, Betrag ≥ 0 wie im Formular geprüft, Depot gesperrt, Obergrenze je Konto | ✅ (Negativ-Tests: fremdes/ungültiges Depot, Wertpapierdepot, ungültige Beträge) |
+| Ladeansicht der Übersicht liest den bereits vorhandenen „letzten Stand“ aus dem Browser-Cache, prüft ihn (`parseSnapshot`, gleiche Regeln wie die Offline-Seite) und zeigt ihn nur als Text. Nichts Neues wird gespeichert; beim Abmelden weiter gelöscht | ✅ (Unit-Tests) |
+| Ladeansichten nur für Übersicht (eigene Routengruppe) und Analyse – keine Seite mit `notFound()` liegt darunter, 404 bleibt 404 | ✅ (E2E Zugriff) |
+| Gesten: Wischen nach links öffnet nur die Rückfrage, löscht nie direkt; Löschen in der Liste fragt immer einmal nach. Ziehen zum Aktualisieren lädt nur die Seite neu (kein neuer Endpunkt). Vibration nur über die Browser-API ohne Daten | ✅ |
+| Übergänge, Druckzustände und Ziehen-Hinweis nur über CSS-Klassen und Animationen – keine Inline-Styles | ✅ |
+
 ## Notfallplan
 
 **Bei Verdacht auf Secret-Leak** (Commit, Log, Screenshot):
