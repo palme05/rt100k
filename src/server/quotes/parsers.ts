@@ -95,6 +95,67 @@ export function parseYahooSearch(json: unknown): InstrumentCandidate[] {
   })
 }
 
+// ── OpenFIGI (nur Zuordnung ISIN → Ticker; Stammdaten und Kurse danach von Yahoo) ──
+
+const openFigiMapping = z
+  .array(
+    z.object({
+      data: z
+        .array(
+          z.object({
+            ticker: z.string().max(40).nullable().optional(),
+            exchCode: z.string().max(10).nullable().optional(),
+          }),
+        )
+        .max(500)
+        .optional(),
+      error: z.string().max(200).optional(),
+      warning: z.string().max(200).optional(),
+    }),
+  )
+  .max(10)
+
+/** Bloomberg-Börsenkürzel → Yahoo-Suffix, in der Reihenfolge, die für EUR-Anleger am besten passt. */
+const FIGI_EXCHANGES: readonly (readonly [string, string])[] = [
+  ['GY', '.DE'],
+  ['GR', '.F'],
+  ['GF', '.F'],
+  ['AV', '.VI'],
+  ['GS', '.SG'],
+  ['GM', '.MU'],
+  ['US', ''],
+  ['UN', ''],
+  ['UW', ''],
+  ['UQ', ''],
+  ['UA', ''],
+  ['UR', ''],
+  ['NA', '.AS'],
+  ['FP', '.PA'],
+  ['IM', '.MI'],
+  ['SM', '.MC'],
+  ['BB', '.BR'],
+  ['ID', '.IR'],
+  ['SW', '.SW'],
+  ['SE', '.SW'],
+  ['LN', '.L'],
+]
+
+/** Yahoo-Symbole aus einer OpenFIGI-Antwort, beste Börse zuerst. Unbekannte Börsen fallen weg. */
+export function yahooSymbolsFromFigi(json: unknown, max = 3): string[] {
+  const parsed = openFigiMapping.safeParse(json)
+  if (!parsed.success) return []
+  const hits = parsed.data.flatMap((job) => job.data ?? [])
+  const out: string[] = []
+  for (const [exch, suffix] of FIGI_EXCHANGES) {
+    for (const h of hits) {
+      if (h.exchCode !== exch || !h.ticker || !/^[A-Z0-9./-]{1,12}$/.test(h.ticker)) continue
+      const symbol = `${h.ticker.replace(/\//g, '-')}${suffix}`
+      if (!out.includes(symbol)) out.push(symbol)
+    }
+  }
+  return out.slice(0, max)
+}
+
 // ── CoinGecko ──────────────────────────────────────────────────────────────
 
 const coingeckoId = z.string().regex(/^[a-z0-9-]{1,80}$/)

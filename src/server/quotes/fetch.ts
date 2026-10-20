@@ -11,10 +11,12 @@ const MAX_BYTES = 1_000_000
  * den Next-Data-Cache (auf Vercel instanzübergreifend). Gibt geparstes JSON
  * (Zahlen als Text) oder Text zurück.
  */
-export async function providerFetch(provider: string, url: string, init: { revalidate: number; headers?: Record<string, string>; as?: 'json' | 'text' }): Promise<unknown> {
+export async function providerFetch(provider: string, url: string, init: { revalidate: number; headers?: Record<string, string>; as?: 'json' | 'text'; method?: 'GET' | 'POST'; body?: string }): Promise<unknown> {
   let response: Response
   try {
     response = await fetch(url, {
+      method: init.method ?? 'GET',
+      ...(init.body === undefined ? {} : { body: init.body }),
       headers: { 'user-agent': USER_AGENT, accept: init.as === 'text' ? 'application/xml,text/xml,*/*' : 'application/json', ...init.headers },
       signal: AbortSignal.timeout(TIMEOUT_MS),
       next: { revalidate: init.revalidate },
