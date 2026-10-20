@@ -401,18 +401,27 @@ export function incomeByMonth(income: readonly IncomeEvent[]): Map<string, numbe
   return out
 }
 
+export interface ExpectedPayment {
+  /** 'YYYY-MM' innerhalb der nächsten 12 Monate (ab dem laufenden Monat) */
+  month: string
+  instrumentId: string | null
+  type: IncomeEvent['type']
+  cents: number
+}
+
 /**
- * Ertragsprognose für 12 Monate ab dem laufenden Monat: jede Zahlung der
- * letzten 12 Monate wiederholt sich einmal im selben Kalendermonat, skaliert
- * auf den heutigen Bestand. Verkaufte Positionen fallen weg; Zinsen ohne
- * Instrument bleiben unverändert. Summe = Erträge der letzten 12 Monate,
- * hochgerechnet auf den heutigen Bestand.
+ * Erwartete Zahlungen der nächsten 12 Monate ab dem laufenden Monat (Dividenden-
+ * kalender): jede Zahlung der letzten 12 Monate wiederholt sich einmal im
+ * selben Kalendermonat, skaliert auf den heutigen Bestand. Verkaufte Positionen
+ * fallen weg; Zinsen ohne Instrument bleiben unverändert. Je Monat und
+ * Instrument zusammengefasst, nach Monat sortiert.
  */
-export function incomeForecast(income: readonly IncomeEvent[], quantities: ReadonlyMap<string, bigint>, today: string): { month: string; cents: number }[] {
+export function expectedPayments(income: readonly IncomeEvent[], quantities: ReadonlyMap<string, bigint>, today: string): ExpectedPayment[] {
   const since = addDays(minusYears(today, 1), 1)
   const [y, m] = today.split('-').map(Number)
   const months = Array.from({ length: 12 }, (_, i) => new Date(Date.UTC(y ?? 2000, (m ?? 1) - 1 + i, 1)).toISOString().slice(0, 7))
-  const byCalendarMonth = new Map<string, number>()
+  const monthOf = new Map(months.map((month) => [month.slice(5, 7), month]))
+  const sums = new Map<string, ExpectedPayment>()
   for (const e of income) {
     if (e.day < since || e.day > today) continue
     let cents = e.amountCents
@@ -421,10 +430,22 @@ export function incomeForecast(income: readonly IncomeEvent[], quantities: Reado
       if (now <= 0n || e.quantity <= 0n) continue
       cents = Number(mulDiv(BigInt(e.amountCents), now, e.quantity))
     }
-    const mm = e.day.slice(5, 7)
-    byCalendarMonth.set(mm, (byCalendarMonth.get(mm) ?? 0) + cents)
+    const month = monthOf.get(e.day.slice(5, 7))!
+    const key = `${month}|${e.instrumentId ?? ''}|${e.type}`
+    const entry = sums.get(key) ?? { month, instrumentId: e.instrumentId, type: e.type, cents: 0 }
+    entry.cents += cents
+    sums.set(key, entry)
   }
-  return months.map((month) => ({ month, cents: byCalendarMonth.get(month.slice(5, 7)) ?? 0 }))
+  return [...sums.values()].filter((p) => p.cents > 0).sort((a, b) => (a.month === b.month ? b.cents - a.cents : a.month < b.month ? -1 : 1))
+}
+
+/** Ertragsprognose je Monat für 12 Monate ab dem laufenden Monat (Summe der erwarteten Zahlungen). */
+export function incomeForecast(income: readonly IncomeEvent[], quantities: ReadonlyMap<string, bigint>, today: string): { month: string; cents: number }[] {
+  const [y, m] = today.split('-').map(Number)
+  const months = Array.from({ length: 12 }, (_, i) => new Date(Date.UTC(y ?? 2000, (m ?? 1) - 1 + i, 1)).toISOString().slice(0, 7))
+  const sums = new Map<string, number>()
+  for (const p of expectedPayments(income, quantities, today)) sums.set(p.month, (sums.get(p.month) ?? 0) + p.cents)
+  return months.map((month) => ({ month, cents: sums.get(month) ?? 0 }))
 }
 
 /** Gebühren und Steuern je Kalenderjahr (Nebenkosten jeder Buchung plus eigene Gebühren-/Steuerbuchungen). */

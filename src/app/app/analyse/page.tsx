@@ -11,7 +11,7 @@ import { Grid, Note, PageHead, Section } from '@/components/ui/layout'
 import { Row, Rows } from '@/components/ui/Rows'
 import { Stats } from '@/components/ui/Summary'
 import { Trend } from '@/components/ui/Trend'
-import { share } from '@/lib/display'
+import { monthLabel, share } from '@/lib/display'
 import { ASSET_KIND_LABEL } from '@/lib/valuation'
 import { loadAnalysis } from '@/server/analysis'
 import { requireUser } from '@/server/auth/session'
@@ -154,6 +154,18 @@ export default async function AnalysisPage({ searchParams }: { searchParams: Pro
 
         <Section id="depot" title="Nach Depot" span="third">
           {analysis.allocation.portfolio.length > 0 ? <AllocationBars items={analysis.allocation.portfolio} /> : <Note>Noch keine Werte.</Note>}
+        </Section>
+
+        <Section id="kalender" title="Dividendenkalender" meta="≈ erwartet, 12 Monate" span="third">
+          {income.calendar.length === 0 ? (
+            <Note>Noch keine Zahlungen, aus denen sich etwas erwarten lässt.</Note>
+          ) : (
+            <Rows>
+              {income.calendar.map((p) => (
+                <Row key={`${p.month}-${p.name}-${p.type}`} date={monthLabel(p.month)} label={p.name} sub={p.type === 'dividend' ? 'Dividende' : 'Zinsen'} value={<Amount value={p.amount} />} />
+              ))}
+            </Rows>
+          )}
         </Section>
 
         <Section id="rebalancing" title="Rebalancing" meta="Zielaufteilung nach Anlageklasse">
