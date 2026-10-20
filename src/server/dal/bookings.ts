@@ -25,6 +25,8 @@ export interface BookingDto {
   feeCents: number
   taxCents: number
   note: string | null
+  /** 'manual' oder 'import' */
+  source: string
 }
 
 /** Welche Felder ein Buchungstyp braucht. */
@@ -203,6 +205,7 @@ export async function listBookings(actor: Actor, portfolioId: unknown): Promise<
         portfolioId: booking.portfolioId,
         instrumentName: instrument.name,
         note: booking.note,
+        source: booking.source,
       })
       .from(booking)
       .leftJoin(instrument, eq(instrument.id, booking.instrumentId))
@@ -234,7 +237,7 @@ export async function createBooking(actor: Actor, input: unknown): Promise<Booki
     const [row] = await tx
       .insert(booking)
       .values({ ...data, portfolioId, ownerId: actor.id, source: 'manual' })
-      .returning({ ...ledgerColumns, portfolioId: booking.portfolioId, note: booking.note })
+      .returning({ ...ledgerColumns, portfolioId: booking.portfolioId, note: booking.note, source: booking.source })
     if (!row) throw new Error('Buchung konnte nicht gespeichert werden.')
     return { ...row, instrumentName }
   })

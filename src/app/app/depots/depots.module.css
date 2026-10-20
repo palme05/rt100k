@@ -127,3 +127,9 @@
   flex-wrap: wrap;
   gap: var(--space-3);
 }
+
+/* mehrere Formulare in einem Abschnitt deutlich trennen */
+.forms {
+  display: grid;
+  gap: var(--space-10);
+}

@@ -23,6 +23,7 @@ export const AUDIT_TYPES = [
   'invitation_created',
   'invitation_revoked',
   'portfolio_deleted',
+  'imports_deleted',
   'export',
   'backup_restored',
   'share_created',

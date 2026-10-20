@@ -4,6 +4,7 @@ import { z } from 'zod'
 import { withUser } from '../db/client'
 import { booking, csvMapping, IMPORT_SOURCES, importFile, BOOKING_TYPES } from '../db/schema'
 import type { Actor } from './actor'
+import { recordAudit } from './audit'
 import { assertBookingRoom, assertConsistent, conflictingInstruments, ledgerBookings, normalizeBooking, ownedPortfolio } from './bookings'
 import { NotFoundError, ValidationError } from './errors'
 import { parseId } from './ids'
@@ -149,6 +150,37 @@ export async function importBookings(actor: Actor, input: unknown): Promise<{ cr
     }
     return { created: fresh.length, duplicates: normalized.length - fresh.length }
   })
+}
+
+/**
+ * Löscht alle importierten Buchungen eines Depots; von Hand erfasste bleiben.
+ * Brauchen diese Stück aus dem Import (z. B. ein Verkauf), bricht es ab. Gibt
+ * es danach im ganzen Konto keine importierten Buchungen mehr, werden auch die
+ * gemerkten Datei-Prüfsummen gelöscht – die Dateien gelten dann wieder als neu.
+ */
+export async function deleteImportedBookings(actor: Actor, portfolioId: unknown): Promise<number> {
+  const id = parseId(portfolioId)
+  const imported = and(eq(booking.portfolioId, id), eq(booking.ownerId, actor.id), eq(booking.source, 'import'))
+  const deleted = await withUser(actor.id, async (tx) => {
+    await ownedPortfolio(tx, actor, id, { lock: true })
+    const ids = new Set((await tx.select({ id: booking.id }).from(booking).where(imported)).map((r) => r.id))
+    if (ids.size === 0) return 0
+    try {
+      assertConsistent((await ledgerBookings(tx, actor, id)).filter((b) => !ids.has(b.id)))
+    } catch (error) {
+      if (error instanceof ValidationError) throw new ValidationError('Von Hand erfasste Buchungen in diesem Depot brauchen Stück aus dem Import (z. B. ein Verkauf). Bitte diese zuerst löschen.')
+      throw error
+    }
+    const rows = await tx.delete(booking).where(imported).returning({ id: booking.id })
+    const [left] = await tx
+      .select({ n: count() })
+      .from(booking)
+      .where(and(eq(booking.ownerId, actor.id), eq(booking.source, 'import')))
+    if (left?.n === 0) await tx.delete(importFile).where(eq(importFile.ownerId, actor.id))
+    return rows.length
+  })
+  if (deleted > 0) await recordAudit({ userId: actor.id, actorId: actor.id, type: 'imports_deleted', detail: { portfolioId: id, bookings: deleted } })
+  return deleted
 }
 
 // ── Gespeicherte CSV-Zuordnungen ────────────────────────────────────────────
