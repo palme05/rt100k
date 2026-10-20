@@ -456,6 +456,27 @@ export const portfolioSnapshot = pgTable(
   ],
 ).enableRLS()
 
+export const ALLOCATION_KINDS = ['etf', 'stock', 'fund', 'bond', 'crypto', 'metal', 'other', 'cash'] as const
+
+/** Zielaufteilung je Anlageklasse für den Rebalancing-Assistenten (Basispunkte, Summe 10 000 je Nutzer). */
+export const allocationTarget = pgTable(
+  'allocation_target',
+  {
+    ownerId: text('owner_id')
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    kind: text('kind').notNull(),
+    targetBp: integer('target_bp').notNull(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.ownerId, t.kind] }),
+    check('allocation_target_kind_check', sql`${t.kind} in ('etf', 'stock', 'fund', 'bond', 'crypto', 'metal', 'other', 'cash')`),
+    check('allocation_target_bp_check', sql`${t.targetBp} between 1 and 10000`),
+    pgPolicy('allocation_target_owner', { for: 'all', to: appRole, using: ownRows, withCheck: ownRows }),
+  ],
+).enableRLS()
+
 /** Annahmen für Road to 100k (eine Zeile je Nutzer). */
 export const roadSettings = pgTable(
   'road_settings',
