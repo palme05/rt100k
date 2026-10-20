@@ -8,7 +8,7 @@ import { dayLabel } from '@/lib/display'
 import { viennaDay } from '@/lib/format'
 import { PRICE_ONE } from '@/lib/quantity'
 import { requireUser } from '@/server/auth/session'
-import { listNotifications, listPriceAlerts, unreadCount } from '@/server/dal/notifications'
+import { listNotifications, listPriceAlerts, unreadCount, type NotificationDto } from '@/server/dal/notifications'
 import { valuePortfolios } from '@/server/overview'
 import { vapidKeys } from '@/server/push'
 import { quoteInEur } from '@/server/quotes/service'
@@ -16,7 +16,7 @@ import { createPriceAlertAction, deletePriceAlertAction, deletePushSubscriptionA
 
 export const metadata = { title: 'Hinweise' }
 
-const KIND_LABEL = { price_alert: 'Kursalarm', dividend: 'Dividende', milestone: 'Meilenstein', speculation_end: 'Spekulationsfrist' } as const
+const KIND_LABEL: Record<NotificationDto['kind'], string> = { price_alert: 'Kursalarm', dividend: 'Dividende', milestone: 'Meilenstein', speculation_end: 'Spekulationsfrist', task: 'Aufgabe', savings_plan: 'Sparplan', import_reminder: 'Import' }
 
 export default async function NotificationsPage() {
   const user = await requireUser()

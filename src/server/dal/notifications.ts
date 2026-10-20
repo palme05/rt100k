@@ -1,4 +1,5 @@
 import 'server-only'
+import { createHash } from 'node:crypto'
 import { and, count, desc, eq, isNull, lt, ne } from 'drizzle-orm'
 import { z } from 'zod'
 import { MAX_PRICE_ALERTS, MAX_PUSH_SUBSCRIPTIONS } from '@/lib/notify'
@@ -93,10 +94,65 @@ export async function pruneNotifications(actor: Actor, before: Date): Promise<nu
   const rows = await withUser(actor.id, (tx) =>
     tx
       .delete(notification)
-      .where(and(eq(notification.ownerId, actor.id), lt(notification.createdAt, before)))
+      // offene Aufgaben bleiben, bis sie abgehakt sind
+      .where(and(eq(notification.ownerId, actor.id), lt(notification.createdAt, before), ne(notification.kind, 'task')))
       .returning({ id: notification.id }),
   )
   return rows.length
+}
+
+// ── Aufgaben (z. B. Kapitalmaßnahmen aus einem Import, die von Hand zu buchen sind) ──
+
+export const MAX_OPEN_TASKS = 200
+const taskTexts = z.array(z.string().trim().min(1).max(300)).max(50)
+
+export interface TaskDto {
+  id: string
+  title: string
+  body: string | null
+  createdAt: string
+}
+
+/** Aufgaben anlegen; dieselbe Aufgabe (gleicher Text) entsteht nur einmal. */
+export async function addTasks(actor: Actor, texts: unknown): Promise<number> {
+  const parsed = taskTexts.safeParse(texts)
+  if (!parsed.success) throw new ValidationError('Ungültige Aufgaben.')
+  if (parsed.data.length === 0) return 0
+  const [open] = await withUser(actor.id, (tx) =>
+    tx
+      .select({ n: count() })
+      .from(notification)
+      .where(and(eq(notification.ownerId, actor.id), eq(notification.kind, 'task'))),
+  )
+  if ((open?.n ?? 0) + parsed.data.length > MAX_OPEN_TASKS) throw new ValidationError(`Höchstens ${MAX_OPEN_TASKS} offene Aufgaben – bitte erledigte abhaken.`)
+  return addNotifications(
+    actor,
+    parsed.data.map((text) => ({ kind: 'task', title: 'Von Hand buchen', body: text, link: '/app/depots', dedupeKey: `task:${createHash('sha256').update(text).digest('hex').slice(0, 40)}` })),
+  )
+}
+
+export async function listTasks(actor: Actor): Promise<TaskDto[]> {
+  const rows = await withUser(actor.id, (tx) =>
+    tx
+      .select({ id: notification.id, title: notification.title, body: notification.body, createdAt: notification.createdAt })
+      .from(notification)
+      .where(and(eq(notification.ownerId, actor.id), eq(notification.kind, 'task')))
+      .orderBy(desc(notification.createdAt))
+      .limit(MAX_OPEN_TASKS),
+  )
+  return rows.map((r) => ({ ...r, createdAt: r.createdAt.toISOString() }))
+}
+
+/** Aufgabe abhaken (löschen); fremde oder andere Hinweise → `NotFoundError`. */
+export async function completeTask(actor: Actor, id: unknown): Promise<void> {
+  const taskId = parseId(id)
+  const rows = await withUser(actor.id, (tx) =>
+    tx
+      .delete(notification)
+      .where(and(eq(notification.id, taskId), eq(notification.ownerId, actor.id), eq(notification.kind, 'task')))
+      .returning({ id: notification.id }),
+  )
+  if (rows.length === 0) throw new NotFoundError('Aufgabe nicht gefunden.')
 }
 
 // ── Kursalarme ──────────────────────────────────────────────────────────────
