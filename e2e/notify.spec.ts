@@ -43,9 +43,10 @@ test('Hinweise: Glocke zählt ungelesene, Seite markiert gelesen, Kursalarm anle
   await alerts.getByRole('button', { name: /Kursalarm für Vanguard .* löschen/ }).click()
   await expect(alerts.getByRole('button', { name: /löschen/ })).toHaveCount(0)
 
-  // Push-Bereich: Einschalten angeboten oder ehrlich „nicht unterstützt“
+  // Push-Bereich: Einschalten angeboten oder ehrlich „nicht unterstützt“/„blockiert“
+  // (die Headless-Shell der CI meldet Mitteilungen als verweigert; `serviceWorker.ready` wartet bis 5 s)
   const push = page.getByRole('region', { name: 'Mitteilungen auf diesem Gerät' })
-  await expect(push.getByRole('button', { name: /einschalten/ }).or(push.getByText(/unterstützt keine Mitteilungen/))).toBeVisible()
+  await expect(push.getByRole('button', { name: /einschalten/ }).or(push.getByText(/unterstützt keine Mitteilungen|Mitteilungen sind in den Browser-Einstellungen/))).toBeVisible({ timeout: 10_000 })
   await expect(push).toContainText('keine Beträge')
   await expectNoOverflow(page)
 
