@@ -45,12 +45,16 @@
   display: grid;
   gap: var(--space-1);
   justify-items: start;
+  margin-top: var(--space-2);
   font-size: var(--text-sm);
 }
 
 .status small {
-  color: var(--ink-3);
-  max-width: 22rem;
+  max-width: 28rem;
+}
+
+.target {
+  max-width: 24rem;
 }
 
 .ok {

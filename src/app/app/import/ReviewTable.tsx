@@ -45,12 +45,10 @@ export function ReviewTable({
           <Th>
             <span className="sr-only">Übernehmen</span>
           </Th>
-          <Th>Datum</Th>
-          <Th>Art und Wertpapier</Th>
+          <Th left>Buchung und Prüfung</Th>
           <Th hideSm>Stück</Th>
           <Th>Betrag</Th>
           <Th hideSm>Gebühr / Steuer</Th>
-          <Th>Prüfung</Th>
         </>
       }
     >
@@ -69,23 +67,12 @@ export function ReviewTable({
                 label={<span className="sr-only">{`${IMPORT_KIND_LABEL[b.kind]} vom ${dayLabel(row.draft.occurredOn)} übernehmen`}</span>}
               />
             </Td>
-            <Td>{dayLabel(row.draft.occurredOn)}</Td>
             <NameCell
               name={`${IMPORT_KIND_LABEL[b.kind]}${b.asset ? ` · ${b.asset.name}` : b.note ? ` · ${b.note}` : ''}`}
-              sub={
-                b.asset
-                  ? `${assetLabel}${row.instrument ? ` → ${row.instrument.name}` : needs ? ' · nicht zugeordnet' : ''}`
-                  : undefined
-              }
-            />
-            <Td hideSm>{row.draft.quantity || '–'}</Td>
-            <Td>
-              <Amount value={cents(row.draft.amount, b.amountCents) / 100} />
-            </Td>
-            <Td hideSm>
-              <Amount value={cents(row.draft.fee, b.feeCents) / 100} /> / <Amount value={cents(row.draft.tax, b.taxCents) / 100} />
-            </Td>
-            <Td>
+              sub={`${dayLabel(row.draft.occurredOn)}${
+                b.asset ? ` · ${assetLabel}${row.instrument ? ` → ${row.instrument.name}` : needs ? ' · nicht zugeordnet' : ''}` : ''
+              }`}
+            >
               <div className={styles.status}>
                 {row.duplicate ? <span className={styles.duplicate}>⟲ schon importiert</span> : null}
                 <span className={c.cls}>
@@ -99,6 +86,13 @@ export function ReviewTable({
                   {row.editing ? 'Fertig' : 'Bearbeiten'}
                 </Button>
               </div>
+            </NameCell>
+            <Td hideSm>{row.draft.quantity || '–'}</Td>
+            <Td>
+              <Amount value={cents(row.draft.amount, b.amountCents) / 100} />
+            </Td>
+            <Td hideSm>
+              <Amount value={cents(row.draft.fee, b.feeCents) / 100} /> / <Amount value={cents(row.draft.tax, b.taxCents) / 100} />
             </Td>
           </tr>
         )
@@ -106,7 +100,7 @@ export function ReviewTable({
         return [
           main,
           <tr key={`${row.key}-edit`} className={styles.editRow}>
-            <Td colSpan={7}>
+            <Td colSpan={5}>
               <EditPanel row={row} needs={needs} onDraft={(d) => onDraft(row.key, d)} onInstrument={(i) => onInstrument(row, i)} />
             </Td>
           </tr>,

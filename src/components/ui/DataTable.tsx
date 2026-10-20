@@ -27,10 +27,11 @@ export function DataTable({
   )
 }
 
-/** Spaltenkopf; `hideSm` blendet die Spalte am Handy aus. */
-export function Th({ children, hideSm = false }: { children: React.ReactNode; hideSm?: boolean }) {
+/** Spaltenkopf; `hideSm` blendet die Spalte am Handy aus, `left` für Textspalten (wie `NameCell`). */
+export function Th({ children, hideSm = false, left = false }: { children: React.ReactNode; hideSm?: boolean; left?: boolean }) {
+  const cls = [hideSm ? styles.hideSm : '', left ? styles.left : ''].filter(Boolean).join(' ')
   return (
-    <th scope="col" className={hideSm ? styles.hideSm : undefined}>
+    <th scope="col" className={cls || undefined}>
       {children}
     </th>
   )
@@ -44,16 +45,17 @@ export function Td({ children, hideSm = false, colSpan }: { children: React.Reac
   )
 }
 
-/** Erste Zelle: Name, darunter Zusatz; optional als Link über die ganze Zelle. */
-export function NameCell({ name, sub, href }: { name: string; sub?: React.ReactNode; href?: string }) {
+/** Namenszelle (linksbündig): Name, darunter Zusatz und optional weiterer Inhalt; optional als Link über die ganze Zelle. */
+export function NameCell({ name, sub, href, children }: { name: string; sub?: React.ReactNode; href?: string; children?: React.ReactNode }) {
   const content = (
     <>
       <span className={styles.name}>{name}</span>
       {sub ? <small>{sub}</small> : null}
+      {children}
     </>
   )
   return (
-    <td>
+    <td className={styles.left}>
       {href ? (
         <Link className={styles.link} href={href}>
           {content}
