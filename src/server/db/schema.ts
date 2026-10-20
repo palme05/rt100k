@@ -328,11 +328,16 @@ export const booking = pgTable(
     currency: char('currency', { length: 3 }).notNull().default('EUR'),
     note: text('note'),
     source: text('source').notNull().default('manual'),
+    /** SHA-256 über die Merkmale einer importierten Buchung (Duplikaterkennung), sonst NULL */
+    importKey: text('import_key'),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },
   (t) => [
     index('booking_portfolio_idx').on(t.portfolioId, t.occurredOn),
+    uniqueIndex('booking_import_key_idx').on(t.ownerId, t.importKey),
+    check('booking_source_check', sql`${t.source} in ('manual', 'import')`),
+    check('booking_import_key_check', sql`${t.importKey} is null or ${t.importKey} ~ '^[0-9a-f]{64}$'`),
     index('booking_owner_idx').on(t.ownerId),
     index('booking_instrument_idx').on(t.instrumentId),
     check(
@@ -351,6 +356,53 @@ export const booking = pgTable(
       using: ownRows,
       withCheck: sql`owner_id = ${currentUser} and exists (select 1 from portfolio p where p.id = portfolio_id and p.owner_id = ${currentUser})`,
     }),
+  ],
+).enableRLS()
+
+export const IMPORT_SOURCES = ['traderepublic', 'flatex', 'bitpanda', 'csv'] as const
+
+/**
+ * Bereits importierte Dateien – nur der SHA-256 der Datei, nie die Datei selbst
+ * (Brief: PDFs nach dem Parsen nicht speichern).
+ */
+export const importFile = pgTable(
+  'import_file',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    ownerId: text('owner_id')
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    fileHash: text('file_hash').notNull(),
+    source: text('source').notNull(),
+    bookings: integer('bookings').notNull().default(0),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    uniqueIndex('import_file_owner_hash_idx').on(t.ownerId, t.fileHash),
+    check('import_file_hash_check', sql`${t.fileHash} ~ '^[0-9a-f]{64}$'`),
+    check('import_file_source_check', sql`${t.source} in ('traderepublic', 'flatex', 'bitpanda', 'csv')`),
+    check('import_file_bookings_check', sql`${t.bookings} >= 0`),
+    pgPolicy('import_file_owner', { for: 'all', to: appRole, using: ownRows, withCheck: ownRows }),
+  ],
+).enableRLS()
+
+/** Gespeicherte Spaltenzuordnungen für den generischen CSV-Import. */
+export const csvMapping = pgTable(
+  'csv_mapping',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    ownerId: text('owner_id')
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    name: text('name').notNull(),
+    mapping: jsonb('mapping').notNull(),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [
+    uniqueIndex('csv_mapping_owner_name_idx').on(t.ownerId, t.name),
+    check('csv_mapping_name_check', sql`char_length(${t.name}) between 1 and 60`),
+    pgPolicy('csv_mapping_owner', { for: 'all', to: appRole, using: ownRows, withCheck: ownRows }),
   ],
 ).enableRLS()
 

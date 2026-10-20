@@ -109,3 +109,17 @@ export async function listGlobalInstruments(): Promise<InstrumentDto[]> {
   const rows = await getDb().select(columns).from(instrument).where(isNull(instrument.ownerId))
   return rows.map(toDto)
 }
+
+/** Allgemeine Instrumente zu ISINs (für den Import, ohne Anbieter-Abfrage). */
+export async function findGlobalInstrumentsByIsin(isins: readonly string[]): Promise<Map<string, InstrumentDto>> {
+  const unique = [...new Set(isins.filter((i) => /^[A-Z]{2}[A-Z0-9]{9}\d$/.test(i)))]
+  if (unique.length === 0) return new Map()
+  const rows = await getDb()
+    .select(columns)
+    .from(instrument)
+    .where(and(isNull(instrument.ownerId), inArray(instrument.isin, unique)))
+  const out = new Map<string, InstrumentDto>()
+  for (const row of rows) if (row.isin && !out.has(row.isin)) out.set(row.isin, toDto(row))
+  return out
+}
+
