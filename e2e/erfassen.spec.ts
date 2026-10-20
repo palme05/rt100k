@@ -42,9 +42,12 @@ test('Schnell buchen: „+“ am Handy, „+ Buchung“ und G B am Desktop, Depo
 
   if (!isMobile) {
     await page.goto('/app')
-    await page.keyboard.press('g')
-    await page.keyboard.press('b')
-    await expect(page).toHaveURL(/\/app\/buchen$/)
+    // Tastenkürzel greifen erst nach dem Laden der Seite – bis dahin erneut drücken
+    await expect(async () => {
+      await page.keyboard.press('g')
+      await page.keyboard.press('b')
+      await expect(page).toHaveURL(/\/app\/buchen$/, { timeout: 1000 })
+    }).toPass({ timeout: 15_000 })
   }
   expect(problems).toEqual([])
 })
