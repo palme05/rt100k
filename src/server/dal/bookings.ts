@@ -166,6 +166,22 @@ export async function ledgerBookings(tx: Tx, actor: Actor, portfolioId: string):
     .orderBy(asc(booking.occurredOn), asc(booking.createdAt))
 }
 
+/** Instrumente, deren Bestand mit diesen Buchungen an einem Tag negativ würde. */
+export function conflictingInstruments(bookings: readonly LedgerBooking[]): string[] {
+  const byInstrument = new Map<string, LedgerBooking[]>()
+  for (const b of bookings) if (b.instrumentId) byInstrument.set(b.instrumentId, [...(byInstrument.get(b.instrumentId) ?? []), b])
+  const conflicts: string[] = []
+  for (const [id, list] of byInstrument) {
+    try {
+      computeLedger(list)
+    } catch (error) {
+      if (!(error instanceof LedgerError)) throw error
+      conflicts.push(id)
+    }
+  }
+  return conflicts
+}
+
 export function assertConsistent(bookings: readonly LedgerBooking[]) {
   try {
     computeLedger(bookings)

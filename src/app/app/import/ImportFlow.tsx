@@ -5,6 +5,7 @@ import { useState, useTransition } from 'react'
 import { FileDrop } from '@/components/ui/FileDrop'
 import { Actions, Button, Field, Message, Select } from '@/components/ui/forms'
 import { Grid, Note, Section } from '@/components/ui/layout'
+import { Progress } from '@/components/ui/Progress'
 import { assetRefOf, assetKey, PREPARE_MAX_ASSETS, PREPARE_MAX_KEYS, type AssetRef } from '@/lib/import/assets'
 import { applyMapping, type CsvMapping } from '@/lib/import/generic'
 import { IMPORT_SOURCE_LABEL } from '@/lib/import/types'
@@ -16,7 +17,11 @@ import { ImportFileError, readImportFile } from './process'
 import { ReviewTable } from './ReviewTable'
 
 const MAX_FILES = 50
-const CHUNK = 500
+// Kleine Teile, chronologisch: Fortschritt sichtbar, jeder Teil baut auf den vorigen auf
+const CHUNK = 100
+/** So oft wird nach dem Abwählen widersprüchlicher Wertpapiere neu versucht. */
+const MAX_CONFLICT_ROUNDS = 8
+const QUANTITY_KINDS: ReadonlySet<string> = new Set(['buy', 'sell', 'transfer_in', 'transfer_out', 'staking'])
 
 const STATUS: Record<FileEntry['status'], string> = {
   lesen: 'wird gelesen …',
@@ -35,6 +40,7 @@ export function ImportFlow({ portfolios, mappings: initialMappings }: { portfoli
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [notice, setNotice] = useState<Notice | null>(null)
   const [saving, startSaving] = useTransition()
+  const [progress, setProgress] = useState<{ label: string; value?: number; max?: number } | null>(null)
 
   /** Server fragen: Instrumente zuordnen, Duplikate und bekannte Dateien melden. */
   async function prepare(fresh: ReviewRow[], entries: readonly FileEntry[]): Promise<ReviewRow[]> {
@@ -52,12 +58,14 @@ export function ImportFlow({ portfolios, mappings: initialMappings }: { portfoli
     const duplicates = new Set<string>()
     const known = new Set<string>()
     for (let i = 0; i < rounds; i++) {
+      if (assets.length > PREPARE_MAX_ASSETS) setProgress({ label: `Wertpapiere zuordnen … ${Math.min(assets.length, i * PREPARE_MAX_ASSETS)} von ${assets.length}`, value: i, max: rounds })
       const result = await prepareImportAction({
         assets: assets.slice(i * PREPARE_MAX_ASSETS, (i + 1) * PREPARE_MAX_ASSETS),
         keys: keys.slice(i * PREPARE_MAX_KEYS, (i + 1) * PREPARE_MAX_KEYS),
         files: i === 0 ? hashes : [],
       })
       if (!result.ok) {
+        setProgress(null)
         setNotice({ tone: 'error', text: result.error })
         return fresh
       }
@@ -65,6 +73,7 @@ export function ImportFlow({ portfolios, mappings: initialMappings }: { portfoli
       for (const k of result.duplicateKeys) duplicates.add(k)
       for (const h of result.knownFiles) known.add(h)
     }
+    setProgress(null)
     setFiles((fs) => fs.map((f) => (f.hash && known.has(f.hash) ? { ...f, known: true } : f)))
     return fresh.map((r) => {
       const next = { ...r, instrument: r.assetKey ? (instruments[r.assetKey] ?? null) : null, duplicate: duplicates.has(r.key) }
@@ -78,6 +87,7 @@ export function ImportFlow({ portfolios, mappings: initialMappings }: { portfoli
     if (take.length < list.length) setNotice({ tone: 'info', text: `Höchstens ${MAX_FILES} Dateien auf einmal – der Rest wurde nicht gelesen.` })
     if (take.length === 0) return
     setReading(true)
+    setProgress({ label: take.length === 1 ? 'Datei wird gelesen …' : `${take.length} Dateien werden gelesen …` })
     const seen = new Set(rows.map((r) => r.key))
     const entries: FileEntry[] = []
     const added: ReviewRow[] = []
@@ -106,6 +116,7 @@ export function ImportFlow({ portfolios, mappings: initialMappings }: { portfoli
     }
     const prepared = added.length > 0 || entries.some((e) => e.hash) ? await prepare(added, entries) : added
     setRows((rs) => [...rs, ...prepared])
+    setProgress(null)
     setReading(false)
   }
 
@@ -144,32 +155,63 @@ export function ImportFlow({ portfolios, mappings: initialMappings }: { portfoli
       let created = 0
       let duplicates = 0
       const committed = new Set<string>()
+      const conflicted = new Set<string>()
       const links: { href: string; label: string }[] = []
+      const total = [...byPortfolio.values()].reduce((n, e) => n + e.length, 0)
+      // nur Buchungen, die den Bestand ändern – Dividenden zum selben Wertpapier gehen trotzdem
+      const inConflict = (r: ReviewRow) => r.instrument !== null && conflicted.has(r.instrument.id) && QUANTITY_KINDS.has(r.booking.kind)
       for (const [portfolioId, entries] of byPortfolio) {
         const fileIds = new Set(entries.map((e) => e.row.fileId))
         const fileList = files
           .filter((f) => fileIds.has(f.id) && f.hash && f.source)
           .map((f) => ({ hash: f.hash as string, source: f.source as NonNullable<FileEntry['source']>, bookings: entries.filter((e) => e.row.fileId === f.id).length }))
-        for (let i = 0; i < entries.length; i += CHUNK) {
-          const chunk = entries.slice(i, i + CHUNK)
-          const result = await commitImportAction({ portfolioId, files: i === 0 ? fileList : [], items: chunk.map((e) => e.item) })
-          if (!result.ok) {
-            setRows((rs) => rs.filter((r) => !committed.has(r.key)))
-            return setNotice({ tone: 'error', text: result.error })
+        let filesSent = false
+        for (let round = 0; ; round++) {
+          // Chronologisch, damit jeder Teil auf den schon gespeicherten aufbaut
+          const pending = entries.filter((e) => !committed.has(e.row.key) && !inConflict(e.row)).sort((a, b) => (a.item.occurredOn < b.item.occurredOn ? -1 : a.item.occurredOn > b.item.occurredOn ? 1 : 0))
+          let retry = false
+          for (let i = 0; i < pending.length; i += CHUNK) {
+            const chunk = pending.slice(i, i + CHUNK)
+            setProgress({ label: `Wird gespeichert … ${committed.size} von ${total} Buchungen`, value: committed.size, max: total })
+            const result = await commitImportAction({ portfolioId, files: filesSent ? [] : fileList, items: chunk.map((e) => e.item) })
+            if (!result.ok) {
+              if (result.conflicts && result.conflicts.length > 0 && round < MAX_CONFLICT_ROUNDS) {
+                // Wertpapiere mit widersprüchlichem Bestand abwählen, den Rest weiter speichern
+                for (const id of result.conflicts) conflicted.add(id)
+                retry = true
+                break
+              }
+              setProgress(null)
+              setRows((rs) => rs.filter((r) => !committed.has(r.key)))
+              return setNotice({ tone: 'error', text: committed.size > 0 ? `${result.error} ${committed.size} Buchungen wurden bis dahin gespeichert.` : result.error })
+            }
+            filesSent = true
+            created += result.created
+            duplicates += result.duplicates
+            for (const e of chunk) committed.add(e.row.key)
           }
-          created += result.created
-          duplicates += result.duplicates
-          for (const e of chunk) committed.add(e.row.key)
+          if (!retry) break
         }
         const p = portfolios.find((x) => x.id === portfolioId)
-        if (p) links.push({ href: `/app/depots/${p.id}`, label: p.name })
+        if (p && entries.some((e) => committed.has(e.row.key))) links.push({ href: `/app/depots/${p.id}`, label: p.name })
       }
-      const remaining = rows.filter((r) => !committed.has(r.key))
+      setProgress(null)
+      const conflictRows = rows.filter((r) => !committed.has(r.key) && r.selected && inConflict(r))
+      if (conflictRows.length > 0) {
+        const message = 'Bestand würde negativ – vermutlich fehlt ein Split oder Depotübertrag. Erst diesen von Hand buchen, dann erneut übernehmen.'
+        setErrors((e) => ({ ...e, ...Object.fromEntries(conflictRows.map((r) => [r.key, message])) }))
+      }
+      const remaining = rows.filter((r) => !committed.has(r.key)).map((r) => (inConflict(r) ? { ...r, selected: false } : r))
       setRows(remaining)
       setFiles((fs) => fs.filter((f) => f.status === 'zuordnen' || f.status === 'fehler' || remaining.some((r) => r.fileId === f.id)))
+      const names = [...new Set(conflictRows.map((r) => r.instrument?.name ?? ''))].filter(Boolean)
+      const conflictText =
+        conflictRows.length > 0
+          ? ` ${conflictRows.length} ${conflictRows.length === 1 ? 'Buchung' : 'Buchungen'} zu ${names.slice(0, 5).join(', ')}${names.length > 5 ? ` und ${names.length - 5} weiteren` : ''} nicht übernommen: Der Bestand würde negativ – vermutlich fehlt ein Split oder Depotübertrag. Die Zeilen sind unten markiert.`
+          : ''
       setNotice({
-        tone: 'success',
-        text: `${created} ${created === 1 ? 'Buchung' : 'Buchungen'} übernommen${duplicates > 0 ? `, ${duplicates} ${duplicates === 1 ? 'war' : 'waren'} schon vorhanden` : ''}.`,
+        tone: conflictRows.length > 0 ? 'info' : 'success',
+        text: `${created} ${created === 1 ? 'Buchung' : 'Buchungen'} übernommen${duplicates > 0 ? `, ${duplicates} ${duplicates === 1 ? 'war' : 'waren'} schon vorhanden` : ''}.${conflictText}`,
         links,
       })
     })
@@ -246,16 +288,14 @@ export function ImportFlow({ portfolios, mappings: initialMappings }: { portfoli
         </div>
       </Section>
 
-      {notice ? (
+      {progress && rows.length === 0 ? (
+        <Section label="Fortschritt">
+          <Progress {...progress} />
+        </Section>
+      ) : null}
+      {notice && rows.length === 0 ? (
         <Section label="Ergebnis">
-          <Message tone={notice.tone}>
-            {notice.text}{' '}
-            {notice.links?.map((l) => (
-              <Link key={l.href} href={l.href} className={styles.inlineLink}>
-                Zu {l.label}
-              </Link>
-            ))}
-          </Message>
+          <NoticeMessage notice={notice} />
         </Section>
       ) : null}
 
@@ -273,6 +313,8 @@ export function ImportFlow({ portfolios, mappings: initialMappings }: { portfoli
                 setRows((rs) => rs.map((r) => (r.key === row.key || (row.assetKey && r.assetKey === row.assetKey) ? { ...r, instrument, selected: r.duplicate ? r.selected : true } : r)))
               }
             />
+            {progress ? <Progress {...progress} /> : null}
+            {notice && !saving ? <NoticeMessage notice={notice} /> : null}
             <Actions>
               <Button onClick={commit} disabled={busy || selectedCount === 0}>
                 {saving ? 'Wird gespeichert …' : `${selectedCount} ${selectedCount === 1 ? 'Buchung' : 'Buchungen'} übernehmen`}
@@ -294,5 +336,18 @@ export function ImportFlow({ portfolios, mappings: initialMappings }: { portfoli
         </Section>
       ) : null}
     </Grid>
+  )
+}
+
+function NoticeMessage({ notice }: { notice: Notice }) {
+  return (
+    <Message tone={notice.tone}>
+      {notice.text}{' '}
+      {notice.links?.map((l) => (
+        <Link key={l.href} href={l.href} className={styles.inlineLink}>
+          Zu {l.label}
+        </Link>
+      ))}
+    </Message>
   )
 }

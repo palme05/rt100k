@@ -4,7 +4,7 @@ import { z } from 'zod'
 import { withUser } from '../db/client'
 import { booking, csvMapping, IMPORT_SOURCES, importFile, BOOKING_TYPES } from '../db/schema'
 import type { Actor } from './actor'
-import { assertBookingRoom, assertConsistent, ledgerBookings, normalizeBooking, ownedPortfolio } from './bookings'
+import { assertBookingRoom, assertConsistent, conflictingInstruments, ledgerBookings, normalizeBooking, ownedPortfolio } from './bookings'
 import { NotFoundError, ValidationError } from './errors'
 import { parseId } from './ids'
 import { getInstrument } from './instruments'
@@ -71,6 +71,14 @@ export async function findImported(actor: Actor, keys: readonly string[], fileHa
   })
 }
 
+/** Mit diesen Instrumenten würde der Bestand negativ (z. B. fehlender Split oder Depotübertrag). */
+export class ImportConflictError extends ValidationError {
+  constructor(readonly instrumentIds: string[]) {
+    super('Damit wäre der Bestand an einem Tag negativ (Verkauf oder Übertrag höher als der Bestand).', 'quantity')
+    this.name = 'ImportConflictError'
+  }
+}
+
 export async function importBookings(actor: Actor, input: unknown): Promise<{ created: number; duplicates: number }> {
   const parsed = importInput.safeParse(input)
   if (!parsed.success) {
@@ -125,7 +133,10 @@ export async function importBookings(actor: Actor, input: unknown): Promise<{ cr
       await assertBookingRoom(tx, actor, fresh.length)
       const current = await ledgerBookings(tx, actor, portfolioId)
       const sorted = [...fresh].sort((a, b) => (a.occurredOn < b.occurredOn ? -1 : a.occurredOn > b.occurredOn ? 1 : 0))
-      assertConsistent([...current, ...sorted.map((n, i) => ({ id: `import-${i}`, ...n }))])
+      const combined = [...current, ...sorted.map((n, i) => ({ id: `import-${i}`, ...n }))]
+      const conflicts = conflictingInstruments(combined)
+      if (conflicts.length > 0) throw new ImportConflictError(conflicts)
+      assertConsistent(combined)
       await tx.insert(booking).values(sorted.map((n) => ({ ...n, portfolioId, ownerId: actor.id, source: 'import' })))
     }
     if (files.length > 0) {

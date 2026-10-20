@@ -72,6 +72,26 @@ test('CSV: Trade-Republic-Transaktionsexport – automatisch erkannt, Konto-Buch
   expect(problems.filter((p) => !/status of 4\d\d/.test(p))).toEqual([])
 })
 
+test('Bestand würde negativ: betroffene Wertpapiere werden abgewählt, der Rest gespeichert', async ({ page }) => {
+  await register(page)
+  await createPortfolio(page, 'TR')
+  await page.goto('/app/import')
+  const head = TR_CSV_EXPORT.split('\n')[0]
+  const row = (cells: string[]) => cells.map((c) => `"${c}"`).join(',')
+  const csv = [
+    head,
+    row(['2026-02-02T09:00:00Z', '2026-02-02', 'DEFAULT', 'TRADING', 'BUY', 'FUND', 'FTSE All-World', 'IE00BK5BQT80', '2', '120.00', '-240.00', '-1.00', '', 'EUR', '', '', '', '', 'c1', '', '', '', '']),
+    row(['2026-03-02T09:00:00Z', '2026-03-02', 'DEFAULT', 'TRADING', 'SELL', 'FUND', 'FTSE All-World', 'IE00BK5BQT80', '-5', '125.00', '625.00', '-1.00', '', 'EUR', '', '', '', '', 'c2', '', '', '', '']),
+    row(['2026-04-01T00:10:00Z', '2026-04-01', 'DEFAULT', 'CASH', 'INTEREST_PAYMENT', '', '', '', '', '', '3.21', '', '-0.88', 'EUR', '', '', '', '', 'c3', '', '', '', '']),
+  ].join('\n')
+  await upload(page, 'Transaktionsexport.csv', 'text/csv', csv)
+  await page.getByRole('button', { name: '3 Buchungen übernehmen' }).click()
+  const result = page.getByText(/1 Buchung übernommen\. 2 Buchungen zu .* nicht übernommen: Der Bestand würde negativ/)
+  await expect(result).toBeVisible()
+  await expect(review(page)).toContainText('vermutlich fehlt ein Split oder Depotübertrag')
+  await expect(page.getByText('0 von 2 ausgewählt')).toBeVisible()
+})
+
 test('Unbekannte Datei und Fremdformat werden abgewiesen', async ({ page }) => {
   await register(page)
   await createPortfolio(page, 'Depot')

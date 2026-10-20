@@ -3,13 +3,14 @@
 import { revalidatePath } from 'next/cache'
 import { requireUser } from '@/server/auth/session'
 import { NotFoundError, ValidationError } from '@/server/dal/errors'
-import { deleteCsvMapping, importBookings, saveCsvMapping, type CsvMappingDto } from '@/server/dal/imports'
+import { deleteCsvMapping, ImportConflictError, importBookings, saveCsvMapping, type CsvMappingDto } from '@/server/dal/imports'
 import { prepareImport, type PreparedImport } from '@/server/imports'
 import { consumeRateLimit } from '@/server/dal/rate-limit'
 
-type Result<T> = ({ ok: true } & T) | { ok: false; error: string }
+type Result<T> = ({ ok: true } & T) | { ok: false; error: string; conflicts?: string[] }
 
-function fail(error: unknown): { ok: false; error: string } {
+function fail(error: unknown): { ok: false; error: string; conflicts?: string[] } {
+  if (error instanceof ImportConflictError) return { ok: false, error: error.message, conflicts: error.instrumentIds }
   if (error instanceof ValidationError || error instanceof NotFoundError) return { ok: false, error: error.message }
   if (error instanceof Error && error.name === 'ZodError') return { ok: false, error: 'Ungültige Import-Daten.' }
   throw error

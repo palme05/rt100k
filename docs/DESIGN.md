@@ -80,6 +80,7 @@ Alle unter `src/components/`. Seiten setzen sich nur daraus zusammen, eigene CSS
 | `YearNav`, `EstimateNotice`, `TaxHints`, `Countdown`, `Toolbar` | `tax/TaxParts.tsx` | Steuer-Cockpit: Jahreswahl als Links (`aria-current`), Hinweis „Schätzung“, Hinweise mit Textmarke („! Prüfen“/„i Info“), Countdown bis steuerfrei |
 | `AgeReportForm` | `tax/AgeReportForm.tsx` | AGE aus OeKB-Meldung: Fonds, Meldedatum, Betrag je Anteil, Währung und Kurs |
 | `FileDrop` | `ui/FileDrop.tsx` | Dateiauswahl per Ziehen oder Tippen (Mehrfachauswahl, Tastatur, Hinweistext); liest nichts selbst |
+| `Progress` | `ui/Progress.tsx` | Fortschritt als Balken mit Text und Drehsymbol (natives `<progress>`, ohne Wert unbestimmt; Text für Screenreader angesagt) |
 | `QrCode` | `ui/QrCode.tsx` | QR-Code als SVG-Pfad (2FA-Einrichtung), CSP-konform |
 | `AuthFrame` | `shell/AuthFrame.tsx` | Schmale Spalte für Anmeldung, 2FA, Einladung |
 | `PwaRegister`, `SaveOfflineSnapshot`, `ClearOfflineSnapshot` | `shell/pwa.tsx` | Service Worker anmelden, letzten Stand fürs Offline-Lesen ablegen bzw. löschen (unsichtbar) |

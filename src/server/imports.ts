@@ -57,6 +57,11 @@ async function resolve(a: AssetRef, known: Map<string, { id: string; name: strin
   return verified ? ensureGlobalInstrument(verified) : null
 }
 
+const RESOLVE_ATTEMPTS = 2
+const RETRY_PAUSE_MS = 800
+const BUDGET_MS = 40_000
+const RETRY_BUDGET_MS = 25_000
+
 export interface PreparedImport {
   instruments: Record<string, { id: string; name: string } | null>
   duplicateKeys: string[]
@@ -69,14 +74,22 @@ export async function prepareImport(actor: Actor, input: unknown): Promise<Prepa
   const byIsin = await findGlobalInstrumentsByIsin(unique.flatMap((a) => (a.kind === 'security' ? [a.isin] : [])))
   const known = new Map([...byIsin].map(([isin, i]) => [isin, { id: i.id, name: i.name }]))
   const instruments: PreparedImport['instruments'] = {}
-  // Nacheinander, um die Kursanbieter nicht mit parallelen Anfragen zu belasten
+  // Nacheinander, um die Kursanbieter nicht mit parallelen Anfragen zu belasten. Bei
+  // vielen Wertpapieren bremst Yahoo gelegentlich – dann ein zweiter Versuch nach kurzer Pause.
+  // Zeitbudget unter der Laufzeitgrenze der Seite (60 s): danach bleibt der Rest „nicht zugeordnet“
+  const started = Date.now()
+  const elapsed = () => Date.now() - started
   for (const a of unique) {
-    try {
-      const hit = await resolve(a, known)
-      instruments[assetKey(a)] = hit ? { id: hit.id, name: hit.name } : null
-    } catch {
-      instruments[assetKey(a)] = null
+    let hit: { id: string; name: string } | null = null
+    for (let attempt = 0; attempt < RESOLVE_ATTEMPTS && !hit && elapsed() < (attempt === 0 ? BUDGET_MS : RETRY_BUDGET_MS); attempt++) {
+      if (attempt > 0) await new Promise((done) => setTimeout(done, RETRY_PAUSE_MS))
+      try {
+        hit = await resolve(a, known)
+      } catch {
+        hit = null
+      }
     }
+    instruments[assetKey(a)] = hit ? { id: hit.id, name: hit.name } : null
   }
   const imported = await findImported(actor, keys, files)
   return { instruments, duplicateKeys: [...imported.keys], knownFiles: [...imported.files] }
