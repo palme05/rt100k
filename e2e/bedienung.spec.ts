@@ -45,7 +45,10 @@ test('Buchung bearbeiten, Liste filtern, Wertpapier-Seite mit Kursverlauf', asyn
   await expect(list).toContainText('2 Buchungen')
   await list.getByRole('link', { name: /Kauf vom .* bearbeiten/ }).first().click()
   await expect(page.getByRole('heading', { name: 'Buchung bearbeiten', level: 1 })).toBeVisible()
-  await expect(page.getByLabel(/Kurswert/)).toHaveValue(/^(1000|600),00$/)
+  // Bearbeiten öffnet mit dem Kurs je Stück, der genau den gespeicherten Betrag ergibt; Umschalten rechnet um
+  await expect(page.getByLabel(/Kurs je Stück/)).toHaveValue(/^(100|120),00$/)
+  await page.getByRole('group', { name: 'Betrag eingeben als' }).getByRole('button', { name: 'Gesamtbetrag' }).click()
+  await expect(page.getByLabel(/Kurswert/)).toHaveValue(/^(1\.000|600),00$/)
   await page.getByLabel(/Kurswert/).fill('1.100,00')
   await page.getByRole('button', { name: 'Änderung speichern' }).click()
   await expect(page).toHaveURL(new RegExp(`/app/depots/${id}\\?geaendert=1`))

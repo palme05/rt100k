@@ -1,0 +1,1 @@
+ALTER TABLE "booking" ADD COLUMN "price_confirmed" boolean DEFAULT false NOT NULL;

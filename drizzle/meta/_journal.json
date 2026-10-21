@@ -127,6 +127,13 @@
       "when": 1792522704388,
       "tag": "0017_notification_kinds",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1792606762695,
+      "tag": "0018_booking_price_confirmed",
+      "breakpoints": true
     }
   ]
 }

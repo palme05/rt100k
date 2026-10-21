@@ -27,7 +27,7 @@ test('Steuer-Cockpit: Schätzung, Verkauf, AGE aus OeKB-Meldung, CSV ohne Formel
   await page.getByLabel('Datum').fill('2026-04-01')
   await page.getByRole('group', { name: 'Bereits im Depot' }).getByRole('button', { name: /Vanguard/ }).click()
   await page.getByLabel('Stück', { exact: true }).fill('2')
-  await page.getByLabel(/Verkaufserlös/).fill('300,00')
+  await page.getByLabel(/Verkaufskurs je Stück/).fill('150,00')
   await page.getByRole('button', { name: 'Buchung speichern' }).click()
   await expect(page.getByText('Buchung gespeichert.')).toBeVisible()
 

@@ -335,6 +335,11 @@ export const booking = pgTable(
     source: text('source').notNull().default('manual'),
     /** SHA-256 über die Merkmale einer importierten Buchung (Duplikaterkennung), sonst NULL */
     importKey: text('import_key'),
+    /**
+     * Kurs je Stück bestätigt („Kurs stimmt – trotzdem speichern“): keine
+     * Plausibilitätswarnung mehr. Jede Änderung ohne Häkchen setzt es zurück.
+     */
+    priceConfirmed: boolean('price_confirmed').notNull().default(false),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },

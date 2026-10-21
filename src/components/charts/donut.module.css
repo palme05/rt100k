@@ -1,4 +1,4 @@
-/* Tortendiagramm (Ring) mit Legende. Breit: Ring links, Legende rechts; schmal untereinander. */
+/* Ringdiagramm mit Legende. Breit: Ring links, Legende rechts; schmal untereinander. */
 
 .root {
   container-type: inline-size;
@@ -7,43 +7,45 @@
 
 .layout {
   display: grid;
-  gap: var(--space-5);
+  gap: var(--space-6);
   justify-items: center;
 }
 
 @container (min-width: 30rem) {
   .layout {
-    grid-template-columns: 11rem minmax(0, 1fr);
+    grid-template-columns: 10.5rem minmax(0, 1fr);
     align-items: center;
     justify-items: stretch;
+    gap: var(--space-8);
   }
 }
 
 .svg {
   display: block;
   width: 100%;
-  max-width: 11rem;
+  max-width: 10.5rem;
   height: auto;
   overflow: visible;
   border-radius: 50%;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .svg:focus-visible {
   outline: 2px solid var(--accent);
-  outline-offset: 3px;
+  outline-offset: 6px;
 }
 
-/* 2 px Lücke zwischen den Segmenten in der Farbe des Untergrunds */
+/* 3 Einheiten Lücke zwischen den Segmenten in der Farbe des Untergrunds */
 .segment {
   stroke: var(--bg);
-  stroke-width: 2;
+  stroke-width: 3;
   stroke-linejoin: round;
   cursor: pointer;
-  transition: opacity 120ms ease;
+  transition: opacity 150ms ease;
 }
 
 .dim {
-  opacity: 0.32;
+  opacity: var(--opacity-dim);
 }
 
 .cat1 { fill: var(--cat-1); }
@@ -56,27 +58,30 @@
 .cat8 { fill: var(--cat-8); }
 .rest { fill: var(--cat-rest); }
 
+/* Mitte: Größen in viewBox-Einheiten (200), gerendert ≈ 0,84 × */
 .centerLabel {
-  font-size: 12px;
+  font-size: 13.5px;
+  font-weight: var(--weight-medium);
   fill: var(--ink-3);
 }
 
 .centerValue {
-  font-size: 20px;
+  font-size: 24px;
   font-weight: var(--weight-semibold);
+  letter-spacing: -0.01em;
   fill: var(--ink);
   font-variant-numeric: tabular-nums;
 }
 
 .centerSub {
-  font-size: 12px;
+  font-size: 13.5px;
   fill: var(--ink-2);
   font-variant-numeric: tabular-nums;
 }
 
+/* Legende im gemeinsamen Zeilenrhythmus mit Haarlinien */
 .legend {
   display: grid;
-  gap: var(--space-2);
   width: 100%;
   min-width: 0;
   list-style: none;
@@ -86,16 +91,30 @@
 
 .item {
   display: grid;
-  grid-template-columns: 10px minmax(0, 1fr) auto auto;
+  grid-template-columns: 8px minmax(0, 1fr) auto auto;
   column-gap: var(--space-3);
   align-items: baseline;
-  padding: 0.15rem var(--space-2);
-  margin-inline: calc(-1 * var(--space-2));
-  border-radius: var(--radius-sm);
+  padding-block: var(--row-y);
+  border-top: 1px solid var(--rule);
+  font-variant-numeric: tabular-nums;
+  transition: opacity 150ms ease;
 }
 
-.itemActive {
-  background: var(--wash);
+.item:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.item:last-child {
+  padding-bottom: 0;
+}
+
+.itemActive .label {
+  font-weight: var(--weight-medium);
+}
+
+.itemDim {
+  opacity: var(--opacity-muted);
 }
 
 .swatch {
@@ -110,7 +129,6 @@
 
 .pct {
   font-weight: var(--weight-medium);
-  font-variant-numeric: tabular-nums;
   min-width: 3.25rem;
   text-align: right;
 }
@@ -118,13 +136,26 @@
 .amt {
   font-size: var(--text-sm);
   color: var(--ink-3);
-  font-variant-numeric: tabular-nums;
   min-width: 4.75rem;
   text-align: right;
 }
 
+@media (prefers-reduced-motion: no-preference) {
+  .svg {
+    animation: donut-in 400ms ease-out both;
+  }
+
+  @keyframes donut-in {
+    from {
+      opacity: 0;
+      transform: rotate(-8deg) scale(0.98);
+    }
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .segment {
+  .segment,
+  .item {
     transition: none;
   }
 }

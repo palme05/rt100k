@@ -1,10 +1,12 @@
 import { beforeAll, describe, expect, it } from 'vitest'
+import { quantityFromDb, unitPriceInput } from '@/lib/quantity'
 import { createUser, vwce } from '@/test/fixtures'
 import type { Actor } from './actor'
-import { booking } from '../db/schema'
-import { withUser } from '../db/client'
-import { createBooking, deleteBooking, getBooking, listBookings, MAX_BOOKINGS_PER_USER, RECONCILE_NOTE, reconcileCashBalance, updateBooking } from './bookings'
-import { NotFoundError, ValidationError } from './errors'
+import { booking, priceDaily } from '../db/schema'
+import { getDb, withUser } from '../db/client'
+import { createBooking, deleteBooking, getBooking, listAllLedgerBookings, listBookings, MAX_BOOKINGS_PER_USER, RECONCILE_NOTE, reconcileCashBalance, updateBooking } from './bookings'
+import { ConfirmationRequired, NotFoundError, ValidationError } from './errors'
+import { ensureGlobalInstrument } from './instruments'
 import { createPortfolio, MAX_PORTFOLIOS_PER_USER } from './portfolios'
 
 let user: Actor
@@ -191,5 +193,123 @@ describe('Kontostand abgleichen', () => {
     await expect(reconcileCashBalance(owner, cash, 42)).rejects.toBeInstanceOf(ValidationError)
     expect(await listBookings(owner, cash)).toEqual([])
     expect(await listBookings(owner, depotOnly)).toEqual([])
+  })
+})
+
+describe('Kurs je Stück', () => {
+  let owner: Actor
+  let d: string
+  beforeAll(async () => {
+    owner = await createUser('Olga')
+    d = (await createPortfolio(owner, { name: 'TR', kind: 'depot' })).id
+  })
+  const buy = { type: 'buy', occurredOn: '2026-03-02', amountMode: 'unit' }
+
+  it('Kauf: Betrag = Stück × Kurs, kaufmännisch gerundet', async () => {
+    const b = await createBooking(owner, { ...buy, portfolioId: d, instrumentId: etf, quantity: '15,399543', price: '97,41' })
+    expect(b).toMatchObject({ quantity: '15.399543000000', amountCents: 150_007, priceConfirmed: false })
+  })
+
+  it('ein mitgeschickter Betrag zählt im Modus „Kurs je Stück“ nicht', async () => {
+    const b = await createBooking(owner, { ...buy, portfolioId: d, instrumentId: etf, quantity: '10', price: '100', amount: '1' })
+    expect(b.amountCents).toBe(100_000)
+  })
+
+  it('Verkauf mit Verkaufskurs, Übertrag ohne Kurs → Anschaffungskosten 0', async () => {
+    const sell = await createBooking(owner, { portfolioId: d, type: 'sell', occurredOn: '2026-03-05', instrumentId: etf, quantity: '2', amountMode: 'unit', price: '112,30', tax: '3,00' })
+    expect(sell).toMatchObject({ amountCents: 22_460, taxCents: 300 })
+    const transfer = await createBooking(owner, { portfolioId: d, type: 'transfer_in', occurredOn: '2026-03-06', instrumentId: etf, quantity: '3', amountMode: 'unit', price: '' })
+    expect(transfer.amountCents).toBe(0)
+  })
+
+  it.each([
+    [{ ...buy, quantity: '1', price: '0' }, 'price'],
+    [{ ...buy, quantity: '1', price: '' }, 'price'],
+    [{ ...buy, quantity: '1', price: '97.41' }, 'price'],
+    [{ ...buy, quantity: '1', price: '1,123456789' }, 'price'],
+    [{ ...buy, quantity: '1', price: 'abc' }, 'price'],
+    [{ ...buy, quantity: '1', price: '1'.repeat(41) }, 'price'],
+    [{ ...buy, quantity: '3', price: '0,001' }, 'price'], // ergibt weniger als 1 Cent
+    [{ ...buy, quantity: '1000000', price: '999.999.999' }, 'price'], // über 1 Mrd. €
+    [{ type: 'dividend', occurredOn: '2026-03-02', amountMode: 'unit', price: '1,00' }, 'price'],
+    [{ type: 'split', occurredOn: '2026-03-02', factor: '2', amountMode: 'unit', price: '1,00' }, 'price'],
+    [{ ...buy, amountMode: 'hack', quantity: '1', price: '1' }, 'amountMode'],
+    [{ ...buy, quantity: '0', price: '1' }, 'quantity'],
+    [{ ...buy, quantity: '1', price: '1', confirmPrice: 'ja' }, 'confirmPrice'],
+  ])('prüft Eingaben: %o → %s', async (input, field) => {
+    const error = await createBooking(owner, { portfolioId: d, instrumentId: etf, ...input }).catch((e: unknown) => e)
+    expect(error).toBeInstanceOf(ValidationError)
+    expect(error).not.toBeInstanceOf(ConfirmationRequired)
+    expect((error as ValidationError).field).toBe(field)
+  })
+
+  it('Bearbeiten im Modus „Kurs je Stück“ rechnet den Betrag neu', async () => {
+    const b = await createBooking(owner, { portfolioId: d, type: 'buy', occurredOn: '2026-03-02', instrumentId: etf, quantity: '5', amount: '500,00' })
+    const updated = await updateBooking(owner, b.id, { type: 'buy', occurredOn: '2026-03-02', instrumentId: etf, quantity: '6', amountMode: 'unit', price: '101,50', amount: '500,00' })
+    expect(updated.amountCents).toBe(60_900)
+  })
+
+  it('Rundlauf: vorbelegter Kurs speichert genau den alten Betrag', async () => {
+    const b = await createBooking(owner, { portfolioId: d, type: 'buy', occurredOn: '2026-03-02', instrumentId: etf, quantity: '15,399543', amount: '1.500,00' })
+    const price = unitPriceInput(b.amountCents, quantityFromDb(b.quantity!))
+    expect(price).toBe('97,4055')
+    const updated = await updateBooking(owner, b.id, { type: 'buy', occurredOn: '2026-03-02', instrumentId: etf, quantity: '15,399543', amountMode: 'unit', price })
+    expect(updated.amountCents).toBe(150_000)
+  })
+})
+
+describe('Kursprüfung beim Speichern', () => {
+  // eigenes Instrument: der gespeicherte Schlusskurs berührt keine anderen Tests
+  let fund: string
+  let owner: Actor
+  let d: string
+  const DAY = '2025-03-14'
+  beforeAll(async () => {
+    fund = (await ensureGlobalInstrument({ kind: 'etf', name: 'Prüf-ETF Speichern', isin: 'XS0000000PC7', symbol: 'PRUEFC.DE', coingeckoId: null, metal: null, currency: 'EUR' })).id
+    await getDb().insert(priceDaily).values({ instrumentId: fund, day: DAY, closeMicros: 97_520_000, source: 'yahoo' }).onConflictDoNothing()
+    owner = await createUser('Paula')
+    d = (await createPortfolio(owner, { name: 'TR', kind: 'depot' })).id
+  })
+
+  it('Kurs statt Kurswert: erst nach Bestätigung gespeichert', async () => {
+    const input = { portfolioId: d, type: 'buy', occurredOn: DAY, instrumentId: fund, quantity: '15', amount: '97,41' }
+    const error = await createBooking(owner, input).catch((e: unknown) => e)
+    expect(error).toBeInstanceOf(ConfirmationRequired)
+    expect((error as ConfirmationRequired).field).toBe('amount')
+    expect((error as Error).message).toMatch(/Kurs eines Stücks.*6,49\s€.*14\.03\.2025.*97,52\s€.*-93,3\s%/)
+    expect(await listBookings(owner, d)).toEqual([])
+
+    const saved = await createBooking(owner, { ...input, confirmPrice: 'on' })
+    expect(saved).toMatchObject({ amountCents: 9_741, priceConfirmed: true })
+    expect((await listAllLedgerBookings(owner)).find((b) => b.id === saved.id)).toMatchObject({ priceConfirmed: true })
+  })
+
+  it('im Modus „Kurs je Stück“ zeigt die Warnung auf das Kursfeld; Abweichung über das Band', async () => {
+    const error = await createBooking(owner, { portfolioId: d, type: 'buy', occurredOn: DAY, instrumentId: fund, quantity: '1', amountMode: 'unit', price: '9,75' }).catch((e: unknown) => e)
+    expect(error).toBeInstanceOf(ConfirmationRequired)
+    expect((error as ConfirmationRequired).field).toBe('price')
+    expect((error as Error).message).toMatch(/Kurs je Stück liegt bei 9,75\s€/)
+  })
+
+  it('plausibler Kurs, Übertrag oder Tag ohne Schlusskurs: keine Rückfrage', async () => {
+    expect(await createBooking(owner, { portfolioId: d, type: 'buy', occurredOn: DAY, instrumentId: fund, quantity: '15', amountMode: 'unit', price: '97,41' })).toMatchObject({ amountCents: 146_115, priceConfirmed: false })
+    expect(await createBooking(owner, { portfolioId: d, type: 'transfer_in', occurredOn: DAY, instrumentId: fund, quantity: '15', amount: '97,41' })).toMatchObject({ amountCents: 9_741 })
+    expect(await createBooking(owner, { portfolioId: d, type: 'buy', occurredOn: '2025-04-30', instrumentId: fund, quantity: '15', amount: '97,41' })).toMatchObject({ priceConfirmed: false })
+  })
+
+  it('Änderung ohne Häkchen wird wieder geprüft und setzt die Bestätigung zurück', async () => {
+    const b = await createBooking(owner, { portfolioId: d, type: 'buy', occurredOn: DAY, instrumentId: fund, quantity: '10', amount: '97,41', confirmPrice: 'on' })
+    expect(b.priceConfirmed).toBe(true)
+    await expect(updateBooking(owner, b.id, { type: 'buy', occurredOn: DAY, instrumentId: fund, quantity: '10', amount: '97,41', note: 'nur Notiz' })).rejects.toBeInstanceOf(ConfirmationRequired)
+    const fixed = await updateBooking(owner, b.id, { type: 'buy', occurredOn: DAY, instrumentId: fund, quantity: '10', amountMode: 'unit', price: '97,41' })
+    expect(fixed).toMatchObject({ amountCents: 97_410, priceConfirmed: false })
+  })
+
+  it('fremde Buchung lässt sich auch mit Häkchen nicht bestätigen', async () => {
+    const other = await createUser('Quirin')
+    const b = await createBooking(owner, { portfolioId: d, type: 'buy', occurredOn: DAY, instrumentId: fund, quantity: '10', amountMode: 'unit', price: '97,00' })
+    await expect(updateBooking(other, b.id, { type: 'buy', occurredOn: DAY, instrumentId: fund, quantity: '10', amount: '97,00', confirmPrice: 'on' })).rejects.toBeInstanceOf(NotFoundError)
+    await expect(createBooking(other, { portfolioId: d, type: 'buy', occurredOn: DAY, instrumentId: fund, quantity: '10', amount: '97,00', confirmPrice: 'on' })).rejects.toBeInstanceOf(NotFoundError)
+    expect(await getBooking(owner, b.id)).toMatchObject({ amountCents: 97_000, priceConfirmed: false })
   })
 })

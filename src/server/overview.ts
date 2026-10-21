@@ -28,7 +28,8 @@ export interface PortfolioValuation {
   missingPrices: number
   fx: FxRates | null
   ledgerError: string | null
-  bookings: (LedgerBooking & { portfolioId: string })[]
+  /** `priceConfirmed`: Kurs trotz Plausibilitätswarnung bestätigt */
+  bookings: (LedgerBooking & { portfolioId: string; priceConfirmed: boolean })[]
 }
 
 export async function valuePortfolios(

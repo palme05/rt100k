@@ -36,15 +36,15 @@
      bei Farbsehschwäche unterscheidbar, wenn sie im Ring nebeneinander liegen
      (ΔE ≥ 12 benachbart, ≥ 10 beim Ringschluss). Ohne Gewinn-Grün, Verlust-Rot
      und Akzent-Orange. Mehr als acht wiederholen sich; Rest immer grau. */
-  --cat-1: #2a78d6;
-  --cat-2: #eda100;
+  --cat-1: #2a75ba;
+  --cat-2: #d3a333;
   --cat-3: #7d3c98;
   --cat-4: #1baf7a;
-  --cat-5: #b8336a;
+  --cat-5: #b0416b;
   --cat-6: #4fb3d9;
   --cat-7: #b5622e;
   --cat-8: #e87ba4;
-  --cat-rest: #d4d3cc;
+  --cat-rest: #b4b3ac;
 
   /* Schrift */
   --font: 'Instrument Sans Variable', 'Helvetica Neue', Arial, sans-serif;
@@ -127,6 +127,12 @@
   --shadow-fab: 0 6px 16px rgb(22 24 27 / 18%), 0 1px 3px rgb(22 24 27 / 12%);
   /* Diagramme: Deckkraft oben in der Ausblendung unter der Hauptlinie */
   --area-top: 0.16;
+  /* Diagramme („Strecke 2“): Linie in Tinte, Raster, Prognosekorridor,
+     Spur der Anteilsbalken. Dunkel eigene Stufen (weniger Blendung). */
+  --chart-ink: var(--ink);
+  --chart-grid: var(--rule);
+  --chart-band: rgb(226 98 11 / 10%);
+  --chart-track: var(--rule);
 }
 
 /* ═══ Dunkles Design ══════════════════════════════════════════════════════
@@ -145,8 +151,6 @@
     --ink-3: #97968f;
     --rule: #2b2d31;
     --rule-strong: #3d4045;
-  --field-border: #6b6e74;
-  --surface-raised: #303236;
     --field-border: #6b6e74;
     --surface-raised: #303236;
     --accent: #f0802f;
@@ -156,15 +160,15 @@
     --second-wash: #2a3a4e;
     --pos: #4cc38a;
     --neg: #f2786d;
-    --cat-1: #3277dd;
-    --cat-2: #c98500;
+    --cat-1: #3e80d0;
+    --cat-2: #bc8a26;
     --cat-3: #9a4aa0;
     --cat-4: #26ad7d;
-    --cat-5: #b8336a;
+    --cat-5: #b0416b;
     --cat-6: #2ca5b4;
     --cat-7: #a24f24;
     --cat-8: #c96f9c;
-    --cat-rest: #3a3c40;
+    --cat-rest: #62656b;
     --scrim: rgb(0 0 0 / 55%);
     --shadow-raise: 0 1px 2px rgb(0 0 0 / 45%);
     --shadow-pop: 0 24px 60px rgb(0 0 0 / 55%);
@@ -172,6 +176,10 @@
     --shadow-menu: 0 8px 24px rgb(0 0 0 / 45%);
     --shadow-fab: 0 6px 16px rgb(0 0 0 / 50%);
     --area-top: 0.2;
+    --chart-ink: #d4d3cd;
+    --chart-grid: #2f3135;
+    --chart-band: rgb(240 128 47 / 10%);
+    --chart-track: #303236;
     color-scheme: dark;
   }
 }
@@ -185,6 +193,8 @@
   --ink-3: #97968f;
   --rule: #2b2d31;
   --rule-strong: #3d4045;
+  --field-border: #6b6e74;
+  --surface-raised: #303236;
   --accent: #f0802f;
   --accent-wash: rgb(240 128 47 / 14%);
   --accent-band: rgb(240 128 47 / 20%);
@@ -192,15 +202,15 @@
   --second-wash: #2a3a4e;
   --pos: #4cc38a;
   --neg: #f2786d;
-  --cat-1: #3277dd;
-  --cat-2: #c98500;
+  --cat-1: #3e80d0;
+  --cat-2: #bc8a26;
   --cat-3: #9a4aa0;
   --cat-4: #26ad7d;
-  --cat-5: #b8336a;
+  --cat-5: #b0416b;
   --cat-6: #2ca5b4;
   --cat-7: #a24f24;
   --cat-8: #c96f9c;
-  --cat-rest: #3a3c40;
+  --cat-rest: #62656b;
   --scrim: rgb(0 0 0 / 55%);
   --shadow-raise: 0 1px 2px rgb(0 0 0 / 45%);
   --shadow-pop: 0 24px 60px rgb(0 0 0 / 55%);
@@ -208,6 +218,10 @@
   --shadow-menu: 0 8px 24px rgb(0 0 0 / 45%);
   --shadow-fab: 0 6px 16px rgb(0 0 0 / 50%);
   --area-top: 0.2;
+  --chart-ink: #d4d3cd;
+  --chart-grid: #2f3135;
+  --chart-band: rgb(240 128 47 / 10%);
+  --chart-track: #303236;
   color-scheme: dark;
 }
 

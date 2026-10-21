@@ -1,0 +1,33 @@
+/* Bearbeiten-Seite: Löschen mit Bestätigung in der Seitenspalte */
+
+.delete {
+  display: grid;
+  gap: var(--space-3);
+  justify-items: start;
+}
+
+.confirm {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.question {
+  margin: 0;
+  font-size: var(--text-md);
+  font-weight: var(--weight-medium);
+  color: var(--ink);
+}
+
+.buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+.text {
+  margin: 0;
+  max-width: var(--measure);
+  font-size: var(--text-md);
+  line-height: var(--leading-body);
+  color: var(--ink-2);
+}

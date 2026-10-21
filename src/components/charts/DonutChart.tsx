@@ -8,12 +8,13 @@ import styles from './donut.module.css'
 import { ringPath } from './scale'
 
 /**
- * Tortendiagramm (Ring) für Anteile – auf einen Blick, die genauen Werte
- * stehen in der Legende daneben (Text, Prozent, Betrag). Segment per Zeiger,
- * Antippen oder Pfeiltasten hervorheben; die Mitte zeigt dann Name und Anteil.
+ * Ringdiagramm für Anteile – auf einen Blick, die genauen Werte stehen in
+ * der Legende (Text, Prozent, Betrag). Segment per Zeiger, Antippen oder
+ * Pfeiltasten hervorheben: es wird nach außen dicker, die übrigen treten
+ * zurück, die Mitte zeigt Name, Anteil und Betrag.
  *
- * Farben über Klassen aus den Design-Tokens (`--cat-1` … `--cat-8`, Rest grau),
- * keine `style`-Attribute (CSP).
+ * Kategorie-Farben (`--cat-1` … `--cat-8`, Rest grau) nur für Anlageklassen;
+ * andere Verteilungen als `BarList`. Keine `style`-Attribute (CSP).
  */
 
 const SLOT = [styles.cat1, styles.cat2, styles.cat3, styles.cat4, styles.cat5, styles.cat6, styles.cat7, styles.cat8]
@@ -23,9 +24,10 @@ export const ASSET_KIND_SLOT: Record<string, number> = { etf: 0, metal: 1, bond:
 
 const SIZE = 200
 const CENTER = SIZE / 2
-const OUTER = 92
-const INNER = 60
-const LIFT = 5
+/** Ring ≈ 11 % des Durchmessers; hervorgehoben wächst er nur nach außen */
+const OUTER = 96
+const INNER = 74
+const ACTIVE_OUTER = 100
 
 export interface DonutChartProps {
   /** Name des Diagramms für Screenreader */
@@ -42,7 +44,7 @@ export interface DonutChartProps {
   totalLabel?: string
 }
 
-const short = (text: string, max = 20) => (text.length > max ? `${text.slice(0, max - 1)}…` : text)
+const short = (text: string, max = 18) => (text.length > max ? `${text.slice(0, max - 1)}…` : text)
 
 export function DonutChart({ title, items, limit, restLabel, remainderLabel, slots, totalLabel = 'Gesamt' }: DonutChartProps) {
   const { hidden } = usePrivacy()
@@ -85,26 +87,27 @@ export function DonutChart({ title, items, limit, restLabel, remainderLabel, slo
           tabIndex={0}
           onKeyDown={onKey}
           onBlur={() => setActive(null)}
-          onPointerLeave={() => setActive(null)}
+          onPointerLeave={(event) => event.pointerType !== 'touch' && setActive(null)}
         >
           {slices.map((s, i) => (
             <path
               key={s.key}
               className={`${styles.segment} ${colorOf(s.slot)} ${active !== null && active !== i ? styles.dim : ''}`}
-              d={ringPath(CENTER, CENTER, active === i ? OUTER + LIFT : OUTER, INNER, s.start, s.end)}
-              onPointerEnter={() => setActive(i)}
+              d={ringPath(CENTER, CENTER, active === i ? ACTIVE_OUTER : OUTER, INNER, s.start, s.end)}
+              // Maus: Hover hebt hervor; Touch: Antippen schaltet um
+              onPointerEnter={(event) => event.pointerType !== 'touch' && setActive(i)}
               onClick={() => setActive(active === i ? null : i)}
               aria-hidden="true"
             />
           ))}
-          <text className={styles.centerLabel} x={CENTER} y={CENTER - 8} textAnchor="middle">
+          <text className={styles.centerLabel} x={CENTER} y={CENTER - 13} textAnchor="middle">
             {current ? short(current.label) : totalLabel}
           </text>
-          <text className={styles.centerValue} x={CENTER} y={CENTER + 14} textAnchor="middle">
+          <text className={styles.centerValue} x={CENTER} y={CENTER + 12} textAnchor="middle">
             {current ? share(current.share) : money(total)}
           </text>
           {current ? (
-            <text className={styles.centerSub} x={CENTER} y={CENTER + 32} textAnchor="middle">
+            <text className={styles.centerSub} x={CENTER} y={CENTER + 33} textAnchor="middle">
               {money(current.value)}
             </text>
           ) : null}
@@ -112,9 +115,9 @@ export function DonutChart({ title, items, limit, restLabel, remainderLabel, slo
 
         <ul className={styles.legend}>
           {slices.map((s, i) => (
-            <li key={s.key} className={`${styles.item} ${active === i ? styles.itemActive : ''}`} onPointerEnter={() => setActive(i)} onPointerLeave={() => setActive(null)}>
-              <svg className={styles.swatch} width={10} height={10} aria-hidden="true">
-                <circle className={colorOf(s.slot)} cx={5} cy={5} r={5} />
+            <li key={s.key} className={`${styles.item} ${active === i ? styles.itemActive : ''} ${active !== null && active !== i ? styles.itemDim : ''}`} onPointerEnter={(event) => event.pointerType !== 'touch' && setActive(i)} onPointerLeave={(event) => event.pointerType !== 'touch' && setActive(null)} onClick={() => setActive(active === i ? null : i)}>
+              <svg className={styles.swatch} width={8} height={8} aria-hidden="true">
+                <circle className={colorOf(s.slot)} cx={4} cy={4} r={4} />
               </svg>
               <span className={styles.label}>{s.label}</span>
               <span className={styles.pct}>{share(s.share)}</span>

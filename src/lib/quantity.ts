@@ -1,3 +1,5 @@
+import { groupThousands } from './money'
+
 /**
  * Stückzahlen und Kurse als skalierte Ganzzahlen (BigInt) – nie als Float.
  *
@@ -101,4 +103,72 @@ export function toEurMicros(priceMicros: bigint, ratePerEur: string): bigint {
 export function averagePriceCents(costCents: number, quantity: bigint): number {
   if (quantity === 0n) return 0
   return Number(mulDiv(BigInt(costCents), QTY_ONE, quantity))
+}
+
+/* ── Kurs je Stück (Eingabe im Buchungsformular) ─────────────────────────
+   Der eingegebene Kurs wird als Ganzzahl in 10⁻⁸ € geführt (Krypto, z. B.
+   0,00001234 €). Formular-Vorschau und Server nutzen dieselben Funktionen,
+   damit die Vorschau immer genau dem gespeicherten Betrag entspricht. */
+
+export const UNIT_PRICE_DECIMALS = 8
+export const UNIT_PRICE_ONE = 10n ** BigInt(UNIT_PRICE_DECIMALS)
+
+const UNIT_PRICE_PATTERN = /^(\d{1,3}(?:\.\d{3}){1,2}|\d{1,9})(?:,(\d{1,8}))?$/
+
+/**
+ * Deutscher Kurs wie „97,41“, „1.234,5678“ oder „0,00001234 €“: Komma =
+ * Dezimaltrennzeichen, Punkte nur als Tausendergruppen. Höchstens 9 Stellen
+ * vor und 8 nach dem Komma, nie negativ. Liefert null bei ungültiger Eingabe
+ * (auch „97.41“ – der Punkt wäre mehrdeutig).
+ */
+export function parseUnitPrice(input: string): bigint | null {
+  const match = UNIT_PRICE_PATTERN.exec(input.replace(/[\s  €]|EUR/g, ''))
+  if (!match) return null
+  const whole = BigInt((match[1] ?? '0').replaceAll('.', ''))
+  return whole * UNIT_PRICE_ONE + BigInt((match[2] ?? '').padEnd(UNIT_PRICE_DECIMALS, '0'))
+}
+
+/** Kurswert in Cent = Stück (10⁻¹²) × Kurs (10⁻⁸), kaufmännisch auf ganze Cent gerundet. */
+export function amountFromUnitPrice(quantity: bigint, unitPrice: bigint): bigint {
+  return mulDiv(quantity, unitPrice, 10n ** BigInt(QTY_DECIMALS + UNIT_PRICE_DECIMALS - 2))
+}
+
+/** Kurs je Stück in 10⁻⁸ € aus Betrag und Stückzahl (für Anzeige und Prüfung). */
+export function unitPriceFromAmount(amountCents: number, quantity: bigint): bigint {
+  if (quantity <= 0n) return 0n
+  return mulDiv(BigInt(amountCents) * 10n ** BigInt(UNIT_PRICE_DECIMALS - 2), QTY_ONE, quantity)
+}
+
+/**
+ * Kürzester Kurs (2–8 Nachkommastellen), der mit `quantity` genau `amountCents`
+ * ergibt – zum Vorbelegen beim Bearbeiten. Leer bei 0, null wenn kein Kurs
+ * mit 8 Nachkommastellen den Betrag exakt trifft.
+ */
+export function unitPriceInput(amountCents: number, quantity: bigint, options: { grouped?: boolean } = {}): string | null {
+  if (quantity <= 0n || amountCents < 0 || !Number.isSafeInteger(amountCents)) return null
+  if (amountCents === 0) return ''
+  const target = BigInt(amountCents)
+  for (let d = 2; d <= UNIT_PRICE_DECIMALS; d++) {
+    const price = mulDiv(target, QTY_ONE * 10n ** BigInt(d), quantity * 100n)
+    if (amountFromUnitPrice(quantity, price * 10n ** BigInt(UNIT_PRICE_DECIMALS - d)) === target) {
+      const text = toDecimalString(price, d).replace('.', ',')
+      return options.grouped ? groupThousands(text) : text
+    }
+  }
+  return null
+}
+
+const unitPriceFormatter = new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR', minimumFractionDigits: 2, maximumFractionDigits: UNIT_PRICE_DECIMALS })
+
+/** Kurs für die Anzeige: `97,41 €`, `0,00001234 €` – mindestens 2, höchstens 8 Nachkommastellen, exakt. */
+export function formatUnitPrice(unitPrice: bigint): string {
+  // Intl.NumberFormat akzeptiert Dezimal-Strings exakt (ohne Float-Umweg).
+  return unitPriceFormatter.format(toDecimalString(unitPrice, UNIT_PRICE_DECIMALS) as `${number}`)
+}
+
+/** Kurs kurz für Hinweise: ab 1 € auf Cent gerundet (`6,49 €`), darunter bis 8 Nachkommastellen. */
+export function displayUnitPrice(unitPrice: bigint): string {
+  if (unitPrice < UNIT_PRICE_ONE) return formatUnitPrice(unitPrice)
+  const step = 10n ** BigInt(UNIT_PRICE_DECIMALS - 2)
+  return formatUnitPrice(mulDiv(unitPrice, 1n, step) * step)
 }

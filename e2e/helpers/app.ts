@@ -95,15 +95,51 @@ export async function createPortfolio(page: Page, name: string, kind: 'depot' | 
   return page.url().split('/').at(-1)!
 }
 
-/** Kauf von VWCE (Testkurs 128,45 €). */
-export async function buyEtf(page: Page, quantity: string, amount: string) {
+/** VWCE suchen und wählen; danach ist der Wert als gewählt markiert. */
+export async function pickEtf(page: Page) {
   await page.getByLabel('Wertpapier').fill('IE00BK5BQT80')
   await page.getByRole('button', { name: /Vanguard FTSE All-World/ }).click()
-  await expect(page.getByText(/Gewählt: Vanguard/)).toBeVisible()
-  await page.getByLabel('Stück', { exact: true }).fill(quantity)
-  await page.getByLabel(/Kurswert/).fill(amount)
+  // gewählt: gedrückter Chip (schon im Depot) oder Anzeige „Ausgewählt“ (neu)
+  await expect(page.getByRole('button', { name: /Vanguard FTSE All-World/, pressed: true }).or(page.getByText(/Ausgewählt: Vanguard/))).toBeVisible()
+}
+
+/** Eingabeart des Betrags umschalten („Kurs je Stück“ oder „Gesamtbetrag“). */
+export async function amountMode(page: Page, mode: 'Kurs je Stück' | 'Gesamtbetrag') {
+  const button = page.getByRole('group', { name: 'Betrag eingeben als' }).getByRole('button', { name: mode, exact: true })
+  await button.click()
+  await expect(button).toHaveAttribute('aria-pressed', 'true')
+}
+
+async function saveBuy(page: Page, date?: string) {
+  if (date) await page.getByLabel('Datum').fill(date)
   await page.getByRole('button', { name: 'Buchung speichern' }).click()
   await expect(page.getByText('Buchung gespeichert.')).toBeVisible()
+}
+
+/** Kauf von VWCE (Testkurs 128,45 €) mit Gesamtbetrag (Kurswert). */
+export async function buyEtf(page: Page, quantity: string, amount: string, options: { date?: string } = {}) {
+  await pickEtf(page)
+  await amountMode(page, 'Gesamtbetrag')
+  await page.getByLabel('Stück', { exact: true }).fill(quantity)
+  await page.getByLabel(/Kurswert/).fill(amount)
+  await saveBuy(page, options.date)
+}
+
+/** Kauf von VWCE mit Kurs je Stück – der Server rechnet Stück × Kurs. */
+export async function buyEtfUnit(page: Page, quantity: string, price: string, options: { date?: string } = {}) {
+  await pickEtf(page)
+  await amountMode(page, 'Kurs je Stück')
+  await page.getByLabel('Stück', { exact: true }).fill(quantity)
+  await page.getByLabel(/Kurs je Stück/).fill(price)
+  await saveBuy(page, options.date)
+}
+
+/** Kalendertag in Wien vor `n` Tagen (YYYY-MM-DD). */
+export function daysAgo(n: number): string {
+  const day = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Vienna' }).format(new Date())
+  const d = new Date(`${day}T12:00:00Z`)
+  d.setUTCDate(d.getUTCDate() - n)
+  return d.toISOString().slice(0, 10)
 }
 
 export function collectProblems(page: Page): string[] {
