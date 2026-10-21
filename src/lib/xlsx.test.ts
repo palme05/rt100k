@@ -68,4 +68,29 @@ describe('Bestandsliste aus XLSX (synthetisch, Aufbau wie ein Anbieter-Download)
       { label: 'Rohstoffe', bp: 4_000 },
     ])
   })
+
+  it('Vanguard-Export (DE, 2026): Texte direkt in den Zellen, „% der Assets“, Stichtag „Per …“, Länder als Kürzel', async () => {
+    // Aufbau wie der echte Download, Inhalte erfunden
+    const ns = 'xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"'
+    const cell = (ref: string, v: string) => `<c r="${ref}" t="str"><v>${v}</v></c>`
+    const row = (r: number, cells: string[]) => `<row r="${r}">${cells.map((v, i) => cell(`${'ABCDEFG'[i]}${r}`, v)).join('')}</row>`
+    const sheet = `<?xml version="1.0" encoding="UTF-8"?><worksheet ${ns}><sheetData>${[
+      row(1, ['Diese datei wurde am 21. Okt. 2026 heruntergeladen']),
+      row(3, ['Aufschlüsselung der Positionen']),
+      row(4, ['Beispiel ESG Welt UCITS ETF (USD) Accumulating']),
+      row(5, ['Per 30. Sept. 2026']),
+      row(7, ['Ticker', 'Wertpapiere', '% der Assets', 'Sektor', 'Region', 'Marktwert', 'Anteile']),
+      row(8, ['AAA', 'Alpha Corp', '60,0000 %', 'Technology', 'US', '600.000,00 $', '1.000']),
+      row(9, ['1234', 'Beta Ltd', '25,0000 %', 'Financials', 'JP', '250.000,00 $', '2.000']),
+      row(10, ['CCC', 'Gamma AG', '15,0000 %', 'Industrials', 'DE', '150.000,00 $', '300']),
+    ].join('')}</sheetData></worksheet>`
+    const b = parseHoldingsRows(await readXlsxRows(makeXlsx([], { sheetXml: sheet })))
+    expect(b).toMatchObject({ fundName: 'Beispiel ESG Welt UCITS ETF (USD) Accumulating', asOf: '2026-09-30', rows: 3 })
+    expect(b.countries).toEqual([
+      { label: 'USA', bp: 6_000 },
+      { label: 'Japan', bp: 2_500 },
+      { label: 'Deutschland', bp: 1_500 },
+    ])
+    expect(b.top[0]).toEqual({ label: 'Alpha Corp', bp: 6_000 })
+  })
 })

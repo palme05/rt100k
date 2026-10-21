@@ -36,7 +36,7 @@ const TOP = 10
 export const CASH_LABEL = 'Cash und Derivate'
 
 const COLUMN: Record<'weight' | 'name' | 'sector' | 'country' | 'region' | 'assetClass', RegExp> = {
-  weight: /^(weight|weighting|gewichtung|gewicht|anteil|% of (net )?assets|% des fondsvermögens|% of (the )?market value|% des marktwert(e)?s|% marktwert|marktwert(anteil)? ?(in )?%|% of fund|% of portfolio|portfolio %|fund %)(\b|$)/i,
+  weight: /^(weight|weighting|gewichtung|gewicht|anteil|% of (net )?assets|% des fondsvermögens|% der assets|% der vermögenswerte|% des vermögens|% of (the )?market value|% des marktwert(e)?s|% marktwert|marktwert(anteil)? ?(in )?%|% of fund|% of portfolio|portfolio %|fund %)(\b|$)/i,
   name: /^(name|security name|holdings?( name)?|wertpapiere?|bezeichnung|titel|constituent)\b/i,
   sector: /^(sector|sektor|branche|industry)\b/i,
   country: /^(location|standort|country|land|domicile|sitzland|country of risk)\b/i,
@@ -104,6 +104,21 @@ function label(value: string, dictionary: Record<string, string>): string {
   return dictionary[v.toLowerCase()] ?? v.slice(0, MAX_LABEL)
 }
 
+const REGION_NAMES = typeof Intl.DisplayNames === 'function' ? new Intl.DisplayNames(['de'], { type: 'region' }) : null
+
+/** Land: bekannte Namen, sonst ISO-Kürzel („JP“) → deutscher Name („Japan“). */
+function countryLabel(value: string): string {
+  const v = clean(value)
+  const known = COUNTRY[v.toLowerCase()]
+  if (known || !/^[A-Z]{2}$/.test(v) || !REGION_NAMES) return label(value, COUNTRY)
+  try {
+    const name = REGION_NAMES.of(v)
+    return name && name !== v ? name.slice(0, MAX_LABEL) : v
+  } catch {
+    return v
+  }
+}
+
 /** „4,85“ / „4.85“ / „4.85%“ → Millionstel-Prozent (exakt, ohne Float); null wenn keine Zahl */
 function weightMicro(raw: string, comma: boolean): number | null {
   let s = clean(raw).replace(/%$/, '').trim()
@@ -121,20 +136,32 @@ const MONTHS: Record<string, number> = { jan: 1, jän: 1, feb: 2, mar: 3, mär: 
 
 /** Stand der Liste aus den Kopfzeilen (falls angegeben): „17.10.2026“, „2026-10-17“, „30 Sep 2026“, „30. September 2026“. */
 function findDate(rows: readonly string[][]): string | null {
-  for (const row of rows) {
-    for (const cell of row) {
-      const m = /(\d{1,2}\.\d{1,2}\.\d{4}|\d{4}-\d{2}-\d{2})/.exec(cell)
-      const day = m ? parseDate(m[1]!) : null
-      if (day) return day
-      const named = /\b(\d{1,2})\.? ([a-zä]{3})[a-zä]*\.? (\d{4})\b/i.exec(cell)
-      const month = named ? MONTHS[named[2]!.toLowerCase()] : undefined
-      if (named && month) {
-        const iso = `${named[3]}-${String(month).padStart(2, '0')}-${named[1]!.padStart(2, '0')}`
-        if (parseDate(iso)) return iso
-      }
+  // Stichtag zuerst („Per 30. Sept. 2026“, „Stand …“, „As of …“) – nicht das Download-Datum
+  const cells = rows.flat()
+  const asOf = cells.filter((c) => /^\s*(per|stand|as of|as at)\b/i.test(c))
+  return dateIn(asOf) ?? dateIn(cells)
+}
+
+function dateIn(cells: readonly string[]): string | null {
+  for (const cell of cells) {
+    const m = /(\d{1,2}\.\d{1,2}\.\d{4}|\d{4}-\d{2}-\d{2})/.exec(cell)
+    const day = m ? parseDate(m[1]!) : null
+    if (day) return day
+    const named = /\b(\d{1,2})\.? ([a-zä]{3})[a-zä]*\.? (\d{4})\b/i.exec(cell)
+    const month = named ? MONTHS[named[2]!.toLowerCase()] : undefined
+    if (named && month) {
+      const iso = `${named[3]}-${String(month).padStart(2, '0')}-${named[1]!.padStart(2, '0')}`
+      if (parseDate(iso)) return iso
     }
   }
   return null
+}
+
+/** Fondsname aus den Kopfzeilen: erste Zeile, die nach Fonds aussieht (nicht „heruntergeladen am …“, Titel oder Stichtag). */
+function fundNameIn(rows: readonly string[][]): string | undefined {
+  const first = rows.map((r) => clean(r.find((c) => clean(c) !== '') ?? '')).filter(Boolean)
+  const skip = /(heruntergeladen|downloaded|aufschlüsselung|holdings|positionen|^per\b|^stand\b|^as (of|at)\b)/i
+  return (first.find((c) => /\b(etf|ucits|fund|fonds)\b/i.test(c) && !skip.test(c)) ?? first.find((c) => !skip.test(c)))?.slice(0, 120)
 }
 
 function sorted(map: Map<string, number>): WeightEntry[] {
@@ -184,7 +211,7 @@ export function parseHoldingsRows(rows: readonly string[][]): Breakdown {
     holdings.push({
       name: clean(r[iName] ?? '').slice(0, MAX_LABEL),
       sector: cash ? CASH_LABEL : iSector >= 0 ? label(r[iSector] ?? '', SECTOR) : 'Ohne Angabe',
-      country: cash ? CASH_LABEL : iCountry >= 0 ? label(r[iCountry] ?? '', COUNTRY) : 'Ohne Angabe',
+      country: cash ? CASH_LABEL : iCountry >= 0 ? countryLabel(r[iCountry] ?? '') : 'Ohne Angabe',
       micro,
       bp: 0,
     })
@@ -209,7 +236,7 @@ export function parseHoldingsRows(rows: readonly string[][]): Breakdown {
     .slice(0, TOP)
     .map((h) => ({ label: h.name, bp: h.bp }))
 
-  const fundName = headerIndex > 0 ? clean(rows[0]?.find((c) => clean(c) !== '') ?? '').slice(0, 120) || null : null
+  const fundName = headerIndex > 0 ? (fundNameIn(rows.slice(0, headerIndex)) ?? null) : null
   return { fundName, asOf: findDate(rows.slice(0, headerIndex)), rows: holdings.length, countries: sorted(countries), sectors: sorted(sectors), top }
 }
 
