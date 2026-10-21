@@ -64,3 +64,46 @@ export function dayLabel(date: string, withYear = true): string {
   const [y, m, d] = date.split('-')
   return withYear ? `${d}.${m}.${y}` : `${d}.${m}.`
 }
+
+/* ── Achsenbeschriftung (Diagramme) ─────────────────────────────────────
+   Kurz und deutsch: Einheit steht einmal in Legende oder Kopf, nicht an
+   jedem Wert. Minus als echtes Minuszeichen (U+2212), Prozente mit Vorzeichen. */
+
+const MINUS = '−'
+const NBSP = ' '
+const axisInt = new Intl.NumberFormat('de-DE', { maximumFractionDigits: 0 })
+const axisMio = new Intl.NumberFormat('de-DE', { maximumFractionDigits: 2 })
+const axisCents = new Intl.NumberFormat('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+
+const signOf = (value: number) => (value < 0 ? MINUS : '')
+
+/** Geldachse ohne Währungszeichen: `20.000`, ab einer Million `1,2 Mio.` */
+export function axisMoney(value: number): string {
+  const abs = Math.abs(value)
+  if (abs >= 1_000_000) return `${signOf(value)}${axisMio.format(abs / 1_000_000)}${NBSP}Mio.`
+  return `${signOf(value)}${axisInt.format(Math.round(abs))}`
+}
+
+/** Kursachse: `120 €`; Cent nur, wenn die Achsenschritte kleiner als 1 € sind. */
+export function axisPrice(value: number, step = 1): string {
+  const abs = Math.abs(value)
+  if (abs >= 1_000_000) return `${axisMoney(value)}${NBSP}€`
+  const text = step < 1 - 1e-9 ? axisCents.format(abs) : axisInt.format(Math.round(abs))
+  return `${signOf(value)}${text}${NBSP}€`
+}
+
+/** Prozentachse mit Vorzeichen: `+10 %`, `0 %`, `−5 %`; Nachkommastellen nur bei kleinen Schritten. */
+export function axisPercent(value: number, step = 0.01): string {
+  const digits = step < 0.001 - 1e-12 ? 2 : step < 0.01 - 1e-12 ? 1 : 0
+  const rounded = Number((value * 100).toFixed(digits))
+  if (rounded === 0) return `0${NBSP}%`
+  const text = Math.abs(rounded).toFixed(digits).replace('.', ',')
+  return `${rounded > 0 ? '+' : MINUS}${text}${NBSP}%`
+}
+
+/** 'YYYY-MM' → `Okt` bzw. mit Jahr `Okt 2026` (Achsen, österreichisch: Jän). */
+export function axisMonth(month: string, withYear = false): string {
+  const [y, m] = month.split('-').map(Number)
+  const name = MONTHS[((m ?? 1) - 1 + 12) % 12] ?? ''
+  return withYear ? `${name} ${y}` : name
+}

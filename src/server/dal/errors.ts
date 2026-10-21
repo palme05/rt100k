@@ -24,3 +24,14 @@ export class ValidationError extends Error {
     this.name = 'ValidationError'
   }
 }
+
+/**
+ * Eingabe ist gültig, wirkt aber unplausibel (z. B. Kurs je Stück weit weg
+ * vom Schlusskurs). Speichern erst nach ausdrücklicher Bestätigung.
+ */
+export class ConfirmationRequired extends ValidationError {
+  constructor(message: string, field?: string) {
+    super(message, field)
+    this.name = 'ConfirmationRequired'
+  }
+}

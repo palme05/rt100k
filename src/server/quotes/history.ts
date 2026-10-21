@@ -86,6 +86,12 @@ async function ecbHistory(currency: string, fromYear: string): Promise<FxPoint[]
   }
 }
 
+/**
+ * Währung der gespeicherten Schlusskurse (`price_daily`): Edelmetalle in USD je
+ * Gramm, sonst die Kurswährung des Instruments (Pence bereits in Pfund).
+ */
+export const storedCurrency = (i: Pick<InstrumentDto, 'metal' | 'currency'>): string => (i.metal ? 'USD' : i.currency)
+
 /** Gespeicherte Schlusskurse (Cron) als Rückfall – in Kurswährung. */
 async function storedCloses(instrumentIds: readonly string[], from: string): Promise<Map<string, HistoryPoint[]>> {
   const out = new Map<string, HistoryPoint[]>()
@@ -181,7 +187,6 @@ export async function getPriceHistory({ instruments, from, today, quotes, fx, fi
 
   const lookback = addDays(from, -10)
   const priced = unique.filter((i) => i.symbol || i.coingeckoId || i.metal)
-  const storedCurrency = (i: InstrumentDto) => (i.metal ? 'USD' : i.currency)
   const stored = await storedCloses(priced.map((i) => i.id), lookback)
   const raw = new Map<string, ParsedHistory>()
   const toFetch: InstrumentDto[] = []

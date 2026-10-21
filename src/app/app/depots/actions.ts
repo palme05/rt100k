@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { requireUser } from '@/server/auth/session'
 import { createBooking, deleteBooking, reconcileCashBalance, updateBooking } from '@/server/dal/bookings'
-import { ValidationError, NotFoundError } from '@/server/dal/errors'
+import { ConfirmationRequired, NotFoundError, ValidationError } from '@/server/dal/errors'
 import { deleteImportedBookings } from '@/server/dal/imports'
 import { ensureGlobalInstrument } from '@/server/dal/instruments'
 import { createPortfolio, deletePortfolio, updatePortfolio } from '@/server/dal/portfolios'
@@ -16,11 +16,16 @@ export interface ActionResult {
   ok: boolean
   error: string | null
   field: string | null
+  /** Eingabe wirkt unplausibel – erneut senden mit „Kurs stimmt – trotzdem speichern“ */
+  confirm?: boolean
+  /** ID der neu angelegten Buchung (für „Bearbeiten“ in der Bestätigung) */
+  id?: string
 }
 
 const ok: ActionResult = { ok: true, error: null, field: null }
 
 function fail(error: unknown): ActionResult {
+  if (error instanceof ConfirmationRequired) return { ok: false, error: error.message, field: error.field ?? null, confirm: true }
   if (error instanceof ValidationError) return { ok: false, error: error.message, field: error.field ?? null }
   if (error instanceof NotFoundError) return { ok: false, error: error.message, field: null }
   throw error
@@ -93,9 +98,11 @@ export async function createBookingAction(_prev: ActionResult, formData: FormDat
     const v = formData.get(name)
     return typeof v === 'string' ? v : null
   }
+  let id: string
   try {
     await consumeRateLimit(user, 'write')
-    await createBooking(user, {
+    // Depot und Instrument prüft die DAL gegen den Nutzer; im Modus „Kurs je Stück“ rechnet der Server den Betrag
+    const created = await createBooking(user, {
       portfolioId: field('portfolioId'),
       type: field('type'),
       occurredOn: field('occurredOn'),
@@ -103,15 +110,19 @@ export async function createBookingAction(_prev: ActionResult, formData: FormDat
       quantity: field('quantity'),
       factor: field('factor'),
       amount: field('amount'),
+      amountMode: field('amountMode'),
+      price: field('price'),
+      confirmPrice: field('confirmPrice'),
       fee: field('fee'),
       tax: field('tax'),
       note: field('note'),
     })
+    id = created.id
   } catch (error) {
     return fail(error)
   }
   revalidatePath('/app', 'layout')
-  return ok
+  return { ...ok, id }
 }
 
 /** Buchung ändern; danach zurück zum Depot der Buchung (aus der DB, nicht aus dem Formular). */
@@ -131,6 +142,9 @@ export async function updateBookingAction(bookingId: string, _prev: ActionResult
       quantity: field('quantity'),
       factor: field('factor'),
       amount: field('amount'),
+      amountMode: field('amountMode'),
+      price: field('price'),
+      confirmPrice: field('confirmPrice'),
       fee: field('fee'),
       tax: field('tax'),
       note: field('note'),

@@ -1,6 +1,6 @@
 import { expect, test, type Locator, type Page } from '@playwright/test'
 import { TR_CSV_EXPORT } from '../src/lib/import/fixtures'
-import { buyEtf, collectProblems, createPortfolio, expectNoOverflow, register } from './helpers/app'
+import { addPriceClose, amountMode, buyEtf, buyEtfUnit, collectProblems, createPortfolio, daysAgo, expectNoOverflow, pickEtf, register } from './helpers/app'
 
 /** Wischen per Touch (Pointer-Ereignisse wie auf dem Handy). */
 async function swipe(row: Locator, direction: 'left' | 'right') {
@@ -120,7 +120,8 @@ test('Offene Punkte: fehlende Kaufkosten beheben, Aufgabe aus dem Import abhaken
   await page.getByLabel('Wertpapier').fill('IE00BK5BQT80')
   await page.getByRole('button', { name: /Vanguard FTSE All-World/ }).click()
   await page.getByLabel('Stück', { exact: true }).fill('3')
-  await page.getByLabel(/Anschaffungskosten/).fill('0')
+  // Ø Einstandskurs leer bzw. 0 → Anschaffungskosten 0
+  await page.getByLabel(/Einstandskurs/).fill('0')
   await saveBooking(page)
 
   // Export mit einem Kauf und einer Kapitalmaßnahme, die von Hand zu buchen ist
@@ -148,11 +149,116 @@ test('Offene Punkte: fehlende Kaufkosten beheben, Aufgabe aus dem Import abhaken
 
   await tasks.getByRole('link', { name: /^Beheben: Kaufkosten fehlen/ }).click()
   await expect(page.getByRole('heading', { name: 'Buchung bearbeiten', level: 1 })).toBeVisible()
-  await page.getByLabel(/Anschaffungskosten/).fill('300,00')
+  // 3 Stück × 100,00 € = 300,00 € Anschaffungskosten
+  await page.getByLabel(/Einstandskurs/).fill('100,00')
+  await expect(page.getByText(/=\s300,00\s€\sAnschaffungskosten/)).toBeVisible()
   await page.getByRole('button', { name: 'Änderung speichern' }).click()
   await expect(page.getByText('Änderung gespeichert.')).toBeVisible()
   await page.goto('/app')
   await expect(page.getByRole('region', { name: 'Offene Punkte' })).toHaveCount(0)
+  expect(problems).toEqual([])
+})
+
+test('Kauf mit Kurs je Stück: Vorschau, Umschalten, Bearbeiten, Eingabeart bleibt', async ({ page }) => {
+  const problems = collectProblems(page)
+  await register(page)
+  await createPortfolio(page, 'Depot')
+
+  // Standard: Kurs je Stück; der Server rechnet Stück × Kurs (kaufmännisch gerundet)
+  await pickEtf(page)
+  await expect(page.getByRole('group', { name: 'Betrag eingeben als' }).getByRole('button', { name: 'Kurs je Stück', exact: true })).toHaveAttribute('aria-pressed', 'true')
+  await page.getByLabel('Stück', { exact: true }).fill('15,399543')
+  await page.getByLabel(/Kurs je Stück/).fill('97,41')
+  await expect(page.getByText(/=\s1\.500,07\s€\sKurswert/)).toBeVisible()
+  await page.getByLabel('Gebühren in €').fill('1,00')
+  await expect(page.getByText(/Belastung gesamt/)).toBeVisible()
+  await expect(page.getByText(/^1\.501,07\s€$/)).toBeVisible()
+  await saveBooking(page)
+  // Bestätigung an der Schaltfläche, Felder für die nächste Buchung leer
+  await expect(page.getByRole('status').filter({ hasText: 'Buchung gespeichert.' })).toContainText(/Kauf · Vanguard.*1\.500,07\s€/)
+  await expect(page.getByLabel('Stück', { exact: true })).toHaveValue('')
+  const list = page.getByRole('region', { name: 'Buchungen' })
+  await expect(list).toContainText('1.500,07')
+
+  // Bearbeiten: vorbelegt mit genau dem Kurs, der den Betrag ergibt; Umschalten rechnet in den Gesamtbetrag um
+  await list.getByRole('link', { name: /Kauf vom .* bearbeiten/ }).first().click()
+  await expect(page.getByRole('heading', { name: 'Buchung bearbeiten', level: 1 })).toBeVisible()
+  await expect(page.getByLabel(/Kurs je Stück/)).toHaveValue('97,41')
+  await amountMode(page, 'Gesamtbetrag')
+  await expect(page.getByLabel(/Kurswert/)).toHaveValue('1.500,07')
+  await expect(page.getByText(/Ø Kurs 97,41\s€ je Stück/)).toBeVisible()
+  await expectNoOverflow(page)
+
+  // die gewählte Eingabeart bleibt auf diesem Gerät
+  await page.goto('/app/buchen')
+  await expect(page.getByRole('group', { name: 'Betrag eingeben als' }).getByRole('button', { name: 'Gesamtbetrag' })).toHaveAttribute('aria-pressed', 'true')
+  await expect(page.getByLabel(/Kurswert/)).toBeVisible()
+  expect(problems).toEqual([])
+})
+
+test('Kurs statt Kurswert: unter „Offene Punkte“ gemeldet und mit einem Klick behoben', async ({ page, isMobile }, testInfo) => {
+  const problems = collectProblems(page)
+  // eigener Tag je Projekt und Wiederholung, mehr als eine Woche auseinander:
+  // Schlusskurse sind für alle Tests gemeinsam und zählen bis zu 6 Tage später
+  const day = daysAgo(10 + (isMobile ? 10 : 0) + 40 * testInfo.retry)
+  await register(page)
+  const id = await createPortfolio(page, 'Depot')
+  // 15 Stück, aber den Kurs eines Stücks als Gesamtbetrag eingetragen
+  await buyEtf(page, '15', '128,45', { date: day })
+  // Schlusskurs erst danach – sonst fragt schon das Speichern nach
+  await addPriceClose('IE00BK5BQT80', day, 128_450_000)
+
+  await page.goto('/app')
+  const tasks = page.getByRole('region', { name: 'Offene Punkte' })
+  await expect(tasks).toContainText('Kurs statt Kurswert? Vanguard')
+  await expect(tasks).toContainText(/Kauf vom .*: -93,3\s%\szum Schlusskurs – Kurs je Stück eintragen/)
+  await expectNoOverflow(page)
+  await tasks.getByRole('link', { name: /^Beheben: Kurs statt Kurswert/ }).click()
+
+  await expect(page.getByRole('heading', { name: 'Buchung bearbeiten', level: 1 })).toBeVisible()
+  await expect(page.getByText(/entspricht etwa dem Kurs eines Stücks/)).toBeVisible()
+  await page.getByRole('button', { name: 'Betrag als Kurs je Stück übernehmen' }).click()
+  await expect(page.getByLabel(/Kurs je Stück/)).toHaveValue('128,45')
+  await expect(page.getByText(/=\s1\.926,75\s€\sKurswert/)).toBeVisible()
+  await page.getByRole('button', { name: 'Änderung speichern' }).click()
+  await expect(page).toHaveURL(new RegExp(`/app/depots/${id}\\?geaendert=1`))
+  await expect(page.getByRole('region', { name: 'Buchungen' })).toContainText('1.926,75')
+
+  await page.goto('/app')
+  await expect(page.getByRole('region', { name: 'Offene Punkte' })).toHaveCount(0)
+  expect(problems).toEqual([])
+})
+
+test('Speichern fragt bei unplausiblem Kurs nach – „Kurs stimmt – trotzdem speichern“', async ({ page, isMobile }, testInfo) => {
+  const problems = collectProblems(page)
+  const day = daysAgo(100 + (isMobile ? 10 : 0) + 40 * testInfo.retry)
+  await addPriceClose('IE00BK5BQT80', day, 128_450_000)
+  await register(page)
+  await createPortfolio(page, 'Depot')
+
+  await pickEtf(page)
+  await page.getByLabel('Datum').fill(day)
+  await amountMode(page, 'Gesamtbetrag')
+  await page.getByLabel('Stück', { exact: true }).fill('10')
+  await page.getByLabel(/Kurswert/).fill('128,45')
+  await page.getByRole('button', { name: 'Buchung speichern' }).click()
+
+  const confirm = page.getByLabel('Kurs stimmt – trotzdem speichern')
+  await expect(confirm).toBeVisible()
+  await expect(confirm).toBeFocused()
+  await expect(page.getByText(/je Stück wären das nur 12,85\s€, der Schlusskurs am .* war 128,45\s€ \(-90,0\s%\)/)).toBeVisible()
+  await expect(page.getByText('Buchung gespeichert.')).toHaveCount(0)
+  // eingetragene Werte bleiben stehen
+  await expect(page.getByLabel(/Kurswert/)).toHaveValue('128,45')
+  await expectNoOverflow(page)
+
+  await confirm.check()
+  await page.getByRole('button', { name: 'Buchung speichern' }).click()
+  await expect(page.getByText('Buchung gespeichert.')).toBeVisible()
+  await expect(page.getByRole('region', { name: 'Buchungen' })).toContainText('128,45')
+
+  // mit Kurs je Stück passt es ohne Rückfrage
+  await buyEtfUnit(page, '2', '128,45', { date: day })
   expect(problems).toEqual([])
 })
 

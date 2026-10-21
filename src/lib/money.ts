@@ -11,6 +11,9 @@
 declare const centsBrand: unique symbol
 export type Cents = number & { readonly [centsBrand]: true }
 
+/** Obergrenze je Betrag (1 Mrd. €): schützt vor Tippfehlern und bleibt eine sichere Ganzzahl. */
+export const MAX_AMOUNT_CENTS = 100_000_000_000
+
 export class MoneyParseError extends Error {
   constructor(input: string) {
     super(`„${input}“ ist kein gültiger Betrag.`)
@@ -77,6 +80,23 @@ function centsToDecimalString(amount: Cents): string {
   const euros = Math.trunc(abs / 100)
   const rest = abs % 100
   return `${negative ? '-' : ''}${euros}.${rest.toString().padStart(2, '0')}`
+}
+
+/** Tausenderpunkte vor dem Komma: `1461,15` → `1.461,15`. */
+export function groupThousands(input: string): string {
+  const comma = input.indexOf(',')
+  const whole = comma < 0 ? input : input.slice(0, comma)
+  return whole.replace(/\B(?=(\d{3})+(?!\d))/g, '.') + (comma < 0 ? '' : input.slice(comma))
+}
+
+/**
+ * Cent → Eingabetext, wie ihn `parseEuroToCents` wieder einliest: `1461,15`
+ * (mit `grouped` als `1.461,15`), leer für 0.
+ */
+export function centsToInput(amount: number, options: { grouped?: boolean } = {}): string {
+  if (!amount) return ''
+  const text = centsToDecimalString(cents(amount)).replace('.', ',')
+  return options.grouped ? groupThousands(text) : text
 }
 
 type DecimalString = `${number}`

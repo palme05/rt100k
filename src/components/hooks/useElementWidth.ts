@@ -1,17 +1,28 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useLayoutEffect, useRef, useState } from 'react'
 
-/** Breite eines Containers in Pixeln (für pixelgenaue SVG-Diagramme statt skalierter viewBox). */
-export function useElementWidth<T extends HTMLElement>(fallback: number) {
+/**
+ * Breite eines Containers in Pixeln (für pixelgenaue SVG-Diagramme statt
+ * skalierter viewBox). `null`, solange noch nicht gemessen: Server und erster
+ * Render zeigen dann nur einen Platzhalter fester Höhe statt einer geratenen
+ * Breite. Gemessen wird synchron vor dem ersten Zeichnen, danach per
+ * ResizeObserver.
+ */
+export function useElementWidth<T extends HTMLElement>() {
   const ref = useRef<T>(null)
-  const [width, setWidth] = useState(fallback)
+  const [width, setWidth] = useState<number | null>(null)
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const element = ref.current
     if (!element) return
+    const apply = (value: number) => {
+      const next = value > 0 ? Math.max(160, Math.floor(value)) : null
+      setWidth((previous) => (previous === next ? previous : next))
+    }
+    apply(element.getBoundingClientRect().width)
     const observer = new ResizeObserver(([entry]) => {
-      if (entry) setWidth(Math.max(240, Math.round(entry.contentRect.width)))
+      if (entry) apply(entry.contentRect.width)
     })
     observer.observe(element)
     return () => observer.disconnect()

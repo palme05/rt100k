@@ -4,7 +4,10 @@ import {
   addCents,
   applyBasisPoints,
   cents,
+  centsToInput,
   formatCents,
+  groupThousands,
+  MAX_AMOUNT_CENTS,
   parseEuroToCents,
   subtractCents,
 } from './money'
@@ -69,5 +72,26 @@ describe('applyBasisPoints', () => {
 
   it('lehnt nicht-ganzzahlige Basispunkte ab', () => {
     expect(() => applyBasisPoints(cents(100), 27.5)).toThrow(RangeError)
+  })
+})
+
+describe('centsToInput', () => {
+  it('liefert Eingabetext, den parseEuroToCents exakt wieder einliest', () => {
+    expect(centsToInput(146_115)).toBe('1461,15')
+    expect(centsToInput(146_115, { grouped: true })).toBe('1.461,15')
+    expect(centsToInput(5)).toBe('0,05')
+    expect(centsToInput(-1_250)).toBe('-12,50')
+    expect(centsToInput(0)).toBe('')
+    expect(centsToInput(MAX_AMOUNT_CENTS, { grouped: true })).toBe('1.000.000.000,00')
+    for (const value of [1, 99, 100, 123_456, 100_000_000, MAX_AMOUNT_CENTS]) {
+      expect(parseEuroToCents(centsToInput(value))).toBe(value)
+      expect(parseEuroToCents(centsToInput(value, { grouped: true }))).toBe(value)
+    }
+  })
+
+  it('setzt Tausenderpunkte nur vor dem Komma', () => {
+    expect(groupThousands('1234567,891234')).toBe('1.234.567,891234')
+    expect(groupThousands('999,5')).toBe('999,5')
+    expect(groupThousands('1000')).toBe('1.000')
   })
 })
