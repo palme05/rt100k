@@ -119,15 +119,20 @@ async function storedFx(currencies: readonly string[], from: string): Promise<Ma
   return out
 }
 
-/** Testkurse (E2E/CI): gleichmäßiger Anstieg von 400 Tagen bis zum heutigen Testkurs. */
+/**
+ * Testkurse (E2E/CI): Anstieg über 400 Tage bis zum heutigen Testkurs, mit
+ * gleichmäßigen Schwankungen, damit Diagramme wie mit echten Kursen aussehen.
+ * Deterministisch; der letzte Punkt ist immer genau der heutige Testkurs.
+ */
 function fixtureHistory(eurMicros: bigint, from: string, today: string): PricePoint[] {
   const start = daysBetween(from, today) > 400 ? addDays(today, -400) : from
   const n = daysBetween(start, today)
-  return Array.from({ length: n + 1 }, (_, k) => ({
-    day: addDays(start, k),
-    // 20 % unter dem heutigen Kurs vor 400 Tagen, linear
-    eurMicros: mulDiv(eurMicros, BigInt(8_000 + Math.round((2_000 * (k + 400 - n)) / 400)), 10_000n),
-  }))
+  return Array.from({ length: n + 1 }, (_, k) => {
+    const back = n - k
+    // 20 % unter dem heutigen Kurs vor 400 Tagen, dazu zwei Wellen (±4 %, ±1,5 %), am Ende null
+    const wave = back === 0 ? 0 : Math.round(400 * Math.sin(back / 23) + 150 * Math.sin(back / 6.1))
+    return { day: addDays(start, k), eurMicros: mulDiv(eurMicros, BigInt(8_000 + Math.round((2_000 * (400 - back)) / 400) + wave), 10_000n) }
+  })
 }
 
 export interface HistoryInput {
