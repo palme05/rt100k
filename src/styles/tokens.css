@@ -14,6 +14,10 @@
   --ink-3: #6c7077;
   --rule: #e6e6e1;
   --rule-strong: #cfcfc9;
+  /* Feldrand: ≥ 3 : 1 gegen --surface (WCAG 1.4.11) */
+  --field-border: #8e9197;
+  /* Erhabene Fläche über --wash (aktives Segment, Menü) */
+  --surface-raised: #ffffff;
 
   /* Akzent: Route, Vermögenslinie, Fokus – sparsam, nie für Text */
   --accent: #e2620b;
@@ -69,6 +73,48 @@
   --space-12: 3rem;
   --gutter: clamp(1rem, 4vw, 3rem);
   --content-max: 80rem;
+
+  /* Rhythmus (docs/DESIGN.md „Abstände“): nur Shell, Grid, Section,
+     SectionHead, Rows/DataTable und Form setzen diese – Seiten nie selbst. */
+  --head-h: 3.5rem;
+  --page-top: var(--space-10);
+  --page-bottom: 5rem;
+  --space-section: var(--space-12);
+  --space-section-x: var(--space-12);
+  --section-pad: var(--space-5);
+  --section-head-h: 2.25rem;
+  --space-head: var(--space-4);
+  --space-block: var(--space-6);
+  --space-stack: var(--space-3);
+  --space-tight: var(--space-2);
+  --space-hair: var(--space-1);
+  --row-y: var(--space-3);
+  --row-y-compact: var(--space-2);
+  --cell-x: var(--space-3);
+  --control-h: 2.75rem;
+  --control-h-sm: 2.25rem;
+  --hit: 2.75rem;
+  --measure: 42rem;
+  --measure-form: 36rem;
+  --opacity-muted: 0.55;
+  --opacity-dim: 0.35;
+
+  /* Schrift-Rollen */
+  --text-title: 1.0625rem;
+  --text-stat: 1.25rem;
+  --text-stat-lg: clamp(1.375rem, 1rem + 1.2vw, 1.75rem);
+  --text-display: var(--text-2xl);
+  --text-input: 1rem;
+  --weight-hero: 450;
+  --leading-tight: 1.1;
+  --leading-snug: 1.3;
+  --leading-meta: 1.4;
+  --leading-body: 1.5;
+  --tracking-display: -0.03em;
+  --tracking-tight: -0.02em;
+  --tracking-snug: -0.01em;
+  --tracking-caps: 0.06em;
+  --font-mono: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
   --radius-sm: 3px;
   --radius-md: 8px;
   --radius-lg: 14px;
@@ -77,6 +123,10 @@
   --shadow-raise: 0 1px 2px rgb(22 24 27 / 10%);
   --shadow-pop: 0 24px 60px rgb(22 24 27 / 18%);
   --shadow-tip: drop-shadow(0 4px 12px rgb(22 24 27 / 10%));
+  --shadow-menu: 0 8px 24px rgb(22 24 27 / 10%), 0 1px 2px rgb(22 24 27 / 8%);
+  --shadow-fab: 0 6px 16px rgb(22 24 27 / 18%), 0 1px 3px rgb(22 24 27 / 12%);
+  /* Diagramme: Deckkraft oben in der Ausblendung unter der Hauptlinie */
+  --area-top: 0.16;
 }
 
 /* ═══ Dunkles Design ══════════════════════════════════════════════════════
@@ -95,6 +145,10 @@
     --ink-3: #97968f;
     --rule: #2b2d31;
     --rule-strong: #3d4045;
+  --field-border: #6b6e74;
+  --surface-raised: #303236;
+    --field-border: #6b6e74;
+    --surface-raised: #303236;
     --accent: #f0802f;
     --accent-wash: rgb(240 128 47 / 14%);
     --accent-band: rgb(240 128 47 / 20%);
@@ -115,6 +169,9 @@
     --shadow-raise: 0 1px 2px rgb(0 0 0 / 45%);
     --shadow-pop: 0 24px 60px rgb(0 0 0 / 55%);
     --shadow-tip: drop-shadow(0 4px 12px rgb(0 0 0 / 50%));
+    --shadow-menu: 0 8px 24px rgb(0 0 0 / 45%);
+    --shadow-fab: 0 6px 16px rgb(0 0 0 / 50%);
+    --area-top: 0.2;
     color-scheme: dark;
   }
 }
@@ -148,5 +205,32 @@
   --shadow-raise: 0 1px 2px rgb(0 0 0 / 45%);
   --shadow-pop: 0 24px 60px rgb(0 0 0 / 55%);
   --shadow-tip: drop-shadow(0 4px 12px rgb(0 0 0 / 50%));
+  --shadow-menu: 0 8px 24px rgb(0 0 0 / 45%);
+  --shadow-fab: 0 6px 16px rgb(0 0 0 / 50%);
+  --area-top: 0.2;
   color-scheme: dark;
+}
+
+/* ═══ Rhythmus je Gerät ═══════════════════════════════════════════════════
+   Handy: etwas engere Abschnitte. Touch: Steuerelemente und Abschnittsköpfe
+   44 px hoch, damit Köpfe mit und ohne Werkzeug gleich hoch bleiben. */
+
+@media (max-width: 720px) {
+  :root {
+    --page-top: var(--space-8);
+    --space-section: var(--space-10);
+  }
+}
+
+@media (min-width: 820px) and (max-width: 1119px) {
+  :root {
+    --space-section-x: var(--space-8);
+  }
+}
+
+@media (pointer: coarse) {
+  :root {
+    --control-h-sm: 2.75rem;
+    --section-head-h: 2.75rem;
+  }
 }

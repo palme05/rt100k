@@ -77,17 +77,17 @@
 .main {
   max-width: var(--content-max);
   margin: 0 auto;
-  padding: var(--space-10) var(--gutter) 5rem;
+  padding: var(--page-top) max(var(--gutter), env(safe-area-inset-right, 0px)) var(--page-bottom) max(var(--gutter), env(safe-area-inset-left, 0px));
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  gap: var(--space-12);
+  gap: var(--space-section);
 }
 
 /* Seiteninhalt: gleiches Raster wie main, kurz einblenden */
 .page {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  gap: var(--space-12);
+  gap: var(--space-section);
   min-width: 0;
   animation: enter 180ms ease-out;
 }

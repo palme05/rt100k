@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { Icon } from '../shell/icons'
 import { LinkPending } from '../shell/LinkPending'
 import styles from './layout.module.css'
 
@@ -79,21 +80,56 @@ export function SectionHead({
   )
 }
 
-export function PageHead({ id, title, children }: { id: string; title: string; children?: React.ReactNode }) {
+export interface BackTarget {
+  href: string
+  label: string
+}
+
+/**
+ * Seitenkopf: optional Zurück-Link und Zeile darüber, Überschrift, Unterzeile
+ * und Aktionen rechts. Weiterer Inhalt (Kennzahlen) folgt darunter.
+ */
+export function PageHead({
+  id,
+  title,
+  back,
+  eyebrow,
+  actions,
+  sub,
+  children,
+}: {
+  id: string
+  title: string
+  back?: BackTarget
+  eyebrow?: React.ReactNode
+  actions?: React.ReactNode
+  /** Unterzeile (alternativ als children, solange kein weiterer Inhalt folgt) */
+  sub?: React.ReactNode
+  children?: React.ReactNode
+}) {
+  const subline = sub ?? children
   return (
-    <section className={styles.pageHead} aria-labelledby={id}>
-      <h1 id={id} className={styles.pageTitle}>
-        {title}
-      </h1>
-      {children ? <p className={styles.pageSub}>{children}</p> : null}
-    </section>
+    <header className={styles.pageHead}>
+      {back ? <BackLink href={back.href}>{back.label}</BackLink> : null}
+      <div className={styles.pageTop}>
+        <div className={styles.pageTitleBlock}>
+          {eyebrow ? <p className={styles.eyebrow}>{eyebrow}</p> : null}
+          <h1 id={id} className={styles.pageTitle}>
+            {title}
+          </h1>
+          {subline ? <p className={styles.pageSub}>{subline}</p> : null}
+        </div>
+        {actions ? <div className={styles.pageActions}>{actions}</div> : null}
+      </div>
+    </header>
   )
 }
 
 export function BackLink({ href, children }: { href: string; children: React.ReactNode }) {
   return (
     <Link className={styles.back} href={href}>
-      ← {children}
+      <Icon name="chevronLeft" size={16} />
+      {children}
       <LinkPending />
     </Link>
   )
@@ -108,9 +144,22 @@ export function TextLink({ href, children }: { href: string; children: React.Rea
   )
 }
 
+/** Weiter-Link am Ende eines Abschnitts, rechtsbündig mit engem Abstand zum Inhalt. */
+export function MoreLink({ href, children }: { href: string; children: React.ReactNode }) {
+  return (
+    <p className={styles.more} data-flow="tight">
+      <TextLink href={href}>{children} →</TextLink>
+    </p>
+  )
+}
+
 /** Kleiner Hinweis unter einem Abschnitt (Quelle, Stand, „Schätzung“). */
 export function Note({ children }: { children: React.ReactNode }) {
-  return <p className={styles.note}>{children}</p>
+  return (
+    <p className={styles.note} data-flow="tight">
+      {children}
+    </p>
+  )
 }
 
 export function Disclaimer({ children }: { children: React.ReactNode }) {

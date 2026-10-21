@@ -1,21 +1,16 @@
-/* Raster und Abschnitte: Weißraum + Haarlinie statt Karten. */
+/* Raster und Abschnitte: Weißraum + Haarlinie statt Karten.
+   Abstände kommen nur aus den Rhythmus-Tokens (tokens.css) – Seiten und
+   Komponenten setzen keine eigenen Außenabstände. */
 
 .grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  gap: 2.75rem;
+  gap: var(--space-section) var(--space-section-x);
 }
 
 @media (min-width: 820px) {
   .grid {
     grid-template-columns: repeat(12, minmax(0, 1fr));
-    gap: var(--space-12) var(--space-10);
-  }
-}
-
-@media (min-width: 1120px) {
-  .grid {
-    gap: var(--space-12);
   }
 }
 
@@ -23,47 +18,62 @@
   grid-column: 1 / -1;
   min-width: 0;
   border-top: 1px solid var(--rule);
-  padding-top: var(--space-5);
+  padding-top: var(--section-pad);
 }
 
-/* Breiten im 12er-Raster: ab 820px halb, ab 1120px Drittel / zwei Drittel */
+/* Fluss im Abschnitt: Blöcke mit gleichem Abstand, Fußnoten enger */
+.section > * + * {
+  margin-top: var(--space-block);
+}
+
+.section > .head + * {
+  margin-top: 0;
+}
+
+.section > * + [data-flow='tight'] {
+  margin-top: var(--space-stack);
+}
+
+/* Breiten nur im 12er-Raster: ab 820px halb, ab 1120px Drittel / zwei Drittel */
 @media (min-width: 820px) {
-  .third,
-  .half {
+  .grid > .third,
+  .grid > .half {
     grid-column: span 6;
   }
 }
 
 @media (min-width: 1120px) {
-  .third {
+  .grid > .third {
     grid-column: span 4;
   }
 
-  .twoThirds {
+  .grid > .twoThirds {
     grid-column: span 8;
   }
 }
 
 .dimmed {
-  opacity: 0.55;
+  opacity: var(--opacity-muted);
   transition: opacity 150ms ease;
 }
 
+/* ── Abschnittskopf: feste Mindesthöhe, damit Köpfe nebeneinander fluchten ── */
 .head {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
   gap: var(--space-2) var(--space-4);
   flex-wrap: wrap;
-  margin-bottom: var(--space-4);
+  min-height: var(--section-head-h);
+  margin-bottom: var(--space-head);
 }
 
 .aside {
   display: flex;
   flex-wrap: wrap;
-  align-items: baseline;
+  align-items: center;
   justify-content: flex-end;
-  gap: 0 var(--space-4);
+  gap: var(--space-2) var(--space-4);
 }
 
 .spaced {
@@ -72,44 +82,92 @@
 
 .title {
   margin: 0;
-  font-size: var(--text-base);
+  font-size: var(--text-title);
   font-weight: var(--weight-semibold);
-  letter-spacing: -0.005em;
+  letter-spacing: var(--tracking-snug);
+  line-height: var(--leading-snug);
+}
+
+h3.title {
+  font-size: var(--text-base);
 }
 
 .meta {
   margin: 0;
   font-size: var(--text-sm);
+  line-height: var(--leading-meta);
   color: var(--ink-3);
 }
 
+/* ── Seitenkopf ───────────────────────────────────────────────────────── */
 .pageHead {
   display: grid;
-  gap: 0.4rem;
+  gap: var(--space-tight);
+  min-width: 0;
+}
+
+.pageTop {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-4) var(--space-8);
+}
+
+.pageTitleBlock {
+  display: grid;
+  gap: var(--space-tight);
+  min-width: 0;
+}
+
+.eyebrow {
+  margin: 0;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--ink-3);
 }
 
 .pageTitle {
   margin: 0;
-  font-size: var(--text-2xl);
+  font-size: var(--text-display);
   font-weight: var(--weight-medium);
-  letter-spacing: -0.03em;
-  line-height: 1.1;
+  letter-spacing: var(--tracking-display);
+  line-height: var(--leading-tight);
   text-wrap: balance;
 }
 
 .pageSub {
   margin: 0;
-  color: var(--ink-3);
+  max-width: 60ch;
+  color: var(--ink-2);
+  text-wrap: pretty;
 }
 
+.pageActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  align-items: center;
+}
+
+/* Zurück-Link gehört zum Kopf: eng über der Überschrift, 44 px Tippfläche */
 .back {
-  font-size: var(--text-md);
-  color: var(--ink-3);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
   width: fit-content;
+  min-height: var(--hit);
+  margin-block: calc(var(--space-3) * -1) calc(var(--space-2) * -1);
+  font-size: var(--text-sm);
+  color: var(--ink-3);
 }
 
 .back:hover {
   color: var(--ink);
+}
+
+.back svg {
+  flex: none;
 }
 
 .textLink {
@@ -123,16 +181,26 @@
   border-bottom-color: var(--accent);
 }
 
+/* Weiter-Link am Ende eines Abschnitts („Steuer-Cockpit öffnen →“) */
+.more {
+  display: flex;
+  justify-content: flex-end;
+  font-size: var(--text-sm);
+}
+
 .note {
   font-size: var(--text-sm);
+  line-height: var(--leading-meta);
   color: var(--ink-3);
-  margin: var(--space-3) 0 0;
+  max-width: var(--measure);
+  margin: 0;
 }
 
 .disclaimer {
   font-size: var(--text-sm);
+  line-height: var(--leading-meta);
   color: var(--ink-3);
-  max-width: 44rem;
+  max-width: var(--measure);
   margin: 0;
 }
 
