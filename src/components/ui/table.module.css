@@ -1,4 +1,5 @@
-/* Datentabelle: Zahlen rechtsbündig, erste Spalte links, Haarlinien zwischen Zeilen. */
+/* Datentabelle: Zahlen rechtsbündig, erste Spalte links, Haarlinien zwischen Zeilen.
+   Gleicher Zeilenrhythmus wie Rows (--row-y), damit Listen nebeneinander fluchten. */
 
 .scroll {
   overflow-x: auto;
@@ -15,20 +16,21 @@
   font-weight: var(--weight-medium);
   color: var(--ink-3);
   text-align: right;
-  padding: 0 0.6rem 0.6rem;
+  padding: 0 var(--cell-x) var(--row-y-compact);
   border-bottom: 1px solid var(--rule-strong);
   white-space: nowrap;
 }
 
 .table td {
   text-align: right;
-  padding: 0.8rem 0.6rem;
+  padding: var(--row-y) var(--cell-x);
   border-bottom: 1px solid var(--rule);
   vertical-align: top;
 }
 
 .table tbody tr:last-child td {
   border-bottom: none;
+  padding-bottom: 0;
 }
 
 .table th:first-child,
@@ -47,14 +49,57 @@
   padding-right: 0;
 }
 
+/* Am Handy ausgeblendete letzte Spalte: die sichtbare letzte bleibt bündig */
+@media (max-width: 720px) {
+  .table th:has(+ .hideSm:last-child),
+  .table td:has(+ .hideSm:last-child) {
+    padding-right: 0;
+  }
+}
+
 .table td small {
   display: block;
   color: var(--ink-3);
   font-size: var(--text-sm);
+  line-height: var(--leading-meta);
 }
 
-.table tbody tr:has(a):hover td {
+/* Ganze Zeile klickbar, wenn die Namenszelle ein Link ist */
+.table tbody tr:has(.link) {
+  position: relative;
+}
+
+.table tbody tr:has(.link):hover td {
   background: var(--wash);
+}
+
+.table tbody tr:has(.link):hover td:first-child {
+  box-shadow: calc(var(--space-2) * -1) 0 0 var(--wash);
+}
+
+.table tbody tr:has(.link):hover td:last-child {
+  box-shadow: var(--space-2) 0 0 var(--wash);
+}
+
+.link::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+}
+
+/* Weitere Bedienelemente in der Zeile bleiben über der Link-Fläche erreichbar */
+.table tbody tr:has(.link) :is(a, button, input, select, summary):not(.link) {
+  position: relative;
+  z-index: 1;
+}
+
+.link:focus-visible {
+  outline: none;
+}
+
+.table tbody tr:has(.link:focus-visible) {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 .name {

@@ -18,7 +18,7 @@ body {
   color: var(--ink);
   font-family: var(--font);
   font-size: var(--text-base);
-  line-height: 1.45;
+  line-height: var(--leading-body);
 }
 
 a {
@@ -55,4 +55,10 @@ svg {
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
+}
+
+h1,
+h2,
+h3 {
+  text-wrap: balance;
 }

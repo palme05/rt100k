@@ -1,50 +1,70 @@
-/* Formulare: ruhige Felder mit Haarlinie, Fokus im Akzent, Fehler mit Text (nie nur Farbe). */
+/* Formulare: ruhige Felder mit klarem Rand, Fokus im Akzent, Fehler mit Text (nie nur Farbe). */
 
 .form {
   display: grid;
   gap: var(--space-5);
   align-content: start;
+  max-width: var(--measure-form);
 }
 
+/* Breite Formulare (z. B. Buchung neben der Liste) dürfen die Spalte füllen */
+.wide {
+  max-width: none;
+}
+
+/* Zwei Felder nebeneinander; am Handy (< 2 × 12rem) untereinander */
 .row {
   display: grid;
   gap: var(--space-5);
-  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  align-items: start;
 }
 
 .field {
   display: grid;
-  gap: 0.35rem;
+  gap: var(--space-tight);
+  align-content: start;
   min-width: 0;
 }
 
 .label {
   font-size: var(--text-md);
   font-weight: var(--weight-medium);
+  line-height: var(--leading-snug);
   color: var(--ink);
 }
 
 .hint {
-  font-size: var(--text-xs);
+  font-size: var(--text-sm);
+  line-height: var(--leading-meta);
   color: var(--ink-3);
 }
 
 .error {
   font-size: var(--text-sm);
+  line-height: var(--leading-meta);
   color: var(--neg);
 }
 
 .control {
   font: inherit;
-  font-size: 1rem;
+  font-size: var(--text-input);
   width: 100%;
-  min-height: 2.75rem;
-  padding: 0.55rem 0.75rem;
+  min-height: var(--control-h);
+  padding: 0 var(--space-3);
   color: var(--ink);
   background: var(--surface);
-  border: 1px solid var(--rule-strong);
+  border: 1px solid var(--field-border);
   border-radius: var(--radius-md);
   font-variant-numeric: tabular-nums;
+  transition:
+    border-color 120ms ease,
+    box-shadow 120ms ease;
+}
+
+.control::placeholder {
+  color: var(--ink-3);
+  opacity: 1;
 }
 
 .control:hover {
@@ -52,9 +72,9 @@
 }
 
 .control:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 1px;
+  outline: 2px solid transparent;
   border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-band);
 }
 
 .control[aria-invalid='true'] {
@@ -63,12 +83,35 @@
 
 .control:disabled {
   background: var(--wash);
+  border-color: var(--rule-strong);
   color: var(--ink-3);
 }
 
 textarea.control {
   min-height: 5rem;
+  padding-block: var(--space-2);
   resize: vertical;
+}
+
+/* Auswahl: eigener Pfeil mit Abstand zum Rand statt Browser-Standard */
+select.control {
+  appearance: none;
+  height: var(--control-h);
+  padding-right: var(--space-10);
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--ink-2) 50%), linear-gradient(135deg, var(--ink-2) 50%, transparent 50%);
+  background-position:
+    calc(100% - 1.25rem) 52%,
+    calc(100% - 0.9375rem) 52%;
+  background-size:
+    0.3125rem 0.3125rem,
+    0.3125rem 0.3125rem;
+  background-repeat: no-repeat;
+  text-overflow: ellipsis;
+}
+
+input[type='date'].control {
+  appearance: none;
 }
 
 .code {
@@ -79,16 +122,20 @@ textarea.control {
 
 .check {
   display: flex;
-  gap: 0.6rem;
+  gap: var(--space-3);
   align-items: flex-start;
   font-size: var(--text-md);
+  line-height: var(--leading-snug);
+  min-height: var(--control-h-sm);
+  cursor: pointer;
 }
 
 .check input {
-  accent-color: var(--accent);
-  width: 1rem;
-  height: 1rem;
-  margin: 0.15rem 0 0;
+  accent-color: var(--ink);
+  flex: none;
+  width: 1.125rem;
+  height: 1.125rem;
+  margin: 0.0625rem 0 0;
 }
 
 /* ── Schaltflächen ───────────────────────────────────────────────────── */
@@ -100,17 +147,25 @@ textarea.control {
   align-items: center;
   justify-content: center;
   gap: var(--space-2);
-  min-height: 2.75rem;
-  padding: 0.5rem 1.1rem;
+  min-height: var(--control-h);
+  padding: 0 var(--space-5);
   border-radius: var(--radius-md);
   border: 1px solid transparent;
   cursor: pointer;
   white-space: nowrap;
+  transition:
+    background-color 120ms ease,
+    border-color 120ms ease,
+    color 120ms ease;
 }
 
 .button:disabled {
+  cursor: not-allowed;
+  opacity: var(--opacity-muted);
+}
+
+.button[aria-busy='true'] {
   cursor: progress;
-  opacity: 0.6;
 }
 
 /* Gedrückt: sichtbare Rückmeldung (iOS hat keine Vibration) */
@@ -132,22 +187,25 @@ textarea.control {
   composes: button;
   background: var(--surface);
   color: var(--ink);
-  border-color: var(--rule-strong);
+  border-color: var(--field-border);
 }
 
 .secondary:hover:not(:disabled) {
-  border-color: var(--ink-3);
+  border-color: var(--ink-2);
+  background: var(--wash);
 }
 
+/* Gefahr: rot mit Wort, Rand in Rot – nie nur Farbe */
 .danger {
   composes: button;
   background: var(--surface);
   color: var(--neg);
-  border-color: var(--rule-strong);
+  border-color: var(--neg);
 }
 
 .danger:hover:not(:disabled) {
-  border-color: var(--neg);
+  background: var(--neg);
+  color: var(--surface);
 }
 
 .quiet {
@@ -172,39 +230,45 @@ textarea.control {
   align-items: center;
 }
 
+/* Am Handy: Hauptaktion über die volle Breite */
+@media (max-width: 720px) {
+  .actions > .primary:first-child {
+    flex: 1 1 100%;
+  }
+}
+
 /* ── Meldungen ───────────────────────────────────────────────────────── */
 .message {
   margin: 0;
   padding: var(--space-3) var(--space-4);
   border-radius: var(--radius-md);
   font-size: var(--text-md);
+  line-height: var(--leading-snug);
   border: 1px solid var(--rule);
+  border-left-width: 3px;
   background: var(--surface);
 }
 
 .messageError {
   composes: message;
-  border-color: var(--neg);
+  border-color: var(--rule);
+  border-left-color: var(--neg);
   color: var(--ink);
 }
 
 .messageSuccess {
   composes: message;
-  border-color: var(--pos);
+  border-left-color: var(--pos);
 }
 
 .messageInfo {
   composes: message;
   background: var(--wash);
   border-color: var(--wash);
+  border-left-color: var(--ink-3);
 }
 
 .messageTitle {
   font-weight: var(--weight-semibold);
   margin-right: 0.35em;
-}
-
-select.control {
-  height: 2.75rem;
-  padding-block: 0;
 }

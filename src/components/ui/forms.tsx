@@ -6,8 +6,9 @@ import styles from './forms.module.css'
  * Feld (aria-describedby) und nie nur als rote Umrandung.
  */
 
-export function Form(props: React.FormHTMLAttributes<HTMLFormElement>) {
-  return <form {...props} className={styles.form} />
+/** Formular, höchstens `--measure-form` breit; `wide` füllt die Spalte. */
+export function Form({ wide = false, ...props }: React.FormHTMLAttributes<HTMLFormElement> & { wide?: boolean }) {
+  return <form {...props} className={wide ? `${styles.form} ${styles.wide}` : styles.form} />
 }
 
 export function FormRow({ children }: { children: React.ReactNode }) {

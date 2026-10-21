@@ -1,4 +1,5 @@
 import { AmountSplit } from '../privacy/privacy'
+import { BackLink, type BackTarget } from './layout'
 import styles from './data.module.css'
 
 export interface KeyStat {
@@ -15,6 +16,7 @@ export function HeroSummary({
   id,
   eyebrow,
   title,
+  back,
   value,
   stats,
   children,
@@ -22,6 +24,7 @@ export function HeroSummary({
   id: string
   eyebrow: React.ReactNode
   title?: string
+  back?: BackTarget
   value: number
   stats: readonly KeyStat[]
   /** Weiterer Inhalt unter der Zeile, z. B. die Routenlinie */
@@ -29,6 +32,7 @@ export function HeroSummary({
 }) {
   return (
     <section className={styles.summary} aria-labelledby={id}>
+      {back ? <BackLink href={back.href}>{back.label}</BackLink> : null}
       <div className={styles.summaryTop}>
         <div className={styles.heading}>
           {title ? (

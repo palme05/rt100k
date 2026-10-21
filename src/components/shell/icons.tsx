@@ -3,7 +3,32 @@
  * `currentColor`). Eigene Pfade statt Symbolbibliothek.
  */
 
-export type IconName = 'home' | 'depots' | 'analysis' | 'tax' | 'road' | 'import' | 'bell' | 'review' | 'shield' | 'admin' | 'more' | 'plus' | 'refresh'
+export type IconName =
+  | 'home'
+  | 'depots'
+  | 'analysis'
+  | 'tax'
+  | 'road'
+  | 'import'
+  | 'bell'
+  | 'review'
+  | 'shield'
+  | 'admin'
+  | 'more'
+  | 'plus'
+  | 'refresh'
+  | 'chevronLeft'
+  | 'chevronRight'
+  | 'chevronDown'
+  | 'search'
+  | 'eye'
+  | 'eyeOff'
+  | 'user'
+  | 'logout'
+  | 'close'
+  | 'check'
+  | 'edit'
+  | 'trash'
 
 const PATHS: Record<IconName, string[]> = {
   home: ['M4 11.5 12 5l8 6.5', 'M6.5 10v9h11v-9'],
@@ -19,11 +44,23 @@ const PATHS: Record<IconName, string[]> = {
   more: ['M5 12h.01', 'M12 12h.01', 'M19 12h.01'],
   plus: ['M12 5v14', 'M5 12h14'],
   refresh: ['M19 8a7.5 7.5 0 1 0 .5 6', 'M19.5 4v4.5H15'],
+  chevronLeft: ['M14.5 6 8.5 12l6 6'],
+  chevronRight: ['M9.5 6l6 6-6 6'],
+  chevronDown: ['M6 9.5l6 6 6-6'],
+  search: ['M10.5 17a6.5 6.5 0 1 0 0-13 6.5 6.5 0 0 0 0 13z', 'M15.5 15.5 20 20'],
+  eye: ['M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z', 'M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z'],
+  eyeOff: ['M4 4l16 16', 'M10.6 6.1A9 9 0 0 1 12 6c6 0 9.5 6 9.5 6a16 16 0 0 1-3 3.6', 'M6.3 7.6A16 16 0 0 0 2.5 12s3.5 6.5 9.5 6.5a9 9 0 0 0 4-.9', 'M9.9 9.9a3 3 0 0 0 4.2 4.2'],
+  user: ['M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8z', 'M4.5 20a7.5 7.5 0 0 1 15 0'],
+  logout: ['M14 4h4.5v16H14', 'M10 8l-4 4 4 4', 'M6 12h9'],
+  close: ['M6 6l12 12', 'M18 6 6 18'],
+  check: ['M5 12.5l4.5 4.5L19 7.5'],
+  edit: ['M4.5 19.5h4l10-10-4-4-10 10z', 'M13 7l4 4'],
+  trash: ['M5 7h14', 'M9.5 7V4.5h5V7', 'M7 7l1 13h8l1-13'],
 }
 
 export function Icon({ name, size = 22, className }: { name: IconName; size?: number; className?: string | undefined }) {
   return (
-    <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={name === 'more' ? 3 : 1.6} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={name === 'more' ? 3 : 1.75} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       {PATHS[name].map((d) => (
         <path key={d} d={d} />
       ))}
