@@ -1,5 +1,4 @@
-import Link from 'next/link'
-import { AuthFrame } from '@/components/shell/AuthFrame'
+import { AuthFrame, AuthLink } from '@/components/shell/AuthFrame'
 import { isInvitationValid } from '@/server/dal/invitations'
 import { RegisterForm } from './RegisterForm'
 
@@ -9,10 +8,10 @@ export default async function InvitationPage({ params }: { params: Promise<{ tok
   const { token } = await params
   if (!(await isInvitationValid(token))) {
     return (
-      <AuthFrame title="Link ungültig" lead="Dieser Einladungslink ist abgelaufen, wurde widerrufen oder schon verwendet.">
-        <p>
-          Bitte den Admin um einen neuen Link. Schon ein Konto? <Link href="/anmelden">Zur Anmeldung</Link>
-        </p>
+      <AuthFrame title="Link ungültig" lead="Dieser Einladungslink ist abgelaufen, wurde widerrufen oder schon verwendet." footnote="Bitte den Admin um einen neuen Link.">
+        <AuthLink href="/anmelden" variant="secondary">
+          Schon ein Konto? Zur Anmeldung
+        </AuthLink>
       </AuthFrame>
     )
   }

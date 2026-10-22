@@ -2,7 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 import { eur, eurWhole } from '@/lib/display'
-import button from '../ui/button.module.css'
+import { IconButton } from '../ui/IconButton'
 
 /**
  * Privatsphäre-Modus: blendet Beträge aus, Prozente bleiben sichtbar.
@@ -90,12 +90,20 @@ export function Amount({
   )
 }
 
+/**
+ * Schalter in der Kopfzeile: Auge (sichtbar) bzw. durchgestrichenes Auge
+ * (ausgeblendet). Name bleibt gleich, der Zustand steckt in `aria-pressed`.
+ */
 export function PrivacyToggle() {
   const { hidden, toggle } = usePrivacy()
   return (
-    <button type="button" className={button.button} aria-pressed={hidden} onClick={toggle} title="Beträge ausblenden (Taste P)">
-      {hidden ? 'Beträge zeigen' : 'Beträge ausblenden'}
-    </button>
+    <IconButton
+      icon={hidden ? 'eyeOff' : 'eye'}
+      label="Beträge ausblenden"
+      aria-pressed={hidden}
+      onClick={toggle}
+      title={hidden ? 'Beträge wieder zeigen (Taste P)' : 'Beträge ausblenden (Taste P)'}
+    />
   )
 }
 

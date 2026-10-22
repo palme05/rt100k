@@ -1,10 +1,14 @@
 import type { Command } from '../command/CommandPalette'
-import { AppHeader, type NavItem } from './AppHeader'
+import { AppHeader } from './AppHeader'
+import type { NavItem } from './nav'
 import { PullToRefresh } from './refresh'
 import { TabBar } from './TabBar'
 import styles from './shell.module.css'
 
-/** Seitenrahmen: Kopfzeile + Inhaltsspalte. */
+/**
+ * Seitenrahmen: Sprunglink, Kopfzeile, Inhaltsspalte, am Handy Leiste unten.
+ * `account` steht rechts außen in der Kopfzeile (Glocke, Konto-Menü).
+ */
 export function AppShell({
   children,
   account,
@@ -20,13 +24,16 @@ export function AppShell({
   quickAdd?: string
 }) {
   return (
-    <>
+    <div className={styles.shell}>
+      <a href="#inhalt" className={styles.skip}>
+        Zum Inhalt springen
+      </a>
       <AppHeader {...header}>{account}</AppHeader>
-      <main className={styles.main} id="inhalt">
+      <main className={styles.main} id="inhalt" tabIndex={-1}>
         {children}
       </main>
       <TabBar nav={header.nav} quickAdd={header.quickAdd} />
       <PullToRefresh />
-    </>
+    </div>
   )
 }

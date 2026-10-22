@@ -29,6 +29,11 @@ export type IconName =
   | 'check'
   | 'edit'
   | 'trash'
+  | 'route'
+  | 'key'
+  | 'dots'
+  | 'arrowRight'
+  | 'alert'
 
 const PATHS: Record<IconName, string[]> = {
   home: ['M4 11.5 12 5l8 6.5', 'M6.5 10v9h11v-9'],
@@ -56,6 +61,13 @@ const PATHS: Record<IconName, string[]> = {
   check: ['M5 12.5l4.5 4.5L19 7.5'],
   edit: ['M4.5 19.5h4l10-10-4-4-10 10z', 'M13 7l4 4'],
   trash: ['M5 7h14', 'M9.5 7V4.5h5V7', 'M7 7l1 13h8l1-13'],
+  // Strecke: Start, Weg in zwei Kurven, Ziel
+  route: ['M4.5 19a1.5 1.5 0 1 0 3 0 1.5 1.5 0 1 0-3 0', 'M9 19h7.5a3.25 3.25 0 0 0 0-6.5h-9a3.25 3.25 0 0 1 0-6.5H15', 'M16.5 6a1.5 1.5 0 1 0 3 0 1.5 1.5 0 1 0-3 0'],
+  key: ['M8.5 19.5a4.5 4.5 0 1 0 0-9 4.5 4.5 0 0 0 0 9z', 'M11.7 11.8 19.5 4', 'M16.5 7l2.5 2.5', 'M14 9.5l1.75 1.75'],
+  // drei Punkte im gleichen Strich wie die übrigen Symbole
+  dots: ['M5 12a1 1 0 1 0 2 0 1 1 0 1 0-2 0', 'M11 12a1 1 0 1 0 2 0 1 1 0 1 0-2 0', 'M17 12a1 1 0 1 0 2 0 1 1 0 1 0-2 0'],
+  arrowRight: ['M5 12h13', 'M13 7l5 5-5 5'],
+  alert: ['M12 4.5 21 19.5H3z', 'M12 10v4', 'M12 16.8v.01'],
 }
 
 export function Icon({ name, size = 22, className }: { name: IconName; size?: number; className?: string | undefined }) {

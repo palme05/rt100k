@@ -1,65 +1,196 @@
-/* Rahmen für Anmeldung, 2FA und Einladung: schmale Spalte, viel Weißraum. */
+/* Rahmen für Anmeldung, 2FA, Einladung und Startseite: oben ausgerichtete
+   Spalte; ab 960 px links eine ruhige Fläche mit Logo und Strecke. */
 
 .frame {
   min-height: 100dvh;
   display: grid;
-  align-content: center;
-  justify-items: center;
-  padding: var(--space-10) var(--gutter);
+  grid-template-columns: minmax(0, 1fr);
 }
 
-.column {
-  width: min(26rem, 100%);
-  display: grid;
-  gap: var(--space-6);
+/* ── Ruhige Fläche (nur breit) ─────────────────────────────────────────── */
+.panel {
+  display: none;
 }
 
 .brand {
   display: inline-flex;
   align-items: center;
-  gap: 0.55rem;
-  font-weight: var(--weight-semibold);
   width: fit-content;
+  min-height: var(--hit);
+  margin-inline: calc(var(--space-2) * -1);
+  padding-inline: var(--space-2);
+  border-radius: var(--radius-md);
 }
 
-.brand svg line:first-child {
+.art {
+  display: block;
+  width: 100%;
+  max-width: 34rem;
+  height: auto;
+  overflow: visible;
+}
+
+.artGrid {
   stroke: var(--rule-strong);
+  stroke-width: 1;
+  stroke-dasharray: 2 6;
 }
 
-.brand svg line:nth-child(2) {
+.artRest {
+  fill: none;
+  stroke: var(--ink-3);
+  stroke-opacity: 0.55;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-dasharray: 0.5 7;
+}
+
+.artDone {
+  fill: none;
   stroke: var(--accent);
+  stroke-width: 3;
+  stroke-linecap: round;
 }
 
-.brand svg circle {
+.artPassed {
+  fill: var(--ink);
+  stroke: var(--wash);
+  stroke-width: 2;
+}
+
+.artNext {
+  fill: var(--wash);
+  stroke: var(--ink-3);
+  stroke-width: 1.75;
+}
+
+.artHalo {
+  fill: var(--accent-band);
+}
+
+.artNow {
   fill: var(--accent);
-  stroke: var(--bg);
+  stroke: var(--wash);
+  stroke-width: 2.5;
+}
+
+.artGoal {
+  fill: var(--wash);
+  stroke: var(--accent);
+  stroke-width: 3;
+}
+
+.artLabel {
+  fill: var(--ink-3);
+  font-size: 13px;
+  font-weight: var(--weight-medium);
+  font-variant-numeric: tabular-nums;
+}
+
+.artLabelGoal {
+  fill: var(--ink);
+  font-weight: var(--weight-semibold);
+}
+
+.claim {
+  display: grid;
+  gap: var(--space-3);
+  max-width: 26rem;
+}
+
+.claimTitle {
+  margin: 0;
+  font-size: var(--text-display);
+  font-weight: var(--weight-medium);
+  line-height: var(--leading-tight);
+  letter-spacing: var(--tracking-display);
+  text-wrap: balance;
+}
+
+.claimText {
+  margin: 0;
+  font-size: var(--text-base);
+  line-height: var(--leading-body);
+  color: var(--ink-2);
+  text-wrap: pretty;
+}
+
+/* ── Spalte mit Formular ───────────────────────────────────────────────── */
+.main {
+  display: grid;
+  justify-items: center;
+  align-content: start;
+  padding: clamp(var(--space-8), 8vh, var(--space-12)) max(var(--gutter), env(safe-area-inset-right, 0px)) var(--space-12) max(var(--gutter), env(safe-area-inset-left, 0px));
+}
+
+.column {
+  width: min(24rem, 100%);
+}
+
+.brandSmall {
+  margin-bottom: var(--space-10);
 }
 
 .title {
   margin: 0;
-  font-size: var(--text-2xl);
+  font-size: var(--text-display);
   font-weight: var(--weight-medium);
-  letter-spacing: -0.03em;
-  line-height: 1.1;
+  line-height: var(--leading-tight);
+  letter-spacing: var(--tracking-display);
 }
 
 .lead {
-  margin: calc(var(--space-3) * -1) 0 0;
+  margin: var(--space-3) 0 0;
+  font-size: var(--text-base);
+  line-height: var(--leading-body);
   color: var(--ink-2);
+  text-wrap: pretty;
+}
+
+.body {
+  display: grid;
+  gap: var(--space-5);
+  margin-top: var(--space-8);
+}
+
+/* Formulare füllen die Spalte; Hauptknopf über die volle Breite */
+.body form {
+  max-width: none;
+}
+
+.body p {
+  margin: 0;
 }
 
 .footnote {
-  margin: 0;
+  margin: var(--space-8) 0 0;
+  padding-top: var(--space-5);
+  border-top: 1px solid var(--rule);
   font-size: var(--text-sm);
+  line-height: var(--leading-meta);
   color: var(--ink-3);
+  text-wrap: pretty;
+}
+
+.footnote a,
+.body p a {
+  color: var(--ink);
+  text-decoration: underline;
+  text-decoration-color: var(--rule-strong);
+  text-underline-offset: 0.2em;
+}
+
+.footnote a:hover,
+.body p a:hover {
+  text-decoration-color: var(--accent);
 }
 
 .divider {
   display: flex;
   align-items: center;
   gap: var(--space-3);
-  color: var(--ink-3);
   font-size: var(--text-sm);
+  color: var(--ink-3);
 }
 
 .divider::before,
@@ -67,4 +198,88 @@
   content: '';
   flex: 1;
   border-top: 1px solid var(--rule);
+}
+
+.primaryLink {
+  composes: primary from '../ui/forms.module.css';
+}
+
+.secondaryLink {
+  composes: secondary from '../ui/forms.module.css';
+}
+
+.body .primaryLink,
+.body .secondaryLink {
+  width: 100%;
+}
+
+/* ── Statusseiten (404, Fehler) ────────────────────────────────────────── */
+.status {
+  min-height: 100dvh;
+  padding-top: clamp(var(--space-8), 14vh, 9rem);
+}
+
+.status .column {
+  width: min(34rem, 100%);
+}
+
+.brandStatus {
+  margin-bottom: var(--space-12);
+}
+
+.eyebrow {
+  margin: 0 0 var(--space-2);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--ink-3);
+  font-variant-numeric: tabular-nums;
+}
+
+.statusActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3) var(--space-4);
+  margin-top: var(--space-8);
+}
+
+.code {
+  flex-basis: 100%;
+  margin: var(--space-2) 0 0;
+  font-size: var(--text-sm);
+  color: var(--ink-3);
+}
+
+.code code {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+}
+
+/* ── Breit: Fläche links, Formular rechts ──────────────────────────────── */
+@media (min-width: 960px) {
+  .frame {
+    grid-template-columns: minmax(24rem, 5fr) minmax(0, 7fr);
+  }
+
+  .panel {
+    position: sticky;
+    top: 0;
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    align-items: center;
+    justify-items: start;
+    gap: var(--space-10);
+    height: 100dvh;
+    padding: var(--space-8) clamp(var(--space-8), 5vw, var(--space-12)) var(--space-12);
+    background: var(--wash);
+    border-right: 1px solid var(--rule);
+  }
+
+  .main {
+    padding-top: clamp(var(--space-12), 18vh, 10rem);
+  }
+
+  .brandSmall {
+    display: none;
+  }
 }

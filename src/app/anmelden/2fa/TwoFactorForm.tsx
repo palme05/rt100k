@@ -52,10 +52,10 @@ export function TwoFactorForm() {
             {...(backup ? { maxLength: 32 } : { inputMode: 'numeric' as const, pattern: '[0-9 ]{6,7}', maxLength: 7 })}
           />
         </Field>
+        <Button type="submit" disabled={pending} aria-busy={pending || undefined}>
+          {pending ? 'Prüfen …' : 'Bestätigen'}
+        </Button>
         <Actions>
-          <Button type="submit" disabled={pending}>
-            {pending ? 'Prüfen …' : 'Bestätigen'}
-          </Button>
           <Button variant="quiet" onClick={() => setBackup((b) => !b)}>
             {backup ? 'Code aus der App verwenden' : 'Backup-Code verwenden'}
           </Button>

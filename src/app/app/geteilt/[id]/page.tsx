@@ -1,13 +1,17 @@
 import { notFound } from 'next/navigation'
+import { PriceText } from '@/components/bookings/PriceText'
 import { Amount } from '@/components/privacy/privacy'
 import { LeaveShare } from '@/components/share/LeaveShare'
+import { WeightCell } from '@/components/ui/AllocationBars'
 import { DataTable, NameCell, Td, Th } from '@/components/ui/DataTable'
-import { BackLink, Grid, Note, Section } from '@/components/ui/layout'
+import { Grid, Note, Section } from '@/components/ui/layout'
 import { Row, Rows } from '@/components/ui/Rows'
 import { HeroSummary } from '@/components/ui/Summary'
 import { Trend } from '@/components/ui/Trend'
+import { bookingTypeLabel, listAmount, unitPriceText } from '@/lib/booking-display'
 import { dayLabel } from '@/lib/display'
-import { formatQuantity, quantityFromDb } from '@/lib/quantity'
+import { displayName } from '@/lib/names'
+import { displayUnitPrice, formatQuantity, quantityFromDb, unitPriceFromAmount } from '@/lib/quantity'
 import { requireUser } from '@/server/auth/session'
 import { NotFoundError } from '@/server/dal/errors'
 import { loadSharedPortfolio } from '@/server/shared'
@@ -16,22 +20,8 @@ import { leaveShareAction } from '../../freigabe/actions'
 export const metadata = { title: 'Geteiltes Depot' }
 
 const KIND_LABEL = { depot: 'Wertpapierdepot', krypto: 'Krypto', cash: 'Cash-Konto', sachwert: 'Edelmetalle' } as const
-const TYPE_LABEL: Record<string, string> = {
-  buy: 'Kauf',
-  sell: 'Verkauf',
-  dividend: 'Dividende',
-  interest: 'Zinsen',
-  fee: 'Gebühr',
-  tax: 'Steuer',
-  deposit: 'Einzahlung',
-  withdrawal: 'Auszahlung',
-  transfer_in: 'Übertrag ein',
-  transfer_out: 'Übertrag aus',
-  split: 'Split',
-  staking: 'Staking',
-  age: 'AGE',
-  tax_refund: 'Steuergutschrift',
-}
+/** Ältere Buchungen nur beim Besitzer – die Freigabe zeigt die jüngsten */
+const SHOWN = 100
 
 /** Geteiltes Depot – nur lesen. Zugriff nur mit angenommener Freigabe (DAL prüft). */
 export default async function SharedPortfolioPage({ params }: { params: Promise<{ id: string }> }) {
@@ -46,39 +36,49 @@ export default async function SharedPortfolioPage({ params }: { params: Promise<
   }
   const { portfolio, value } = data
   const names = new Map(portfolio.instruments.map((i) => [i.id, i.name]))
+  const metal = new Set(portfolio.instruments.filter((i) => i.kind === 'metal').map((i) => i.id))
   const gain = value ? value.valueCents - value.investedCents : 0
+  const positions = value?.positions ?? []
+  const recent = [...portfolio.bookings].reverse().slice(0, SHOWN)
 
   return (
     <>
-      <BackLink href="/app/depots">Depots</BackLink>
       <HeroSummary
         id="geteilt-titel"
+        back={{ href: '/app/depots', label: 'Depots' }}
         eyebrow={`Geteilt von ${portfolio.ownerName} · ${KIND_LABEL[portfolio.kind]} · nur lesen`}
         title={portfolio.name}
         value={(value?.valueCents ?? 0) / 100}
         stats={[
           { label: 'Gewinn', value: value && value.investedCents > 0 ? <Trend value={gain / value.investedCents} /> : '–', note: <Amount value={gain / 100} signed whole /> },
-          { label: 'Einstand', value: <Amount value={(value?.investedCents ?? 0) / 100} whole /> },
+          { label: 'Einstand', value: <Amount value={(value?.investedCents ?? 0) / 100} whole />, note: 'ohne Nebenkosten' },
           { label: 'Erträge', value: <Amount value={(value?.incomeCents ?? 0) / 100} whole />, note: 'Dividenden, Zinsen' },
         ]}
       />
       <Grid>
         {portfolio.kind === 'cash' ? null : (
-          <Section id="positionen" title="Positionen">
-            {value && value.positions.length > 0 ? (
+          <Section id="positionen" title="Positionen" meta={positions.length === 1 ? '1 Position' : `${positions.length} Positionen`}>
+            {positions.length > 0 ? (
               <DataTable
                 caption={`Positionen in ${portfolio.name}`}
+                align="middle"
                 head={
                   <>
                     <Th>Position</Th>
+                    <Th hideSm>Anteil</Th>
+                    <Th hideSm>Ø Einstand</Th>
                     <Th>Wert</Th>
                     <Th>Gewinn</Th>
                   </>
                 }
               >
-                {value.positions.map((p) => (
+                {positions.map((p) => (
                   <tr key={p.instrumentId}>
-                    <NameCell name={p.name} sub={`${formatQuantity(p.quantity)} ${p.kind === 'metal' ? 'g' : 'Stück'}`} />
+                    <NameCell name={displayName(p.name)} sub={`${formatQuantity(p.quantity, 6)} ${p.kind === 'metal' ? 'g' : 'Stk.'}`} />
+                    <Td hideSm>
+                      <WeightCell share={p.weight} />
+                    </Td>
+                    <Td hideSm>{p.quantity > 0n && p.costCents > 0 ? <PriceText text={displayUnitPrice(unitPriceFromAmount(p.costCents, p.quantity))} /> : '–'}</Td>
                     <Td>
                       <Amount value={p.valueCents / 100} />
                     </Td>
@@ -96,27 +96,47 @@ export default async function SharedPortfolioPage({ params }: { params: Promise<
             )}
           </Section>
         )}
-        <Section id="buchungen" title="Buchungen" meta={`${portfolio.bookings.length} insgesamt`} span="twoThirds">
-          {portfolio.bookings.length === 0 ? (
+        <Section
+          id="buchungen"
+          title="Buchungen"
+          meta={portfolio.bookings.length > SHOWN ? `die letzten ${SHOWN} von ${portfolio.bookings.length}` : `${portfolio.bookings.length} insgesamt`}
+          span="twoThirds"
+        >
+          {recent.length === 0 ? (
             <Note>Keine Buchungen.</Note>
           ) : (
             <Rows>
-              {[...portfolio.bookings]
-                .reverse()
-                .slice(0, 100)
-                .map((b) => (
+              {recent.map((b) => {
+                const name = b.instrumentId ? names.get(b.instrumentId) : undefined
+                const type = bookingTypeLabel(b.type)
+                const amount = listAmount(b.type, b.amountCents)
+                const price = unitPriceText(b.type, b.quantity, b.amountCents)
+                const qty = b.quantity ? `${formatQuantity(quantityFromDb(b.quantity))} ${b.instrumentId && metal.has(b.instrumentId) ? 'g' : 'Stk.'}` : null
+                return (
                   <Row
                     key={b.id}
-                    date={dayLabel(b.occurredOn, false)}
-                    label={(b.instrumentId && names.get(b.instrumentId)) || TYPE_LABEL[b.type] || b.type}
-                    sub={`${b.quantity ? `${formatQuantity(quantityFromDb(b.quantity))} Stk. · ` : ''}${TYPE_LABEL[b.type] ?? b.type} · ${b.occurredOn.slice(0, 4)}`}
-                    value={b.amountCents ? <Amount value={b.amountCents / 100} /> : '–'}
+                    emphasis
+                    date={dayLabel(b.occurredOn)}
+                    label={name ? displayName(name) : type}
+                    sub={
+                      <>
+                        {[name ? type : null, qty].filter(Boolean).join(' · ')}
+                        {price ? (
+                          <>
+                            {' '}
+                            à <PriceText text={price} />
+                          </>
+                        ) : null}
+                      </>
+                    }
+                    value={amount ? <Amount value={amount.value} signed={amount.signed} /> : '–'}
                   />
-                ))}
+                )
+              })}
             </Rows>
           )}
         </Section>
-        <Section id="freigabe" title="Freigabe" span="third">
+        <Section id="freigabe" title="Freigabe" meta="nur lesen" span="third">
           <Note>Nur zum Ansehen – Änderungen macht der Besitzer. Das Depot zählt nicht zu deinem Vermögen.</Note>
           <LeaveShare leave={leaveShareAction.bind(null, portfolio.id)} />
         </Section>

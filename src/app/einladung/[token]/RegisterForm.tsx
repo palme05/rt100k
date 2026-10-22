@@ -1,7 +1,7 @@
 'use client'
 
 import { useActionState, useId } from 'react'
-import { Actions, Button, describedBy, Field, Form, Input, Message } from '@/components/ui/forms'
+import { Button, describedBy, Field, Form, Input, Message } from '@/components/ui/forms'
 import { registerAction, type RegisterState } from './actions'
 
 const initial: RegisterState = { error: null, field: null, values: { name: '', email: '' } }
@@ -29,11 +29,9 @@ export function RegisterForm({ token }: { token: string }) {
         <Field id={`${id}-pw2`} label="Passwort wiederholen" error={err('passwordRepeat')}>
           <Input id={`${id}-pw2`} name="passwordRepeat" type="password" required minLength={12} maxLength={128} autoComplete="new-password" {...describedBy(`${id}-pw2`, null, err('passwordRepeat'))} />
         </Field>
-        <Actions>
-          <Button type="submit" disabled={pending}>
-            {pending ? 'Konto wird angelegt …' : 'Konto anlegen'}
-          </Button>
-        </Actions>
+        <Button type="submit" disabled={pending} aria-busy={pending || undefined}>
+          {pending ? 'Konto wird angelegt …' : 'Konto anlegen'}
+        </Button>
       </Form>
     </>
   )
