@@ -178,6 +178,7 @@ export default async function InstrumentPage({ params }: { params: Promise<{ id:
                 linkInstruments={false}
                 context="instrument"
                 groupBy="year"
+                pageSize={12}
                 items={d.bookings.map((b) => {
                   const amount = listAmount(b.type, b.amountCents)
                   return {

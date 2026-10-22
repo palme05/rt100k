@@ -1,5 +1,6 @@
 import { AcceptShare } from '@/components/share/AcceptShare'
-import { Note, PageHead } from '@/components/ui/layout'
+import { Grid, Note, PageHead, Section } from '@/components/ui/layout'
+import { Row, Rows } from '@/components/ui/Rows'
 import { dayLabel } from '@/lib/display'
 import { requireUser } from '@/server/auth/session'
 import { peekShare } from '@/server/dal/shares'
@@ -24,11 +25,20 @@ export default async function AcceptSharePage({ params }: { params: Promise<{ to
   }
   return (
     <>
-      <PageHead id="freigabe-titel" title="Depot ansehen?">
-        {preview.ownerName} teilt das Depot „{preview.portfolioName}“ mit dir – nur zum Ansehen. Du siehst Positionen und Buchungen, kannst aber nichts ändern.
+      <PageHead id="freigabe-titel" eyebrow="Freigabe" title="Depot ansehen?">
+        {preview.ownerName} teilt das Depot „{preview.portfolioName}“ mit dir – nur zum Ansehen.
       </PageHead>
-      <AcceptShare accept={acceptShareAction.bind(null, token)} />
-      <Note>Der Link gilt bis {dayLabel(preview.expiresAt.slice(0, 10))} und nur einmal. Du kannst die Freigabe später jederzeit verlassen.</Note>
+      <Grid>
+        <Section id="freigabe-umfang" title="Was du siehst" span="twoThirds">
+          <Rows>
+            <Row label="Positionen und Buchungen" sub="aktuell, solange die Freigabe besteht" value="✓ sichtbar" />
+            <Row label="Ändern, buchen, löschen" sub="das Depot bleibt bei der Person, die es teilt" value="✗ nicht möglich" />
+            <Row label="Deine eigenen Depots" sub="werden nicht geteilt" value="✗ unsichtbar" />
+          </Rows>
+          <AcceptShare accept={acceptShareAction.bind(null, token)} />
+          <Note>Der Link gilt bis {dayLabel(preview.expiresAt.slice(0, 10))} und nur einmal. Du kannst die Freigabe später jederzeit verlassen.</Note>
+        </Section>
+      </Grid>
     </>
   )
 }

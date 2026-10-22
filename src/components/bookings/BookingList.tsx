@@ -9,7 +9,8 @@ import { haptic } from '../hooks/haptics'
 import { useSwipe } from '../hooks/useSwipe'
 import { Amount } from '../privacy/privacy'
 import { Icon } from '../shell/icons'
-import { Button, Input, Select } from '../ui/forms'
+import button from '../ui/button.module.css'
+import { Input, Select } from '../ui/forms'
 import { Note } from '../ui/layout'
 import { PriceText } from './PriceText'
 import styles from './bookings.module.css'
@@ -39,7 +40,7 @@ export interface BookingListItem {
   portfolioName?: string | null
 }
 
-/** So viele Zeilen zuerst, dann schrittweise mehr. */
+/** So viele Zeilen zuerst, dann schrittweise mehr (Standard). */
 const PAGE = 25
 
 /**
@@ -51,7 +52,11 @@ const PAGE = 25
  * fragt immer einmal nach.
  *
  * `context="instrument"` (Wertpapier-Seite): der Name des Werts steht schon
- * im Seitentitel – die Zeile zeigt die Art und das Depot statt des Namens.
+ * im Seitentitel – die Zeile zeigt die Art und das Depot statt des Namens,
+ * in breiten Spalten einzeilig („Kauf  3,09 Stk. à 129,48 €“).
+ *
+ * `pageSize`: so viele Zeilen zuerst (Depot-Seite weniger, damit die Liste
+ * neben dem Buchungsformular nicht drei Bildschirme lang wird).
  */
 export function BookingList({
   items,
@@ -59,6 +64,7 @@ export function BookingList({
   linkInstruments = true,
   context = 'portfolio',
   groupBy = 'month',
+  pageSize = PAGE,
 }: {
   items: readonly BookingListItem[]
   remove: (id: string) => Promise<{ ok: boolean; error: string | null }>
@@ -66,13 +72,15 @@ export function BookingList({
   context?: 'portfolio' | 'instrument'
   /** Gruppen nach Monat (Standard) oder Jahr – Jahr für wenige Buchungen je Monat (Sparplan) */
   groupBy?: 'month' | 'year'
+  /** Zeilen beim ersten Anzeigen, danach je Klick das Doppelte */
+  pageSize?: number
 }) {
   const id = useId()
   const [type, setType] = useState('')
   const [instrument, setInstrument] = useState('')
   const [year, setYear] = useState('')
   const [query, setQuery] = useState('')
-  const [limit, setLimit] = useState(PAGE)
+  const [limit, setLimit] = useState(pageSize)
   const [pending, start] = useTransition()
   const [error, setError] = useState<string | null>(null)
   const [confirming, setConfirming] = useState<string | null>(null)
@@ -117,7 +125,7 @@ export function BookingList({
     setInstrument('')
     setYear('')
     setQuery('')
-    setLimit(PAGE)
+    setLimit(pageSize)
   }
 
   const onRemove = (b: BookingListItem) =>
@@ -135,11 +143,11 @@ export function BookingList({
       <div className={styles.filters} role="search" aria-label="Buchungen filtern">
         <label className={styles.search}>
           <span className="sr-only">Suchen</span>
-          <Input id={`${id}-q`} type="search" placeholder="Suchen …" value={query} onChange={(e) => (setQuery(e.target.value), setLimit(PAGE))} autoComplete="off" />
+          <Input id={`${id}-q`} type="search" placeholder="Suchen …" value={query} onChange={(e) => (setQuery(e.target.value), setLimit(pageSize))} autoComplete="off" />
         </label>
         <label className={styles.filter}>
           <span className="sr-only">Art</span>
-          <Select id={`${id}-type`} value={type} onChange={(e) => (setType(e.target.value), setLimit(PAGE))}>
+          <Select id={`${id}-type`} value={type} onChange={(e) => (setType(e.target.value), setLimit(pageSize))}>
             <option value="">Alle Arten</option>
             {types.map(([value, label]) => (
               <option key={value} value={value}>
@@ -151,7 +159,7 @@ export function BookingList({
         {instruments.length > 1 ? (
           <label className={styles.filter}>
             <span className="sr-only">Wertpapier</span>
-            <Select id={`${id}-instrument`} value={instrument} onChange={(e) => (setInstrument(e.target.value), setLimit(PAGE))}>
+            <Select id={`${id}-instrument`} value={instrument} onChange={(e) => (setInstrument(e.target.value), setLimit(pageSize))}>
               <option value="">Alle Werte</option>
               {instruments.map(([value, label]) => (
                 <option key={value} value={value}>
@@ -164,7 +172,7 @@ export function BookingList({
         {years.length > 1 ? (
           <label className={styles.filter}>
             <span className="sr-only">Jahr</span>
-            <Select id={`${id}-year`} value={year} onChange={(e) => (setYear(e.target.value), setLimit(PAGE))}>
+            <Select id={`${id}-year`} value={year} onChange={(e) => (setYear(e.target.value), setLimit(pageSize))}>
               <option value="">Alle Jahre</option>
               {years.map((y) => (
                 <option key={y} value={y}>
@@ -220,9 +228,11 @@ export function BookingList({
       </div>
       {filtered.length === 0 ? <Note>Keine Buchung passt zu diesem Filter.</Note> : null}
       {filtered.length > limit ? (
-        <Button variant="quiet" onClick={() => setLimit((l) => l + PAGE * 2)}>
-          Weitere anzeigen ({filtered.length - limit})
-        </Button>
+        <p className={styles.more}>
+          <button type="button" className={button.button} onClick={() => setLimit((l) => l + pageSize * 2)}>
+            {`Weitere anzeigen (${filtered.length - limit})`}
+          </button>
+        </p>
       ) : null}
     </div>
   )
@@ -256,7 +266,7 @@ function BookingRow({
   const extra = [b.imported ? 'Import' : null, b.note].filter(Boolean).join(' · ')
 
   return (
-    <li className={styles.row} data-swipe={b.id}>
+    <li className={context === 'instrument' ? `${styles.row} ${styles.inline}` : styles.row} data-swipe={b.id}>
       <span className={styles.date}>{`${b.occurredOn.slice(8, 10)}.${b.occurredOn.slice(5, 7)}.`}</span>
       <span className={styles.main}>
         <span className={styles.title} title={showName && b.instrumentName !== name ? (b.instrumentName ?? undefined) : undefined}>

@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useTransition } from 'react'
 import { Button, Message } from '../ui/forms'
+import styles from './notify.module.css'
 
 type Result = { ok: boolean; error: string | null }
 type State = 'laden' | 'nicht-unterstuetzt' | 'blockiert' | 'aus' | 'an'
@@ -82,22 +83,37 @@ export function PushSettings({ publicKey, save, remove }: { publicKey: string | 
     })
 
   return (
-    <>
+    <div className={styles.stack}>
+      {state === 'laden' ? (
+        <p className={styles.checking} role="status">
+          Prüfe, ob dieses Gerät Mitteilungen kann …
+        </p>
+      ) : null}
       {state === 'nicht-unterstuetzt' ? (
         <Message tone="info">Dieses Gerät oder dieser Browser unterstützt keine Mitteilungen. Auf dem iPhone geht es nur, wenn rt100k zum Home-Bildschirm hinzugefügt ist.</Message>
       ) : null}
       {state === 'blockiert' ? <Message tone="info">Mitteilungen sind in den Browser-Einstellungen für diese Seite blockiert.</Message> : null}
+      {state === 'aus' || state === 'an' ? (
+        <p className={styles.state}>
+          <span className={state === 'an' ? styles.on : styles.off} aria-hidden="true" />
+          {state === 'an' ? 'An auf diesem Gerät' : 'Aus'}
+        </p>
+      ) : null}
       {state === 'aus' ? (
-        <Button variant="secondary" onClick={enable} disabled={pending}>
-          Mitteilungen auf diesem Gerät einschalten
-        </Button>
+        <div>
+          <Button variant="secondary" onClick={enable} disabled={pending}>
+            Mitteilungen auf diesem Gerät einschalten
+          </Button>
+        </div>
       ) : null}
       {state === 'an' ? (
-        <Button variant="quiet" onClick={disable} disabled={pending}>
-          Mitteilungen auf diesem Gerät ausschalten
-        </Button>
+        <div>
+          <Button variant="secondary" onClick={disable} disabled={pending}>
+            Mitteilungen auf diesem Gerät ausschalten
+          </Button>
+        </div>
       ) : null}
       {message ? <Message tone={message.tone}>{message.text}</Message> : null}
-    </>
+    </div>
   )
 }

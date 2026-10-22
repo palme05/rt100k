@@ -257,9 +257,9 @@ export default async function OverviewPage() {
         <Section id="steuer" title={tax ? `Steuer ${tax.year}` : 'Steuer'} meta="≈ Schätzung" span={moves.top.length > 0 ? 'third' : 'half'}>
           {tax ? (
             <Rows>
-              <Row label="≈ Steuer gesamt" value={<Amount value={tax.total.estimate} />} />
-              {tax.total.due > 0 ? <Row label="≈ offen über die Erklärung" value={<Amount value={tax.total.due} />} /> : null}
-              {tax.total.forfeited > 0 ? <Row label="Verluste ohne Ausgleich" value={<Amount value={tax.total.forfeited} />} /> : null}
+              <Row label="≈ Steuer gesamt" value={<Amount value={tax.total.estimate} whole />} />
+              {tax.total.due > 0 ? <Row label="≈ offen über die Erklärung" value={<Amount value={tax.total.due} whole />} /> : null}
+              {tax.total.forfeited > 0 ? <Row label="Verluste ohne Ausgleich" value={<Amount value={tax.total.forfeited} whole />} /> : null}
               {tax.hints.length > 0 ? <Row label="Hinweise" value={<TextLink href="/app/steuer#hinweise">{`${tax.hints.length} prüfen`}</TextLink>} /> : null}
             </Rows>
           ) : (

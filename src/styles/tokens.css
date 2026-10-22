@@ -139,6 +139,16 @@
   --fab-bg: var(--ink);
   --fab-ink: var(--bg);
   --fab-border: transparent;
+  /* Vorschau der Darstellung (Konto → Darstellung): zeigt hell und dunkel
+     unabhängig vom aktiven Design – gilt deshalb in beiden Designs gleich,
+     die dunklen Blöcke überschreiben diese Werte bewusst nicht. */
+  --preview-light-bg: #fbfbf9;
+  --preview-light-line: #e6e6e1;
+  --preview-light-ink: #16181b;
+  --preview-dark-bg: #131416;
+  --preview-dark-line: #2f3135;
+  --preview-dark-ink: #ecebe6;
+  --preview-accent: #e2620b;
 }
 
 /* ═══ Dunkles Design ══════════════════════════════════════════════════════

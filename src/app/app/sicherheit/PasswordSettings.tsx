@@ -43,7 +43,7 @@ export function PasswordSettings() {
           <Input id={`${id}-repeat`} name="repeat" type="password" required minLength={12} maxLength={128} autoComplete="new-password" />
         </Field>
         <Actions>
-          <Button type="submit" variant="secondary" disabled={pending}>
+          <Button type="submit" disabled={pending}>
             Passwort ändern
           </Button>
         </Actions>

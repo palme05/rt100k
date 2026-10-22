@@ -40,6 +40,8 @@ export default async function SharedPortfolioPage({ params }: { params: Promise<
   const gain = value ? value.valueCents - value.investedCents : 0
   const positions = value?.positions ?? []
   const recent = [...portfolio.bookings].reverse().slice(0, SHOWN)
+  // Anteil nur bei mehreren Positionen – eine einzelne hat immer 100 %
+  const showWeight = positions.length >= 2
 
   return (
     <>
@@ -65,7 +67,7 @@ export default async function SharedPortfolioPage({ params }: { params: Promise<
                 head={
                   <>
                     <Th>Position</Th>
-                    <Th hideSm>Anteil</Th>
+                    {showWeight ? <Th hideSm>Anteil</Th> : null}
                     <Th hideSm>Ø Einstand</Th>
                     <Th>Wert</Th>
                     <Th>Gewinn</Th>
@@ -75,9 +77,11 @@ export default async function SharedPortfolioPage({ params }: { params: Promise<
                 {positions.map((p) => (
                   <tr key={p.instrumentId}>
                     <NameCell name={displayName(p.name)} sub={`${formatQuantity(p.quantity, 6)} ${p.kind === 'metal' ? 'g' : 'Stk.'}`} />
-                    <Td hideSm>
-                      <WeightCell share={p.weight} />
-                    </Td>
+                    {showWeight ? (
+                      <Td hideSm>
+                        <WeightCell share={p.weight} />
+                      </Td>
+                    ) : null}
                     <Td hideSm>{p.quantity > 0n && p.costCents > 0 ? <PriceText text={displayUnitPrice(unitPriceFromAmount(p.costCents, p.quantity))} /> : '–'}</Td>
                     <Td>
                       <Amount value={p.valueCents / 100} />
@@ -112,6 +116,7 @@ export default async function SharedPortfolioPage({ params }: { params: Promise<
                 const amount = listAmount(b.type, b.amountCents)
                 const price = unitPriceText(b.type, b.quantity, b.amountCents)
                 const qty = b.quantity ? `${formatQuantity(quantityFromDb(b.quantity))} ${b.instrumentId && metal.has(b.instrumentId) ? 'g' : 'Stk.'}` : null
+                const facts = [name ? type : null, qty].filter(Boolean).join(' · ')
                 return (
                   <Row
                     key={b.id}
@@ -119,15 +124,17 @@ export default async function SharedPortfolioPage({ params }: { params: Promise<
                     date={dayLabel(b.occurredOn)}
                     label={name ? displayName(name) : type}
                     sub={
-                      <>
-                        {[name ? type : null, qty].filter(Boolean).join(' · ')}
-                        {price ? (
-                          <>
-                            {' '}
-                            à <PriceText text={price} />
-                          </>
-                        ) : null}
-                      </>
+                      // ohne Wertpapier ist die Art schon der Titel – keine leere oder doppelte Unterzeile
+                      facts || price ? (
+                        <>
+                          {facts}
+                          {price ? (
+                            <>
+                              {facts ? ' ' : ''}à <PriceText text={price} />
+                            </>
+                          ) : null}
+                        </>
+                      ) : undefined
                     }
                     value={amount ? <Amount value={amount.value} signed={amount.signed} /> : '–'}
                   />

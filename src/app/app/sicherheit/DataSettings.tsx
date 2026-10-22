@@ -2,9 +2,10 @@
 
 import { useRouter } from 'next/navigation'
 import { useState, useTransition } from 'react'
-import button from '@/components/ui/button.module.css'
+import { Icon } from '@/components/shell/icons'
 import { FileDrop } from '@/components/ui/FileDrop'
 import { Message } from '@/components/ui/forms'
+import forms from '@/components/ui/forms.module.css'
 import styles from './security.module.css'
 
 const MAX_BYTES = 10 * 1024 * 1024
@@ -31,17 +32,27 @@ export function DataSettings({ canRestore }: { canRestore: boolean }) {
 
   return (
     <div className={styles.stack}>
-      <p className={styles.text}>Vollständiges Backup als JSON (Depots, Buchungen, Verlauf, Einstellungen, Aktivität) oder nur die Buchungen als CSV für Excel. Passwort, Passkeys und Sitzungen sind nie enthalten.</p>
       <div className={styles.actions}>
-        <a className={button.button} href="/app/konto/export?format=json" download>
+        <a className={forms.secondary} href="/app/konto/export?format=json" download>
+          <Icon name="download" size={18} />
           Backup (JSON) herunterladen
         </a>
-        <a className={button.button} href="/app/konto/export?format=csv" download>
+        <a className={forms.secondary} href="/app/konto/export?format=csv" download>
+          <Icon name="download" size={18} />
           Buchungen (CSV) herunterladen
         </a>
       </div>
       {canRestore ? (
-        <FileDrop label="Backup hierher ziehen oder auswählen" hint="rt100k-Backup (JSON, höchstens 10 MB). Geht nur in ein Konto ohne Depots." accept=".json,application/json" multiple={false} disabled={pending} onFiles={restore} />
+        <FileDrop
+          label="Backup hierher ziehen"
+          touchLabel="Backup auswählen"
+          button="Backup auswählen"
+          hint="rt100k-Backup (JSON, höchstens 10 MB). Geht nur in ein Konto ohne Depots."
+          accept=".json,application/json"
+          multiple={false}
+          disabled={pending}
+          onFiles={restore}
+        />
       ) : (
         <p className={styles.text}>Ein Backup lässt sich nur in ein Konto ohne Depots zurückspielen.</p>
       )}

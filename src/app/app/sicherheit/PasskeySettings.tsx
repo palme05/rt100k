@@ -38,9 +38,6 @@ export function PasskeySettings({ passkeys }: { passkeys: readonly PasskeyDto[] 
 
   return (
     <div className={styles.stack}>
-      <p className={styles.text}>
-        Passkeys ersetzen das Passwort durch Fingerabdruck, Gesicht oder PIN deines Geräts. Sie sind fälschungssicher und funktionieren nur auf dieser Website.
-      </p>
       {error ? <Message tone="error">{error}</Message> : null}
       {passkeys.length > 0 ? (
         <Rows>
@@ -64,7 +61,7 @@ export function PasskeySettings({ passkeys }: { passkeys: readonly PasskeyDto[] 
       )}
       <Form onSubmit={add}>
         <Field id={`${id}-name`} label="Name des Passkeys" hint="Zum Wiedererkennen, z. B. „iPhone“ oder „Laptop“.">
-          <Input id={`${id}-name`} name="name" maxLength={60} placeholder="z. B. iPhone" />
+          <Input id={`${id}-name`} name="name" maxLength={60} aria-describedby={`${id}-name-hint`} />
         </Field>
         <Actions>
           <Button type="submit" disabled={pending}>

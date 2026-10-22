@@ -1,58 +1,244 @@
-/* Monatsrückblick als „Ausgabe“: große Schlagzeile, nummerierte Highlights. Nur Tokens. */
+/* Monatsrückblick als „Ausgabe“: Aufmacher mit großer Zahl und Diagramm,
+   nummerierte Highlights, Archiv als Monatsraster. Abstände aus den
+   Rhythmus-Tokens, Farben nur aus tokens.css – Zahlen in Tinte. */
 
-.masthead {
-  display: grid;
+/* ── Blättern im Kopf ────────────────────────────────────────────────── */
+.pager {
+  display: inline-flex;
   gap: var(--space-2);
-  padding-block: var(--space-6) var(--space-4);
-  border-bottom: 1px solid var(--rule-strong);
 }
 
-.issue {
+.pagerLink,
+.pagerOff {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1);
+  min-height: var(--control-h-sm);
+  min-width: var(--control-h-sm);
+  padding: 0 var(--space-3);
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--radius-pill);
   font-size: var(--text-sm);
-  color: var(--ink-3);
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  margin: 0;
-}
-
-.headline {
-  font-size: var(--text-2xl);
   font-weight: var(--weight-medium);
-  line-height: 1.1;
-  margin: 0;
-  text-wrap: balance;
-}
-
-.dek {
-  margin: 0;
   color: var(--ink-2);
+  text-decoration: none;
+  transition:
+    border-color 120ms ease,
+    color 120ms ease;
 }
 
+.pagerLink:hover {
+  border-color: var(--field-border);
+  color: var(--ink);
+}
+
+.pagerLink:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.pagerOff {
+  padding: 0;
+  color: var(--ink-3);
+  opacity: var(--opacity-dim);
+}
+
+.pagerText {
+  white-space: nowrap;
+}
+
+/* ── Aufmacher: Zahl links, Diagramm rechts ──────────────────────────── */
+.lead {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-8) var(--space-section-x);
+  align-items: start;
+  min-width: 0;
+}
+
+@media (min-width: 1120px) {
+  .lead {
+    grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+  }
+}
+
+.leadText {
+  display: grid;
+  gap: var(--space-tight);
+  align-content: start;
+  min-width: 0;
+}
+
+.leadText > dl {
+  margin-top: var(--space-6);
+}
+
+.leadLabel {
+  margin: 0;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--ink-3);
+}
+
+.leadValue {
+  margin: 0;
+  font-size: var(--text-hero);
+  font-weight: var(--weight-hero);
+  letter-spacing: var(--tracking-display);
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+
+.leadChart {
+  min-width: 0;
+}
+
+/* ── Highlights: „01“ … in Tinte-3, Haarlinien dazwischen ───────────── */
 .highlights {
   margin: 0;
-  padding-left: 1.4rem;
+  padding: 0;
+  list-style: none;
+  counter-reset: highlight;
   display: grid;
+  max-width: var(--measure);
+}
+
+.highlights li {
+  counter-increment: highlight;
+  display: grid;
+  grid-template-columns: 2.25rem minmax(0, 1fr);
   gap: var(--space-3);
-  max-width: 46rem;
+  align-items: baseline;
+  padding: var(--row-y) 0;
+  border-bottom: 1px solid var(--rule);
+  font-size: var(--text-lg);
+  line-height: var(--leading-snug);
+  letter-spacing: var(--tracking-snug);
+  text-wrap: pretty;
 }
 
-.highlights li::marker {
-  color: var(--accent);
-  font-weight: var(--weight-semibold);
+.highlights li:first-child {
+  padding-top: 0;
 }
 
-.months {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2) var(--space-4);
+.highlights li:last-child {
+  padding-bottom: 0;
+  border-bottom: none;
+}
+
+.highlights li::before {
+  content: counter(highlight, decimal-leading-zero);
   font-size: var(--text-sm);
-}
-
-.months a {
+  font-weight: var(--weight-semibold);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0;
   color: var(--ink-3);
 }
 
-.months a[aria-current='page'] {
-  color: var(--ink);
+/* ── Werte im Monat: zwei Gruppen ────────────────────────────────────── */
+.groups {
+  display: grid;
+  gap: var(--space-8);
+  min-width: 0;
+}
+
+/* ── Archiv: Jahr links, zwölf Monate als Raster ─────────────────────── */
+.archive {
+  display: grid;
+  gap: var(--space-5);
+  min-width: 0;
+}
+
+.year {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-2) var(--space-6);
+  align-items: center;
+}
+
+@media (min-width: 820px) {
+  .year {
+    grid-template-columns: 4rem minmax(0, 1fr);
+  }
+}
+
+.yearLabel {
+  margin: 0;
+  font-size: var(--text-sm);
   font-weight: var(--weight-semibold);
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+
+.monthGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+@media (min-width: 560px) {
+  .monthGrid {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1120px) {
+  .monthGrid {
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+  }
+}
+
+.month,
+.monthOff {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--control-h-sm);
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-pill);
+  font-size: var(--text-sm);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.month {
+  color: var(--ink-2);
+  text-decoration: none;
+  transition:
+    background-color 120ms ease,
+    color 120ms ease;
+}
+
+.month:hover {
+  background: var(--wash);
+  color: var(--ink);
+}
+
+.month:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.month[aria-current='page'] {
+  background: var(--ink);
+  color: var(--bg);
+  font-weight: var(--weight-semibold);
+}
+
+.monthOff {
+  color: var(--ink-3);
+  opacity: var(--opacity-muted);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pagerLink,
+  .month {
+    transition: none;
+  }
 }

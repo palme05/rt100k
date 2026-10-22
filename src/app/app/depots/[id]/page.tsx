@@ -7,7 +7,7 @@ import { DonutChart } from '@/components/charts/DonutChart'
 import { HistoryChart } from '@/components/charts/HistoryChart'
 import { Amount } from '@/components/privacy/privacy'
 import { RefreshButton } from '@/components/shell/refresh'
-import { WeightCell } from '@/components/ui/AllocationBars'
+import { slotsByShare, WeightCell } from '@/components/ui/AllocationBars'
 import { DataTable, NameCell, Td, Th } from '@/components/ui/DataTable'
 import { Message } from '@/components/ui/forms'
 import { Grid, Muted, Note, Section, SectionHead } from '@/components/ui/layout'
@@ -88,6 +88,9 @@ export default async function PortfolioPage({ params, searchParams }: { params: 
   const history = insights?.history ?? []
   const today = insights?.today ?? null
   const showAllocation = !cash && positions.length >= 2
+  // Balken in der Tabelle in der Farbe des Rings (nur wenn der Ring gezeigt wird)
+  const slots = showAllocation && positions.length <= DONUT_MAX ? slotsByShare(positions.map((p) => ({ key: p.instrumentId, share: p.weight }))) : new Map<string, number>()
+  const showWeight = positions.length >= 2
   const importCount = bookings.filter((b) => b.source === 'import').length
 
   // Kopf: höchstens vier Kennzahlen; Realisiertes als Zusatz bei den Erträgen
@@ -190,7 +193,7 @@ export default async function PortfolioPage({ params, searchParams }: { params: 
                 head={
                   <>
                     <Th>Position</Th>
-                    <Th hideSm>Anteil</Th>
+                    {showWeight ? <Th hideSm>Anteil</Th> : null}
                     <Th hideSm>Ø Einstand</Th>
                     <Th hideSm>Kurs</Th>
                     <Th>Wert</Th>
@@ -206,9 +209,11 @@ export default async function PortfolioPage({ params, searchParams }: { params: 
                   return (
                     <tr key={p.instrumentId}>
                       <NameCell name={displayName(p.name)} sub={`${formatQuantity(p.quantity, 6)} ${unit(p.kind)}`} href={`/app/wertpapier/${p.instrumentId}`} />
-                      <Td hideSm>
-                        <WeightCell share={p.weight} />
-                      </Td>
+                      {showWeight ? (
+                        <Td hideSm>
+                          <WeightCell share={p.weight} slot={slots.get(p.instrumentId)} />
+                        </Td>
+                      ) : null}
                       <Td hideSm>{average ? <PriceText text={average} /> : '–'}</Td>
                       <Td hideSm>
                         {p.priced && q ? (
@@ -222,9 +227,11 @@ export default async function PortfolioPage({ params, searchParams }: { params: 
                       </Td>
                       <Td>
                         <Amount value={p.valueCents / 100} />
-                        <span className={styles.smOnly}>
-                          <small>{share(p.weight)}</small>
-                        </span>
+                        {showWeight ? (
+                          <span className={styles.smOnly}>
+                            <small>{share(p.weight)}</small>
+                          </span>
+                        ) : null}
                       </Td>
                       <Td>
                         {p.costCents > 0 ? <Trend value={p.gainCents / p.costCents} /> : '–'}
@@ -252,7 +259,7 @@ export default async function PortfolioPage({ params, searchParams }: { params: 
             </Section>
 
             {plans.length > 0 ? (
-              <Section id="sparplaene" title="Sparpläne" meta="aus den Käufen erkannt">
+              <Section id="sparplaene" title="Sparpläne" meta="erkannt an drei Monatskäufen">
                 <Rows>
                   {plans.map((plan) => {
                     const name = valuation.instruments.get(plan.instrumentId)?.name ?? 'Unbekannt'
@@ -276,7 +283,6 @@ export default async function PortfolioPage({ params, searchParams }: { params: 
                     )
                   })}
                 </Rows>
-                <Note>Erkannt an mindestens drei Käufen im Monatsabstand mit ähnlichem Betrag.</Note>
               </Section>
             ) : null}
           </div>
@@ -286,6 +292,7 @@ export default async function PortfolioPage({ params, searchParams }: { params: 
               {geaendert ? <Message tone="success">Änderung gespeichert.</Message> : null}
               <BookingList
                 remove={deleteBookingAction}
+                pageSize={12}
                 items={bookings.map((b) => {
                   const metal = b.instrumentId ? valuation.instruments.get(b.instrumentId)?.kind === 'metal' : false
                   const amount = listAmount(b.type, b.amountCents)

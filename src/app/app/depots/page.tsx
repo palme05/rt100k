@@ -27,6 +27,8 @@ const KIND_LABEL = {
   cash: 'Cash-Konto',
   sachwert: 'Edelmetalle',
 } as const
+/** Kurz für die Unterzeile in der Tabelle (wie auf der Übersicht) – passt auch am Handy in eine Zeile */
+const SHORT_KIND = { depot: 'Depot', krypto: 'Krypto', cash: 'Cash', sachwert: 'Edelmetalle' } as const
 
 export default async function PortfoliosPage() {
   const user = await requireUser()
@@ -64,28 +66,25 @@ export default async function PortfoliosPage() {
     },
   ]
   const count = valuation.portfolios.length
+  const actions = (
+    <>
+      <Link className={button.button} href="/app/import">
+        <Icon name="import" size={16} />
+        Importieren
+      </Link>
+      <Link className={button.button} href="/app/depots/neu">
+        <Icon name="plus" size={16} />
+        Neues Depot
+      </Link>
+    </>
+  )
 
   return (
     <>
       <HeroSummary id="depots-titel" eyebrow="Gesamtwert" title="Depots und Konten" value={total} stats={count > 0 ? stats : []} />
       <Grid>
-        <Section
-          id="liste"
-          title="Alle Depots"
-          meta={count === 1 ? '1 Depot oder Konto' : `${count} Depots und Konten`}
-          actions={
-            <span className={styles.headActions}>
-              <Link className={button.button} href="/app/import">
-                <Icon name="import" size={16} />
-                Importieren
-              </Link>
-              <Link className={button.button} href="/app/depots/neu">
-                <Icon name="plus" size={16} />
-                Neues Depot
-              </Link>
-            </span>
-          }
-        >
+        {/* Aktionen im Kopf; am Handy unter der Tabelle (zwei gleich breite Knöpfe statt Umbruch im Kopf) */}
+        <Section id="liste" title="Alle Depots" actions={<span className={count > 0 ? `${styles.headActions} ${styles.wideOnly}` : styles.headActions}>{actions}</span>}>
           {count === 0 ? (
             <div className={styles.empty}>
               <p>Noch keine Depots. Leg dein erstes Depot an und erfasse Käufe – Kurse holt rt100k automatisch.</p>
@@ -113,7 +112,7 @@ export default async function PortfoliosPage() {
                 const line = series.get(p.id) ?? []
                 const today = moves.byPortfolio.get(p.id)
                 const broker = p.broker && p.broker.toLocaleLowerCase('de') !== p.name.toLocaleLowerCase('de') ? p.broker : null
-                const kind = KIND_LABEL[p.kind].toLocaleLowerCase('de') === p.name.toLocaleLowerCase('de') ? null : KIND_LABEL[p.kind]
+                const kind = SHORT_KIND[p.kind].toLocaleLowerCase('de') === p.name.toLocaleLowerCase('de') ? null : SHORT_KIND[p.kind]
                 const positions = p.kind === 'cash' ? null : p.value.positions.length === 1 ? '1 Position' : `${p.value.positions.length} Positionen`
                 return (
                   <tr key={p.id}>
@@ -129,7 +128,7 @@ export default async function PortfoliosPage() {
                     <Td>
                       {p.value.investedCents > 0 ? <Trend value={g / p.value.investedCents} /> : '–'}
                       <small>
-                        <Amount value={g / 100} signed whole />
+                        <Amount value={g / 100} signed />
                       </small>
                     </Td>
                   </tr>
@@ -137,6 +136,7 @@ export default async function PortfoliosPage() {
               })}
             </DataTable>
           )}
+          {count > 0 ? <div className={styles.listActions}>{actions}</div> : null}
         </Section>
         {shared.length > 0 ? (
           <Section id="geteilt" title="Mit mir geteilt" meta="nur lesen, zählt nicht zu deinem Vermögen">

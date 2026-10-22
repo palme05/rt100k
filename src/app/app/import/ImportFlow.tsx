@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { useState, useTransition } from 'react'
+import { ImportSources, ImportSteps } from '@/components/import/ImportGuide'
 import { FileDrop } from '@/components/ui/FileDrop'
 import { Actions, Button, Field, Message, Select } from '@/components/ui/forms'
 import { Grid, Note, Section } from '@/components/ui/layout'
@@ -240,8 +241,10 @@ export function ImportFlow({ portfolios, mappings: initialMappings }: { portfoli
       <Section id="dateien" title="Dateien" meta="PDF oder CSV, bis 10 MB">
         <div className={styles.stack}>
           <FileDrop
-            label="Abrechnungen hierher ziehen oder auswählen"
-            hint="Trade Republic als Transaktionsexport (CSV) oder PDF, flatex als PDF, Bitpanda als CSV-Export, andere Banken als CSV mit eigener Zuordnung. Die Dateien werden nur in deinem Browser gelesen – an rt100k gehen nur die erkannten Buchungen."
+            label="Abrechnungen hierher ziehen"
+            touchLabel="Abrechnungen auswählen"
+            button="Dateien auswählen"
+            hint="PDF oder CSV, mehrere auf einmal. Die Dateien werden nur in deinem Browser gelesen – an rt100k gehen nur die erkannten Buchungen."
             accept=".pdf,.csv,application/pdf,text/csv"
             disabled={busy}
             onFiles={(list) => void addFiles(list)}
@@ -294,6 +297,17 @@ export function ImportFlow({ portfolios, mappings: initialMappings }: { portfoli
           ) : null}
         </div>
       </Section>
+
+      {files.length === 0 && rows.length === 0 && !progress ? (
+        <>
+          <Section id="ablauf" title="So funktioniert der Import" span="twoThirds">
+            <ImportSteps />
+          </Section>
+          <Section id="quellen" title="Unterstützte Quellen" span="third">
+            <ImportSources />
+          </Section>
+        </>
+      ) : null}
 
       {progress && rows.length === 0 ? (
         <Section label="Fortschritt">

@@ -1,76 +1,8 @@
-/* Road to 100k: Routenlinie, Ankunftszeiten, Planer, Stationen. */
+/* Road to 100k: Satz unter der Routenlinie (Übersicht), Ankunft, Planer,
+   Schieberegler, Stationen. Abstände aus den Rhythmus-Tokens, Farben nur aus
+   tokens.css. Die Routenlinie selbst steht in route.module.css. */
 
-/* ── Routenlinie ─────────────────────────────────────────────────────── */
-.route {
-  display: block;
-  overflow: visible;
-}
-
-.track {
-  stroke: var(--rule-strong);
-  stroke-width: 2;
-  stroke-linecap: round;
-}
-
-.done {
-  stroke: var(--accent);
-  stroke-width: 3;
-  stroke-linecap: round;
-}
-
-.stationDone {
-  fill: var(--ink);
-  stroke: var(--bg);
-  stroke-width: 2.5;
-}
-
-.stationAhead {
-  fill: var(--bg);
-  stroke: var(--ink-3);
-  stroke-width: 1.5;
-}
-
-.stationGoal {
-  fill: var(--bg);
-  stroke: var(--accent);
-  stroke-width: 2.5;
-}
-
-.here {
-  fill: var(--accent);
-  stroke: var(--bg);
-  stroke-width: 3;
-}
-
-.hereHalo {
-  fill: var(--accent-wash);
-}
-
-.label {
-  font-size: 12px;
-  font-weight: var(--weight-semibold);
-  fill: var(--ink);
-  font-variant-numeric: tabular-nums;
-}
-
-.labelAhead {
-  composes: label;
-  font-weight: var(--weight-medium);
-  fill: var(--ink-2);
-}
-
-.date {
-  font-size: 11px;
-  fill: var(--ink-3);
-  font-variant-numeric: tabular-nums;
-}
-
-.hereLabel {
-  font-size: 12px;
-  font-weight: var(--weight-semibold);
-  fill: var(--ink);
-}
-
+/* ── Satz unter der Routenlinie (Übersicht) ──────────────────────────── */
 .routeNote {
   display: flex;
   flex-wrap: wrap;
@@ -87,52 +19,96 @@
   font-weight: var(--weight-semibold);
 }
 
-/* ── Ankunftszeiten ──────────────────────────────────────────────────── */
-.arrivals {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
-  gap: var(--space-6) var(--space-10);
+/* ── Ankunft: eine große Zahl, drei Kennzahlen daneben ───────────────── */
+.lead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-6) var(--space-12);
+  min-width: 0;
+}
+
+.arrival {
   margin: 0;
+  display: grid;
+  gap: var(--space-tight);
+  min-width: 0;
 }
 
 .arrival dt {
   font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
   color: var(--ink-3);
 }
 
 .arrival dd {
-  margin: var(--space-1) 0 0;
+  margin: 0;
+  display: grid;
+  gap: var(--space-tight);
 }
 
 .arrivalBig {
-  display: block;
-  font-size: 1.75rem;
-  font-weight: var(--weight-medium);
-  letter-spacing: -0.02em;
-  line-height: 1.1;
+  font-size: var(--text-hero);
+  font-weight: var(--weight-hero);
+  letter-spacing: var(--tracking-display);
+  line-height: 1;
   font-variant-numeric: tabular-nums;
 }
 
 .arrivalSub {
-  display: block;
   font-size: var(--text-sm);
+  line-height: var(--leading-meta);
   color: var(--ink-3);
-  margin-top: var(--space-1);
 }
 
-/* ── Planer ──────────────────────────────────────────────────────────── */
+/* Ankunft und Routenlinie bilden einen Kopf (enger als zwischen Abschnitten) */
+.top {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-8);
+  min-width: 0;
+}
+
+/* ── Planer: Diagramm und Stationen links, Annahmen rechts ───────────── */
 .planner {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  gap: var(--space-12);
+  gap: var(--space-section) var(--space-section-x);
+  min-width: 0;
 }
 
 @media (min-width: 1120px) {
   .planner {
-    grid-template-columns: minmax(0, 1fr) 19rem;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+  }
+
+  .main {
+    grid-column: span 8;
+  }
+
+  .side {
+    grid-column: span 4;
   }
 }
 
+.main,
+.side {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-section);
+  align-content: start;
+  min-width: 0;
+}
+
+/* Vergleichsszenario unter dem Diagramm */
+.scenario {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--ink-2);
+}
+
+/* ── Annahmen ────────────────────────────────────────────────────────── */
 .controls {
   display: grid;
   gap: var(--space-6);
@@ -141,48 +117,203 @@
 
 .control {
   display: grid;
-  gap: 0.4rem;
+  gap: var(--space-1);
 }
 
 .controlHead {
   display: flex;
   justify-content: space-between;
   align-items: baseline;
+  gap: var(--space-3);
   font-size: var(--text-md);
+  font-weight: var(--weight-medium);
 }
 
 .controlHead output {
   font-weight: var(--weight-semibold);
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
 .hint {
-  font-size: var(--text-xs);
+  font-size: var(--text-sm);
+  line-height: var(--leading-meta);
   color: var(--ink-3);
 }
 
+.checkHint {
+  display: block;
+  font-size: var(--text-sm);
+  color: var(--ink-3);
+}
+
+/* ── Schieberegler: eigene Spur (SVG dahinter), Griff in Tinte ───────── */
+.slider {
+  --thumb: 1.25rem;
+
+  position: relative;
+  display: grid;
+  align-items: center;
+  /* 44 px Tippfläche, optisch aber eng an Bezeichnung und Hinweis */
+  margin-block: calc(var(--space-2) * -1);
+}
+
+@media (pointer: coarse) {
+  .slider {
+    --thumb: 1.5rem;
+  }
+}
+
+/* Spur beginnt und endet in der Griffmitte – so endet die Füllung genau dort */
+.sliderTrack {
+  position: absolute;
+  left: calc(var(--thumb) / 2);
+  right: calc(var(--thumb) / 2);
+  top: 50%;
+  width: calc(100% - var(--thumb));
+  height: 4px;
+  translate: 0 -50%;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.trackBg {
+  fill: var(--rule-strong);
+}
+
+.trackFill {
+  fill: var(--ink);
+}
+
+.trackFillSecond {
+  fill: var(--second);
+}
+
 .range {
+  appearance: none;
+  position: relative;
   width: 100%;
-  accent-color: var(--accent);
+  height: var(--hit);
   margin: 0;
+  background: transparent;
+  cursor: pointer;
 }
 
-.checkbox {
+.range:focus-visible {
+  outline: none;
+}
+
+.range::-webkit-slider-runnable-track {
+  height: 4px;
+  background: transparent;
+  border: 0;
+}
+
+.range::-moz-range-track {
+  height: 4px;
+  background: transparent;
+  border: 0;
+}
+
+.range::-webkit-slider-thumb {
+  appearance: none;
+  box-sizing: border-box;
+  width: var(--thumb);
+  height: var(--thumb);
+  margin-top: calc((4px - var(--thumb)) / 2);
+  border-radius: 50%;
+  border: 2px solid var(--ink);
+  background: var(--surface);
+  box-shadow: var(--shadow-raise);
+  transition:
+    scale 120ms ease,
+    box-shadow 120ms ease;
+}
+
+.range::-moz-range-thumb {
+  box-sizing: border-box;
+  width: var(--thumb);
+  height: var(--thumb);
+  border-radius: 50%;
+  border: 2px solid var(--ink);
+  background: var(--surface);
+  box-shadow: var(--shadow-raise);
+  transition:
+    scale 120ms ease,
+    box-shadow 120ms ease;
+}
+
+.range:hover::-webkit-slider-thumb {
+  scale: 1.1;
+}
+
+.range:hover::-moz-range-thumb {
+  scale: 1.1;
+}
+
+.range:active::-webkit-slider-thumb {
+  scale: 1.15;
+}
+
+.range:active::-moz-range-thumb {
+  scale: 1.15;
+}
+
+/* Fokus: Akzent-Ring um den Griff (wie bei allen Bedienelementen) */
+.range:focus-visible::-webkit-slider-thumb {
+  box-shadow:
+    0 0 0 3px var(--bg),
+    0 0 0 5px var(--accent);
+}
+
+.range:focus-visible::-moz-range-thumb {
+  box-shadow:
+    0 0 0 3px var(--bg),
+    0 0 0 5px var(--accent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .range::-webkit-slider-thumb {
+    transition: none;
+  }
+
+  .range::-moz-range-thumb {
+    transition: none;
+  }
+}
+
+/* „übernehmen“ im Hinweis: 44 px Tippfläche, ohne die Zeile höher zu machen */
+.inlineButton {
+  display: inline;
+  padding: var(--space-3) 0;
+  margin: calc(var(--space-3) * -1) 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-weight: var(--weight-medium);
+  color: var(--ink);
+  text-decoration: underline;
+  text-decoration-color: var(--rule-strong);
+  text-underline-offset: 0.2em;
+  cursor: pointer;
+}
+
+.inlineButton:hover {
+  text-decoration-color: var(--accent);
+}
+
+.buttons {
   display: flex;
-  gap: 0.6rem;
-  align-items: flex-start;
-  font-size: var(--text-md);
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-5);
+  align-items: center;
+  padding-top: var(--space-5);
+  border-top: 1px solid var(--rule);
 }
 
-.checkbox input {
-  accent-color: var(--accent);
-  width: 1rem;
-  height: 1rem;
-  margin: 0.15rem 0 0;
-}
-
-.reset {
-  justify-self: start;
+.saved {
+  font-size: var(--text-sm);
+  color: var(--ink-2);
 }
 
 /* ── Stationen ───────────────────────────────────────────────────────── */
@@ -203,8 +334,8 @@
 
 .station {
   display: grid;
-  gap: 0.1rem;
-  padding-left: 1.15rem;
+  gap: var(--space-hair);
+  padding-left: var(--space-5);
   position: relative;
 }
 
@@ -228,6 +359,7 @@
 .station span {
   font-size: var(--text-sm);
   color: var(--ink-3);
+  font-variant-numeric: tabular-nums;
 }
 
 .stationReached {
@@ -245,41 +377,4 @@
 
 .stationTarget::before {
   border: 2.5px solid var(--accent);
-}
-
-/* Abschnitte im Planer teilen sich die Zeile */
-.planner > section {
-  grid-column: auto;
-}
-
-.buttons {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2);
-  align-items: center;
-}
-
-/* Vergleichsszenario unter dem Diagramm */
-.scenario {
-  margin: var(--space-3) 0 0;
-  font-size: var(--text-sm);
-  color: var(--ink-2);
-}
-
-.inlineButton {
-  display: inline-flex;
-  align-items: center;
-  min-height: 2.75rem;
-  padding: 0;
-  border: 0;
-  background: none;
-  font: inherit;
-  color: var(--ink-2);
-  text-decoration: underline;
-  text-underline-offset: 2px;
-  cursor: pointer;
-}
-
-.inlineButton:hover {
-  color: var(--ink);
 }

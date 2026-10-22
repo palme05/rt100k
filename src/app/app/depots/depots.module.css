@@ -45,6 +45,27 @@
   gap: var(--space-2);
 }
 
+/* Aktionen der Depot-Liste: breit im Kopf, am Handy unter der Tabelle */
+.listActions {
+  display: none;
+}
+
+@media (max-width: 560px) {
+  .wideOnly {
+    display: none;
+  }
+
+  .listActions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-3);
+  }
+
+  .listActions > a {
+    min-height: var(--control-h);
+  }
+}
+
 /* ── Hauptspalte + Seitenspalte ────────────────────────────────────────
    Die Seitenspalte steht im Quelltext zuerst (am Handy oben), ab 1120px
    rechts neben der Hauptspalte (8 + 4 Spalten wie Grid). Beide Spalten

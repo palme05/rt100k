@@ -3,7 +3,9 @@
 import { useActionState, useId, useState, useTransition } from 'react'
 import { Amount } from '../privacy/privacy'
 import { Actions, Button, describedBy, Field, Form, FormRow, Input, Message, Select } from '../ui/forms'
+import { Note, SectionHead } from '../ui/layout'
 import { Row, Rows } from '../ui/Rows'
+import styles from './notify.module.css'
 
 type Result = { ok: boolean; error: string | null }
 
@@ -34,13 +36,13 @@ export function PriceAlerts({
   const current = instruments.find((i) => i.id === instrumentId)
 
   return (
-    <>
+    <div className={styles.stack}>
       {state.error ? <Message tone="error">{state.error}</Message> : null}
       {state.ok ? <Message tone="success">Kursalarm angelegt.</Message> : null}
       {instruments.length === 0 ? (
         <Message tone="info">Kursalarme gibt es für Wertpapiere, Kryptowährungen und Edelmetalle mit laufendem Kurs in deinen Depots.</Message>
       ) : (
-        <Form action={action}>
+        <Form action={action} wide>
           <Field id={`${id}-instrument`} label="Wertpapier" hint={current?.price !== null && current?.price !== undefined ? <>Aktuell <Amount value={current.price} /></> : undefined}>
             <Select id={`${id}-instrument`} name="instrumentId" value={instrumentId} onChange={(e) => setInstrumentId(e.target.value)} {...describedBy(`${id}-instrument`, current?.price != null)}>
               {instruments.map((i) => (
@@ -57,39 +59,46 @@ export function PriceAlerts({
                 <option value="below">unter … fällt</option>
               </Select>
             </Field>
-            <Field id={`${id}-price`} label="Kurs in €" hint="z. B. 128,50">
-              <Input id={`${id}-price`} name="price" inputMode="decimal" required {...describedBy(`${id}-price`, true)} />
+            <Field id={`${id}-price`} label="Kurs in €">
+              <Input id={`${id}-price`} name="price" inputMode="decimal" required placeholder="z. B. 128,50" />
             </Field>
           </FormRow>
           <Actions>
-            <Button type="submit" variant="secondary" disabled={pending}>
+            <Button type="submit" disabled={pending}>
               Kursalarm anlegen
             </Button>
           </Actions>
         </Form>
       )}
-      {alerts.length > 0 ? (
-        <Rows>
-          {alerts.map((a) => (
-            <Row
-              key={a.id}
-              label={a.instrumentName}
-              sub={
-                <>
-                  {a.direction === 'above' ? 'über ' : 'unter '}
-                  <Amount value={a.threshold} />
-                  {a.triggeredAt ? ' · ausgelöst' : ' · aktiv'}
-                </>
-              }
-              value={
-                <Button variant="quiet" disabled={removing} onClick={() => start(async () => void (await remove(a.id)))} aria-label={`Kursalarm für ${a.instrumentName} löschen`}>
-                  Löschen
-                </Button>
-              }
-            />
-          ))}
-        </Rows>
+      {instruments.length > 0 || alerts.length > 0 ? (
+        <div className={styles.alerts}>
+          <SectionHead title="Aktive Alarme" level={3} meta={alerts.length > 0 ? String(alerts.length) : undefined} />
+          {alerts.length > 0 ? (
+            <Rows>
+              {alerts.map((a) => (
+                <Row
+                  key={a.id}
+                  label={a.instrumentName}
+                  sub={
+                    <>
+                      {a.direction === 'above' ? 'über ' : 'unter '}
+                      <Amount value={a.threshold} />
+                      {a.triggeredAt ? ' · ausgelöst' : ' · aktiv'}
+                    </>
+                  }
+                  value={
+                    <Button variant="quiet" disabled={removing} onClick={() => start(async () => void (await remove(a.id)))} aria-label={`Kursalarm für ${a.instrumentName} löschen`}>
+                      Löschen
+                    </Button>
+                  }
+                />
+              ))}
+            </Rows>
+          ) : (
+            <Note>Noch keine Kursalarme – lege oben einen an.</Note>
+          )}
+        </div>
       ) : null}
-    </>
+    </div>
   )
 }
