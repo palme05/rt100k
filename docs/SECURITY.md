@@ -372,6 +372,23 @@ Unabhängiges Review (eigener Prüfdurchlauf, nur lesend) aller Route-Handler, S
 | Nicht zugeordnete Wertpapiere aus dem Import werden als Aufgabe gespeichert – über dieselbe Action wie Kapitalmaßnahmen (Rate-Limit, zod, höchstens 50 je Aufruf, je 300 Zeichen, nur Text) | ✅ (Unit-Test) |
 | Sparplan-Vorschlag in der Road und Ladebalken beim Seitenwechsel: nur Anzeige, keine neuen Endpunkte | ✅ |
 
+## Nachtrag: Buchen mit Kurs je Stück, Plausibilität, „Strecke 2“ (22.10.2026)
+
+| Prüfung | Ergebnis |
+|---|---|
+| Kurs je Stück: der Server berechnet Betrag = Stück × Kurs (BigInt, kaufmännisch gerundet) und **ignoriert** im Kurs-Modus einen mitgeschickten Betrag. Neue Eingaben zod-geprüft (`amountMode` als Enum, Kurs ≤ 40 Zeichen, ≤ 9 + 8 Stellen, kein Punkt als Dezimalzeichen, Ergebnis ≤ 1 Mrd. € vor der Umwandlung in `Number`) | ✅ (Unit- und DB-Tests, u. a. „gefälschter Betrag wird ignoriert“) |
+| Reihenfolge der Actions unverändert: `requireUser()` → `consumeRateLimit` → DAL; keine IDs oder Beträge aus dem Formular vertraut | ✅ |
+| Plausibilität liest nur allgemeine Marktdaten (`price_daily`, `fx_daily`, Fenster [Tag − 6, Tag], höchstens 1.000 Abfragen); Buchungen nur über `valuePortfolios(actor)` (`withUser` + `ownerId`) | ✅ (Negativ-Tests `prices.db.test.ts`, `plausibility.db.test.ts`, `tasks.db.test.ts`) |
+| `booking.price_confirmed` (Migration 0018, Spalte mit Standard `false`, keine neuen Rechte nötig) nur über eigene Buchungen setzbar; jede Änderung ohne Häkchen setzt sie zurück | ✅ (IDOR-Test in `bookings.db.test.ts`) |
+| Offene Punkte zur Kursprüfung zeigen nur Prozente (sicher im Privatsphäre-Modus); ein Fehler der Prüfung blendet nur den Hinweis aus | ✅ |
+| Vorbelegung von `/app/buchen` aus der Adresse (Depot, Wert, Betrag, Datum) wird geprüft (UUID, Ziffern, Datum nicht in der Zukunft); ein Wert wird nur vorbelegt, wenn er im eigenen Depot schon gebucht ist | ✅ (Unit-Test `prefill.test.ts`) |
+| `listPortfolioHistory` (Wertverlauf je Depot): ID per zod, Eigentum über `withUser` + `ownerId` + `portfolioId`; fremde oder ungültige IDs → `NotFoundError` | ✅ (Negativ-Tests `snapshots.db.test.ts`) |
+| Buchung löschen auf der Bearbeiten-Seite nur zweistufig; die alte Schaltfläche ohne Rückfrage ist entfernt | ✅ |
+| Diagramme setzen keine `style`-Attribute: Positionen über SVG-Attribute (auch Prozentwerte), Verlaufs-IDs aus `useId` auf `[A-Za-z0-9_-]` bereinigt, `fill="url(#…)"` als Attribut; Tooltip- und Achsentexte sind React-Text, kein HTML | ✅ |
+| Fehlerseiten (`error.tsx`, `global-error.tsx`) zeigen nur den Fehlercode (digest), nie die Meldung; keine Inline-Skripte oder -Stile | ✅ |
+| Konto-Menü zeigt Name und E-Mail der eigenen Sitzung (aus `requireUser`); Abmelden entfernt wie bisher Push-Abo und Offline-Stand. Befehlspalette und Blätter sind native `<dialog>` (Fokus bleibt darin, Hintergrund inert) | ✅ |
+| Darstellungs-Vorschau, Schieberegler, Sprunglinks: nur Anzeige, eigene Tokens, keine Inline-Styles | ✅ |
+
 ## Notfallplan
 
 **Bei Verdacht auf Secret-Leak** (Commit, Log, Screenshot):

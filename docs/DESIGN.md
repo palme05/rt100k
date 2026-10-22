@@ -1,15 +1,16 @@
 # Designsystem „Strecke“
 
-Stand: 20.10.2026 · gewählt aus drei Prototypen (Richtung A). Die Prototyp-Seiten sind mit Phase 2 entfallen; Referenz sind jetzt die App-Seiten unter `/app` (Übersicht, Depots, Road to 100k, Sicherheit, Admin).
+Stand: 22.10.2026 („Strecke 2“: Feinschliff nach Betreiber-Rückmeldung) · gewählt aus drei Prototypen (Richtung A). Die Prototyp-Seiten sind mit Phase 2 entfallen; Referenz sind jetzt die App-Seiten unter `/app` (Übersicht, Depots, Road to 100k, Sicherheit, Admin).
 
 ## Grundsätze
 
-1. **Ruhe vor Dichte.** Eine große Zahl oben, darunter wenige Kennzahlen. Abschnitte trennt Weißraum mit einer Haarlinie, es gibt **keine Karten, keine Schatten auf Flächen, keine Verläufe**.
+1. **Ruhe vor Dichte.** Eine große Zahl oben, darunter wenige Kennzahlen. Abschnitte trennt Weißraum mit einer Haarlinie, es gibt **keine Karten, keine Schatten auf Flächen, keine Verläufe auf UI-Flächen** – einzige Ausnahme: die vertikale Ausblendung unter der Hauptlinie eines Diagramms (Stopps per Klasse, `--area-top`).
 2. **Tinte + ein Akzent.** Fast alles ist Tinte in drei Stufen. Orange markiert genau eines: den Weg zum Ziel (Routenlinie, Vermögenslinie, Ziel-Linie, Fokus). Blau ist die Zweitfarbe für Einzahlungen, Erträge und Anteile.
 3. **Grün/Rot nur für Gewinn/Verlust** und nie allein: immer mit Vorzeichen und Pfeil (`▲ +0,4 %`).
 4. **Zahlen sind der Inhalt.** Tabellarische Ziffern in Listen und Tabellen, Beträge im österreichischen Format (`1.234,56 €`, „Jänner“), Prognosen mit `≈`, Steuerwerte als „Schätzung“ markiert.
 5. **Jede Grafik ist bedienbar und lesbar ohne Maus:** Tooltip per Zeiger, Touch und Pfeiltasten, Tabellenansicht darunter, Text für Screenreader.
 6. **Privatsphäre ist eingebaut:** Jeder Betrag läuft über `Amount`/`AmountSplit` bzw. die Diagramm-Formatierer und verschwindet im Privatsphäre-Modus (Taste `P`). Prozente bleiben sichtbar.
+7. **Konstante Abstände.** Abstände kommen nur aus den Rhythmus-Tokens (siehe „Abstände“). Seiten setzen keine eigenen Außenabstände, Komponenten keine Margins an ihrer Wurzel, negative Margins nur für Tippflächen.
 
 ## Tokens
 
@@ -29,7 +30,10 @@ Einzige Quelle: [`src/styles/tokens.css`](../src/styles/tokens.css). Komponenten
 | Zweitfarbe | `--second` / `--second-wash` | `#2f5f8f` / `#c9d6e4` | Einzahlungen (gestrichelt), Erträge, Anteils-Balken / Prognose-Säulen |
 | Bedeutung | `--pos` / `--neg` | `#1b7745` / `#c1372f` | Gewinn / Verlust, immer mit Pfeil |
 | Kategorien | `--cat-1` … `--cat-8`, `--cat-rest` | Blau, Bernstein, Pflaume, Aqua, Himbeere, Himmelblau, Siena, Rosa; Rest `#d4d3cc` | Segmente in Tortendiagrammen (Reihenfolge geprüft, siehe „Diagramme“) |
-| Effekte | `--scrim`, `--shadow-raise`, `--shadow-pop`, `--shadow-tip` | | Palette-Hintergrund, Segment, Palette, Tooltip |
+| Feld | `--field-border` | `#8e9197` | Rand von Eingabefeldern (≥ 3 : 1 gegen `--surface`) |
+| | `--surface-raised` | `#ffffff` / dunkel `#303236` | Aktives Segment, Menüs – immer heller als `--wash` |
+| Diagramm | `--chart-ink`, `--chart-grid`, `--chart-band`, `--chart-track`, `--area-top` | | Linie in Tinte, Raster, Prognosekorridor, Balken-Spur, Deckkraft der Ausblendung |
+| Effekte | `--scrim`, `--shadow-raise`, `--shadow-pop`, `--shadow-tip`, `--shadow-menu`, `--shadow-fab` | | Palette-Hintergrund, Segment, Palette, Tooltip, Menüs, „+“ am Handy |
 
 **Schrift:** Instrument Sans Variable (OFL, selbst gehostet über `@fontsource-variable/instrument-sans`). Eine Familie für alles.
 
@@ -44,13 +48,40 @@ Einzige Quelle: [`src/styles/tokens.css`](../src/styles/tokens.css). Komponenten
 
 Gewichte: 400, 500 (Zahlen, Titel), 600 (Abschnittstitel, Diagramm-Werte). Diagrammtexte 11–12 px.
 
-**Abstände:** `--space-1` … `--space-12` (0,25–3 rem), Seitenrand `--gutter` (1–3 rem), Inhaltsbreite `--content-max` (80 rem). Radien: 3 / 8 / 14 px, Pill.
+**Schrift-Rollen:** `--text-title` (17 px, Abschnitt `h2`, 600), `--text-stat` (20 px, jede Kennzahl), `--text-stat-lg` (Name über einem Betrag, Ankunftsmonat), `--text-display` (jede `h1`), `--text-input` (16 px in Feldern, verhindert Zoom auf iOS), `--weight-hero` 450. Unterüberschriften (`h3`) kleiner und in `--ink-2`.
+
+## Abstände
+
+Grundraster `--space-1` … `--space-12` (0,25–3 rem), Seitenrand `--gutter`, Inhaltsbreite `--content-max` (80 rem), Radien 3 / 8 / 14 px und Pill. Darauf liegt ein **Rhythmus**, den nur die Bausteine setzen:
+
+| Token | Wert | Besitzer |
+|---|---|---|
+| `--head-h` | 3,5 rem | Kopfzeile (feste Höhe) |
+| `--page-top` / `--page-bottom` | 2,5 rem (Handy 2 rem) / 5 rem | `AppShell` |
+| `--space-section` | 3 rem (Handy 2,5 rem) | Abstand zwischen Seitenblöcken und Rasterzeilen |
+| `--space-section-x` | 3 rem (820–1119 px: 2 rem) | Spaltenabstand im Raster |
+| `--section-pad` | 1,25 rem | Haarlinie → Abschnittskopf |
+| `--section-head-h` | 2,25 rem (Touch 2,75 rem) | Mindesthöhe des Kopfs – Köpfe nebeneinander fluchten, mit und ohne Werkzeug |
+| `--space-head` | 1 rem | Kopf → Inhalt |
+| `--space-block` | 1,5 rem | Block → Block im Abschnitt (Fluss-Regel in `Section`) |
+| `--space-stack` | 0,75 rem | Inhalt → Fußnote/Weiter-Link (`data-flow="tight"`: `Note`, `MoreLink`) |
+| `--space-tight` | 0,5 rem | Zeile über dem Titel → Titel → Unterzeile, Label → Feld |
+| `--row-y` / `--row-y-compact` | 0,75 / 0,5 rem | Zeilen in `Rows` und `DataTable` (gleich, damit Listen nebeneinander fluchten) |
+| `--control-h` / `--control-h-sm` | 2,75 / 2,25 rem (Touch beide 2,75) | Felder und Formular-Knöpfe / Werkzeuge, Segmente, Symbol-Knöpfe |
+| `--measure` / `--measure-form` | 42 / 36 rem | Fließtext / einspaltige Formulare |
+
+Regeln: Die letzte Zeile einer Liste endet bündig. Zurück-Links gehören in den Seitenkopf (`back`-Prop), nicht als eigener Block. Spaltenbreiten (`third`, `half`, `twoThirds`) gelten nur innerhalb von `Grid`; jede Rasterzeile geht auf (keine einzelnen Drittel am Ende).
 
 ## Layout
 
 - **Raster:** am Handy eine Spalte; ab 820 px 12 Spalten (Abschnitte halb), ab 1120 px Drittel/zwei Drittel. `Section span="twoThirds" | "third" | "half" | "full"`.
-- Jeder Abschnitt: Haarlinie oben, Titel links (600), Meta rechts (`--ink-3`), optional Werkzeuge (Segment-Umschalter).
-- Kopfzeile: Logo (Strecke mit Position), Navigation mit Akzent-Unterstrich und Menü „Mehr“, rechts Privatsphäre und Suche (`⌘K`). Am Handy (≤ 720 px) steht die Navigation als Leiste unten (Safe-Area beachtet), weitere Seiten im Blatt „Mehr“; die Suche entfällt dort.
+- Jeder Abschnitt: Haarlinie oben, Titel links (`--text-title`, 600), Meta rechts (`--ink-3`), optional Werkzeuge (Segment-Umschalter) – alles mittig im Kopf fester Mindesthöhe.
+- **Kopfzeile:** eine Zeile in fester Höhe (`--head-h`), klebt oben, leicht durchscheinend mit Haarlinie, bricht ab 721 px nie um. Links Logo (`BrandMark`) und Navigation (aktive Seite mit Akzent-Strich auf der Haarlinie, auch für Unterseiten über `activePrefixes`) mit „Mehr“ (Import, Monatsrückblick). Rechts: Suche (ab 1280 px als Feld mit ⌘K bzw. Strg K, darunter Symbol), „+ Buchung“ als einzige gefüllte Schaltfläche, dann ruhige Symbole: Beträge ausblenden (Auge, `aria-pressed`), Hinweise (Glocke, Zahl über dem Symbol – ändert die Breite nie), Konto-Menü (Initialen: Name, E-Mail, Konto und Sicherheit, Admin, Abmelden). 721–1023 px: Kurzformen, „+“ ohne Wort.
+- **Handy (≤ 720 px):** oben Logo und Symbole (44 px), unten Leiste mit Pille hinter dem aktiven Symbol, „Mehr“ und Konto als Blatt von unten; „+“ schwebt rechts über der Leiste, nicht auf Formularseiten. Sprunglink „Zum Inhalt springen“ als erstes Element.
+- **Führende Zahl:** Jede Auswertungsseite beginnt mit genau einer großen Zahl und höchstens drei bis vier Kennzahlen daneben – Übersicht: Gesamtvermögen, Depot: Wert, Steuer: ≈ Steuer des Jahres, Road: Ankunftsmonat, Rückblick: Veränderung im Monat. Bei ungerader Zahl nimmt am Handy die letzte Kennzahl die ganze Zeile.
+- **Depot-Seite:** Kopf → Wertverlauf (2/3) + Aufteilung (1/3, Ring bis 8 Positionen, sonst Balkenliste) → Positionen (Anteil, Ø Einstand, Kurs mit Tagesveränderung) → Buchungen (2/3) mit „Neue Buchung“ und Sparplänen rechts (am Handy davor) → Verwaltung (Freigaben, Einstellungen, Löschen).
+- **Einstellungsseiten:** Blöcke mit Titel und Erklärung links und Bedienung rechts, am Handy untereinander. Eine Hauptaktion je Block; endgültige Aktionen mit roter Linie, rotem Rand und Wort.
+- **Nullen:** Null-Beträge in Tabellen als gedämpfter Strich (–), Zeilen mit Werten zuerst. „Schätzung“ genau einmal je Seite deutlich, sonst nur „≈“.
 - **Alle Funktionen auf allen Geräten:** Was am Handy per Tippen oder Wischen geht, geht am Desktop per Maus und Tastatur – und umgekehrt. Tippflächen mindestens 44 px hoch.
 - Kein seitliches Scrollen am Handy (E2E-Test mit Pixel-7-Viewport, 412 px). Breite Tabellen scrollen in ihrem eigenen Container, Spalten zweiter Ordnung blenden sich am Handy aus (`hideSm`).
 
@@ -69,11 +100,16 @@ Alle unter `src/components/`. Seiten setzen sich nur daraus zusammen, eigene CSS
 | `Rows`, `Row` | `ui/Rows.tsx` | Listen „Bezeichnung … Wert“ (optional Datum, Untertitel) |
 | `WeightBar` | `ui/AllocationBars.tsx` | Kleiner Gewichtsbalken in Tabellenzellen |
 | `TabBar` | `shell/TabBar.tsx` | Handy: Leiste unten (Übersicht, Depots, Analyse, Road, Mehr) mit Blatt „Mehr“; am Desktop ausgeblendet (dort „Mehr“ in der Kopfzeile) |
-| `BookingList` | `bookings/BookingList.tsx` | Alle Buchungen nach Monat, Filter (Art, Wert, Jahr), Suche, Bearbeiten/Löschen je Zeile, schrittweise anzeigen |
+| `BookingList` | `bookings/BookingList.tsx` | Eine Zeile je Buchung (Datum · Name/Details mit „à 97,41 €“ · Betrag), Gruppen nach Monat, Filter in einer Zeile, Bearbeiten/Löschen als Symbol-Knöpfe (Maus: bei Hover/Fokus, Touch: immer; Wischen zusätzlich), Vorzeichen nur für Geldflüsse |
 | `PriceChart` | `charts/PriceChart.tsx` | Kursverlauf eines Wertpapiers (6 M bis Max) mit Kauf-/Verkaufspunkten |
 | `SaleSimulator` | `tax/SaleSimulator.tsx` | Verkauf durchspielen: Position, Stück, Kurs → Erlös, Einstand, Gewinn/Verlust, ≈ KESt-Änderung, Netto (Live-Region, als Schätzung gekennzeichnet) |
 | `LinkPending` | `shell/LinkPending.tsx` | Schmaler Balken oben, solange nach einem Klick die nächste Seite lädt (in Navigation, Tab-Leiste, `TextLink`, `BackLink`, `NameCell`); erscheint erst nach 120 ms |
-| `TaskList` | `tasks/TaskList.tsx` | Offene Punkte: abgeleitete (verschwinden von selbst, „Beheben →“) und gespeicherte Aufgaben („✓ Erledigt“) |
+| `TaskList` | `tasks/TaskList.tsx` | Offene Punkte: abgeleitete (verschwinden von selbst, „Beheben →“, z. B. „Kurs statt Kurswert?“, Zwei-Faktor) und gespeicherte Aufgaben („✓ Erledigt“) |
+| `IconButton`, `IconLink` | `ui/IconButton.tsx` | Knopf/Link nur mit Symbol, Name per `aria-label` und Tooltip, Zahl als Überlagerung |
+| `BrandMark`, `UserMenu`, `Sheet` | `shell/` | Logo (Kopf und Anmeldung), Konto-Menü (Tastatur, am Handy als Blatt), Blatt von unten (natives `<dialog>`) |
+| `AppErrorState`, `NotFoundState` | `shell/` | Ruhige Fehler- und 404-Seiten mit „Erneut versuchen“ bzw. Weg zurück |
+| `MoreLink` | `ui/layout.tsx` | Weiter-Link am Ende eines Abschnitts („Steuer-Cockpit öffnen →“) |
+| `BarList`, `DeltaBars` | `charts/` | Verteilungen außer Anlageklassen als Balkenliste (Name, Prozent, Betrag); Veränderung im Monat als Beiträge (Kurse, Zu-/Abflüsse, Erträge) |
 | `LinkChips` | `ui/Chips.tsx` | Auswahl als Links (z. B. Depot beim Schnell-Erfassen), `aria-current`, 44 px hoch |
 | `RefreshButton`, `PullToRefresh` | `shell/refresh.tsx` | Daten neu laden per Knopf bzw. Ziehen (nur installierte App) |
 | `LastSnapshot` | `shell/LastSnapshot.tsx` | Ladeansicht der Übersicht mit dem letzten Stand dieses Geräts |
@@ -109,18 +145,23 @@ Reine Logik liegt in `src/lib/` (Prognose, Kennzahlen, Monate, Road, Import-Pars
 
 ## Diagramme
 
-Grundlage sind die Dataviz-Regeln: Form nach Aufgabe wählen, Farbe zuletzt.
+Grundlage sind die Dataviz-Regeln: Form nach Aufgabe wählen, Farbe zuletzt („Strecke 2“).
 
-- **Töne statt freier Farben:** `tone: 'accent' | 'second' | 'ink' | 'muted' | 'median'`. Vermögen = `accent` mit Fläche, Einzahlungen = `second` gestrichelt, Ist-Verlauf in Prognosen = `ink`, Median = `median` (gestrichelt), Korridor = `band`.
-- **Höchstens drei Reihen pro Linien- oder Säulendiagramm.** Ab zwei Reihen immer eine `Legend`. Säulen haben eine Farbe, Prognose-Säulen die helle Variante.
-- **Eine y-Achse**, keine Doppelachsen. Geldachsen starten bei 0. Meilensteine als Haarlinien mit Label links, das Ziel in Akzent.
-- **Linien 2 px**, Einzahlungen 1,5 px gestrichelt, Raster 1 px `--rule`. Direkte Labels sparsam: höchster Wert bei Säulen, Ziel-Linie.
-- **Interaktion ist Pflicht:** Crosshair + Tooltip (Zeiger, Touch, Pfeiltasten, Shift = 12 Schritte, Home/End, Esc), Hover-Fläche größer als die Marke, Live-Region für Screenreader, „Als Tabelle anzeigen“ unter jedem Diagramm.
-- **Keine Inline-Styles** (CSP): Positionen nur über SVG-Attribute, Farben über Klassen.
-- **Anteile als Tortendiagramm (Ring)** – Entscheidung des Betreibers vom 20.10.2026 (vorher einfarbige Balken). Der Ring zeigt die Verteilung auf einen Blick, die Legende daneben die genauen Werte (Name, Prozent, Betrag über `Amount`); sie ersetzt die Tabellenansicht. 2 px Lücke zwischen den Segmenten.
-- **Kategorie-Farben** `--cat-1` … `--cat-8`: Reihenfolge mit dem Dataviz-Validator gegen `--bg` geprüft – benachbarte Segmente auch bei Farbsehschwäche unterscheidbar (ΔE ≥ 12, beim Ringschluss ≥ 10), ohne Gewinn-Grün, Verlust-Rot und Akzent-Orange. Mehr als acht Einträge wiederholen die Farben; was nicht einzeln gezeigt wird, ist ein graues Reststück (`--cat-rest`).
-- **Farbe folgt dem Eintrag, nicht dem Rang:** jede Anlageklasse hat ihren festen Platz (`ASSET_KIND_SLOT`: ETFs Blau, Edelmetalle Bernstein, Anleihen Pflaume, Aktien Aqua, Krypto Himbeere, Fonds Himmelblau, Cash Siena, Sonstiges Rosa) – auch als Block in der ETF-Durchschau. Länder, Branchen und Einzeltitel nehmen die übrigen Plätze der Reihe nach (`assignSlots`).
-- Texte und Zahlen stehen in Tinte, nie in der Segmentfarbe; die Farbe trägt nur der Punkt in der Legende.
+- **Töne statt freier Farben:** `tone: 'accent' | 'second' | 'ink' | 'muted' | 'median'`. Vermögen = `accent` mit Ausblendung, Einzahlungen = `second` gestrichelt als Treppe, Ist-Verlauf in Prognosen = `ink`, Median gestrichelt, Korridor = `band`.
+- **Zeichnen erst nach dem Messen:** Der Server liefert einen Platzhalter fester Höhe, das Diagramm misst seine Breite vor dem ersten Bild – keine geratenen Breiten, nichts ragt über das Raster. Linien sind auf den Plotbereich beschnitten; die Routenlinie arbeitet in Prozent.
+- **Linien 2 px, monoton kubisch** (kein Überschwingen über die Daten), Kontostände und Einzahlungen als Treppe; Endpunkt mit 2-px-Ring; Raster nur waagrecht, Grundlinie `--rule-strong`.
+- **Ausblendung** nur unter der Hauptlinie: vertikaler `<linearGradient>`, Stopps per Klasse (`--area-top`), IDs aus `useId` bereinigt.
+- **Achsen:** Geld `20.000` (€ nur am obersten Wert), ab 1 Mio. `1,2 Mio.`; Kurse `120 €`, Cent nur bei Schritten unter 1 €; Prozent immer mit Vorzeichen und echtem Minus; Zeitachse nur an Kalendergrenzen (Monat, Quartal, Halbjahr, Jahr), mindestens 64 px Abstand, erste und letzte Beschriftung innen.
+- **Meilensteine sind Achsenwerte** (keine zweite Linie); das Ziel 1 px Akzent mit Beschriftung, in der Prognose mit „≈ Monat“ am Schnittpunkt.
+- **Höchstens drei Reihen** pro Linien- oder Säulendiagramm, ab zwei Reihen immer eine `Legend`. **Eine y-Achse**, keine Doppelachsen.
+- **Säulen:** höchstens 24 (sonst Quartale oder Jahre, die Tabelle behält jeden Monat), 60 % der Breite, oben 2 px gerundet; Prognose hell mit Rand rechts der „Heute“-Linie; Hover dimmt die anderen statt umzufärben; beschriftet wird nur der letzte erhaltene Monat.
+- **Kauf/Verkauf** als Striche an der Grundlinie (je Monat zusammengefasst); ▲▼ bleiben Gewinn/Verlust vorbehalten.
+- **Interaktion ist Pflicht:** Crosshair + Tooltip (Zeiger, Touch, Pfeiltasten, Shift = 12 Schritte, Home/End, Esc), Tooltip mit Datum oben und Spalten Schlüssel/Name/Wert, Live-Region, „Als Tabelle anzeigen“ unter jedem Diagramm.
+- **Anteile:** Anlageklassen als Ring (11 % des Durchmessers, 3 Einheiten Lücke, Hover hebt hervor und dimmt die anderen) mit Legende (Name, Prozent, Betrag); **alle anderen Verteilungen** (Währung, Depot, Land, Branche, Einzeltitel) als `BarList`.
+- **Kategorie-Farben** `--cat-1` … `--cat-8`: ruhigere Reihe, mit dem Dataviz-Validator gegen hell und dunkel geprüft (benachbart ΔE ≥ 12), ohne Gewinn-Grün, Verlust-Rot und Akzent-Orange. Farbe folgt dem Eintrag, nicht dem Rang (`ASSET_KIND_SLOT`); Rest grau (`--cat-rest`, dunkel ≥ 3 : 1).
+- **Sparkline** 64 × 20 px in eigener Tabellenspalte, Endpunkt, Mindestspanne ±1,5 %, damit ruhige Konten ruhig aussehen.
+- **Bewegung** nur beim ersten Erscheinen (Linie zeichnet sich, Flächen blenden ein, Säulen wachsen) und nur ohne „Bewegung reduzieren“; Zeitraumwechsel blendet über.
+- **Keine Inline-Styles** (CSP): Positionen nur über SVG-Attribute, Farben über Klassen. Texte und Zahlen stehen in Tinte, nie in der Segmentfarbe.
 
 ## Barrierefreiheit
 
@@ -145,9 +186,9 @@ Jede Geste hat eine sichtbare Entsprechung für Maus und Tastatur – nichts ist
 
 | Geste (Handy) | Entsprechung | Wo |
 |---|---|---|
-| Buchung nach rechts wischen → bearbeiten | „Bearbeiten“ je Zeile | `BookingList` |
+| Buchung nach rechts wischen → bearbeiten | Symbol „Bearbeiten“ je Zeile | `BookingList` |
 | Buchung nach links wischen → Rückfrage „Wirklich löschen?“ | „Löschen“ je Zeile (fragt ebenfalls nach) | `BookingList` |
-| Blatt „Mehr“ nach unten wischen | „✕“, Esc, Tippen daneben | `TabBar` |
+| Blatt „Mehr“ oder Konto nach unten wischen | „✕“, Esc, Tippen daneben | `Sheet` |
 | Ziehen am Seitenanfang (nur installierte App) | „Kurse aktualisieren“ | `PullToRefresh`, `RefreshButton` |
 | „+“ unten rechts | „+ Buchung“ in der Kopfzeile, Tasten `g b`, Palette | `TabBar`, `AppHeader` |
 
@@ -158,7 +199,11 @@ Jede Geste hat eine sichtbare Entsprechung für Maus und Tastatur – nichts ist
 
 ## Do / Don't
 
-**Formulare:** Primär-Schaltfläche in Tinte (nie Akzent), Gefahr in Rot mit Wort („Depot löschen“), Löschen nur mit Bestätigung. Zahlenfelder mit `inputMode="decimal"` und deutschem Format, Vorschau („Ø Kurs 128,45 €“) unter dem Feld.
+**Formulare:** Primär-Schaltfläche in Tinte (nie Akzent, am Handy volle Breite), Gefahr in Rot mit Rand und Wort („Depot löschen“), Löschen nur mit Bestätigung. Felder einer Reihe fluchten (unter 2 × 12 rem untereinander), eigener Auswahlpfeil, weicher Fokusring. Zahlenfelder mit `inputMode="decimal"` und deutschem Format, Vorschau unter dem Feld. Kein Autofokus beim Laden.
+
+**Buchen:** Stück + **Kurs je Stück** (Standard; Metall: Gesamtbetrag). Der Umschalter „Betrag eingeben als“ rechnet die Werte um, die Wahl bleibt je Gerät. Unter dem Kursfeld „= 1.461,15 € Kurswert (ohne Gebühren)“ (über `Amount`, dieselbe Rechnung wie am Server), über der Schaltfläche „Belastung/Gutschrift gesamt“. Gewählter Wert als Chip mit Haken und Tintenrand. Bestätigung neben der Schaltfläche (`role="status"`), Rückfrage bei unplausiblem Kurs als Hinweis mit Checkbox „Kurs stimmt – trotzdem speichern“, Fokus springt dorthin.
+
+**Schieberegler und Fortschritt:** eigene Spur, Griff in Tinte, 44 px hoch; der Akzent bleibt der Route vorbehalten.
 
 | Do | Don't |
 |---|---|
