@@ -1,0 +1,59 @@
+/* Logo „Strecke“ und Schriftzug – Kopfzeile, Anmeldung, Fehlerseiten. */
+
+.mark {
+  display: block;
+  flex: none;
+  overflow: visible;
+}
+
+.rest {
+  stroke: var(--ink-3);
+  stroke-opacity: 0.45;
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+.goal {
+  fill: none;
+  stroke: var(--ink-3);
+  stroke-width: 1.5;
+}
+
+.done {
+  stroke: var(--accent);
+  stroke-width: 2.5;
+  stroke-linecap: round;
+}
+
+.now {
+  fill: var(--accent);
+  stroke: var(--bg);
+  stroke-width: 2;
+}
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--ink);
+  font-size: var(--text-title);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-tight);
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.lg {
+  gap: var(--space-3);
+  font-size: var(--text-xl);
+}
+
+/* Ab hier sichtbar ausgeblendet, für Screenreader vorhanden */
+.wordCompact {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}

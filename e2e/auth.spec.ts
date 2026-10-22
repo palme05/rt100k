@@ -13,8 +13,17 @@ test('Einladung → Konto → Abmelden → Anmelden mit Passwort', async ({ page
   await page.goto('/app')
   await expect(page.getByRole('heading', { name: /Hallo/ })).toBeVisible()
 
-  await page.goto('/app/sicherheit')
-  await page.getByRole('button', { name: 'Überall abmelden' }).click()
+  // Konto-Menü: per Tastatur öffnen, Esc gibt den Fokus zurück, dann abmelden
+  const account = page.getByRole('button', { name: /^Konto:/ })
+  await account.press('Enter')
+  await expect(page.getByRole('menuitem', { name: 'Konto und Sicherheit' })).toBeFocused()
+  await page.keyboard.press('ArrowDown')
+  await expect(page.getByRole('menuitem', { name: 'Abmelden' })).toBeFocused()
+  await page.keyboard.press('Escape')
+  await expect(account).toBeFocused()
+  await expect(page.getByRole('menuitem', { name: 'Abmelden' })).toBeHidden()
+  await account.click()
+  await page.getByRole('menuitem', { name: 'Abmelden' }).click()
   await page.waitForURL(/\/anmelden$/)
 
   await page.getByLabel('E-Mail').fill(email)

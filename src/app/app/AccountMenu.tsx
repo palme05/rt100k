@@ -1,19 +1,17 @@
-import Link from 'next/link'
-import { NotificationBell } from '@/components/shell/NotificationBell'
-import button from '@/components/ui/button.module.css'
-import styles from './app.module.css'
-import { SignOutButton } from './SignOutButton'
+'use client'
 
-export function AccountMenu({ name, unread }: { name: string; unread: number }) {
+import { NotificationBell } from '@/components/shell/NotificationBell'
+import { UserMenu } from '@/components/shell/UserMenu'
+import { accountLinks, NOTICES_LINK } from './navigation'
+import { useSignOut } from './SignOutButton'
+
+/** Rechts außen in der Kopfzeile: Glocke mit ungelesenen Hinweisen und Konto-Menü. */
+export function AccountMenu({ name, email, unread, isAdmin }: { name: string; email: string; unread: number; isAdmin: boolean }) {
+  const { pending, signOut } = useSignOut()
   return (
     <>
-      <NotificationBell href="/app/hinweise" unread={unread} />
-      <Link className={button.button} href="/app/sicherheit" title={`Konto und Sicherheit (${name})`}>
-        Konto
-      </Link>
-      <span className={styles.hideSm}>
-        <SignOutButton />
-      </span>
+      <NotificationBell href={NOTICES_LINK.href} activePrefixes={NOTICES_LINK.activePrefixes} unread={unread} />
+      <UserMenu name={name} email={email} links={accountLinks(isAdmin)} onSignOut={() => void signOut()} signingOut={pending} />
     </>
   )
 }

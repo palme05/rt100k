@@ -3,7 +3,8 @@
 import { useRouter } from 'next/navigation'
 import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent } from 'react'
 import { isTypingTarget, usePrivacy } from '../privacy/privacy'
-import button from '../ui/button.module.css'
+import { Icon } from '../shell/icons'
+import { useIsApple } from '../shell/useMedia'
 import styles from './command.module.css'
 
 export interface Command {
@@ -15,8 +16,21 @@ export interface Command {
   action?: 'toggle-privacy'
 }
 
+/** Treffer nach Gruppen in der Reihenfolge ihres ersten Auftretens. */
+function groupResults(results: readonly Command[]): { group: string; items: Command[] }[] {
+  const groups = new Map<string, Command[]>()
+  for (const command of results) {
+    const list = groups.get(command.group)
+    if (list) list.push(command)
+    else groups.set(command.group, [command])
+  }
+  return Array.from(groups, ([group, items]) => ({ group, items }))
+}
+
 /**
- * Command Palette (⌘K / Strg+K). Tastatur-first: Pfeile, Enter, Esc.
+ * Command Palette (⌘K / Strg+K). Tastatur-first: Pfeile, Enter, Esc. Als
+ * natives `<dialog>` in der obersten Ebene (nie unter der Kopfzeile).
+ * Auslöser ab 1280 px als Suchfeld mit Tastenhilfe, darunter als Symbol.
  */
 export function CommandPalette({
   commands,
@@ -32,20 +46,22 @@ export function CommandPalette({
   const [active, setActive] = useState(0)
   const router = useRouter()
   const { toggle } = usePrivacy()
+  const apple = useIsApple()
+  const dialog = useRef<HTMLDialogElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
-  const returnFocus = useRef<HTMLElement | null>(null)
   const listId = useId()
 
-  const results = useMemo(() => {
+  const groups = useMemo(() => {
     const q = query.trim().toLowerCase()
-    return q ? commands.filter((c) => `${c.label} ${c.group} ${c.hint ?? ''}`.toLowerCase().includes(q)) : [...commands]
+    return groupResults(q ? commands.filter((c) => `${c.label} ${c.group} ${c.hint ?? ''}`.toLowerCase().includes(q)) : commands)
   }, [commands, query])
+  const results = useMemo(() => groups.flatMap((g) => g.items), [groups])
+  const optionId = (command: Command) => `${listId}-${command.id}`
 
   useEffect(() => {
     const onKey = (event: globalThis.KeyboardEvent) => {
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
         event.preventDefault()
-        returnFocus.current = document.activeElement as HTMLElement | null
         setOpen((o) => !o)
       }
     }
@@ -53,15 +69,25 @@ export function CommandPalette({
     return () => window.removeEventListener('keydown', onKey)
   }, [])
 
+  // Öffnen/Schließen am Dialog-Element; es gibt den Fokus beim Schließen selbst zurück
   useEffect(() => {
-    if (open) {
+    const el = dialog.current
+    if (!el) return
+    if (open && !el.open) {
+      el.showModal()
       inputRef.current?.focus()
-    } else {
-      returnFocus.current?.focus?.()
     }
+    if (!open && el.open) el.close()
   }, [open])
 
-  const close = () => {
+  // aktiven Treffer bei Pfeiltasten sichtbar halten
+  useEffect(() => {
+    if (!open) return
+    const current = results[active]
+    if (current) document.getElementById(`${listId}-${current.id}`)?.scrollIntoView({ block: 'nearest' })
+  }, [active, open, results, listId])
+
+  const reset = () => {
     setOpen(false)
     setQuery('')
     setActive(0)
@@ -69,83 +95,144 @@ export function CommandPalette({
 
   const run = (command: Command | undefined) => {
     if (!command) return
-    close()
+    reset()
     if (command.action === 'toggle-privacy') toggle()
     else if (command.href) router.push(command.href)
   }
 
-  const onKey = (event: KeyboardEvent<HTMLDivElement>) => {
-    if (event.key === 'Escape') {
-      event.preventDefault()
-      close()
-    } else if (event.key === 'ArrowDown') {
+  const onKey = (event: KeyboardEvent<HTMLDialogElement>) => {
+    if (event.key === 'ArrowDown') {
       event.preventDefault()
       setActive((a) => Math.min(results.length - 1, a + 1))
     } else if (event.key === 'ArrowUp') {
       event.preventDefault()
       setActive((a) => Math.max(0, a - 1))
+    } else if (event.key === 'Home' && event.ctrlKey) {
+      event.preventDefault()
+      setActive(0)
+    } else if (event.key === 'End' && event.ctrlKey) {
+      event.preventDefault()
+      setActive(Math.max(0, results.length - 1))
     } else if (event.key === 'Enter') {
       event.preventDefault()
       run(results[active])
     } else if (event.key === 'Tab') {
-      // Fokus bleibt im Dialog
+      // Fokus bleibt im Eingabefeld
       event.preventDefault()
       inputRef.current?.focus()
     }
   }
 
+  const shortcut = apple === null ? null : apple ? '⌘K' : 'Strg K'
+
   return (
     <>
       <button
         type="button"
-        className={button.button}
-        onClick={() => {
-          returnFocus.current = document.activeElement as HTMLElement | null
-          setOpen(true)
-        }}
+        className={styles.trigger}
+        onClick={() => setOpen(true)}
+        aria-label={triggerLabel}
+        title={shortcut ? `${triggerLabel} (${shortcut})` : triggerLabel}
         aria-haspopup="dialog"
+        aria-keyshortcuts="Meta+K Control+K"
       >
-        {triggerLabel} <kbd>⌘K</kbd>
+        <Icon name="search" size={18} />
+        <span className={styles.triggerText} aria-hidden="true">
+          {triggerLabel} …
+        </span>
+        <kbd className={styles.triggerKbd} aria-hidden="true">
+          {shortcut}
+        </kbd>
       </button>
-      {open ? (
-        <div className={styles.backdrop} onPointerDown={(e) => e.target === e.currentTarget && close()}>
-          <div className={styles.dialog} role="dialog" aria-modal="true" aria-label="Befehle" onKeyDown={onKey}>
-            <input
-              ref={inputRef}
-              className={styles.input}
-              value={query}
-              onChange={(e) => {
-                setQuery(e.target.value)
-                setActive(0)
-              }}
-              placeholder={placeholder}
-              role="combobox"
-              aria-expanded="true"
-              aria-controls={listId}
-              aria-activedescendant={results[active] ? `${listId}-${results[active].id}` : undefined}
-              aria-autocomplete="list"
-            />
-            <ul id={listId} className={styles.list} role="listbox" aria-label="Ergebnisse">
-              {results.length === 0 ? <li className={styles.empty}>Nichts gefunden.</li> : null}
-              {results.map((c, i) => (
-                <li
-                  key={c.id}
-                  id={`${listId}-${c.id}`}
-                  role="option"
-                  aria-selected={i === active}
-                  className={styles.item}
-                  onPointerEnter={() => setActive(i)}
-                  onClick={() => run(c)}
-                >
-                  <span className={styles.group}>{c.group}</span>
-                  <span>{c.label}</span>
-                  {c.hint ? <span className={styles.hint}>{c.hint}</span> : null}
-                </li>
+      <dialog
+        ref={dialog}
+        className={styles.dialog}
+        aria-label="Befehle"
+        onKeyDown={onKey}
+        onClose={reset}
+        onClick={(e) => {
+          // Klick auf den dunklen Rand schließt
+          if (e.target === e.currentTarget) reset()
+        }}
+      >
+        {open ? (
+          <div className={styles.panel}>
+            <div className={styles.inputRow}>
+              <Icon name="search" size={18} className={styles.inputIcon} />
+              <input
+                ref={inputRef}
+                className={styles.input}
+                value={query}
+                onChange={(e) => {
+                  setQuery(e.target.value)
+                  setActive(0)
+                }}
+                placeholder={placeholder}
+                aria-label="Ziel oder Aktion suchen"
+                role="combobox"
+                aria-expanded="true"
+                aria-controls={listId}
+                aria-activedescendant={results[active] ? optionId(results[active]) : undefined}
+                aria-autocomplete="list"
+                autoComplete="off"
+                spellCheck={false}
+                enterKeyHint="go"
+              />
+              <kbd className={styles.esc}>Esc</kbd>
+            </div>
+            <div id={listId} className={styles.list} role="listbox" aria-label="Ergebnisse">
+              {groups.map(({ group, items }, g) => (
+                <div key={group} role="group" aria-labelledby={`${listId}-g${g}`} className={styles.group}>
+                  <div id={`${listId}-g${g}`} role="presentation" className={styles.groupLabel}>
+                    {group}
+                  </div>
+                  {items.map((c) => {
+                    const index = results.indexOf(c)
+                    return (
+                      <div
+                        key={c.id}
+                        id={optionId(c)}
+                        role="option"
+                        aria-selected={index === active}
+                        className={styles.item}
+                        onPointerMove={() => index !== active && setActive(index)}
+                        onClick={() => run(c)}
+                      >
+                        <span className={styles.label}>{c.label}</span>
+                        {c.hint ? (
+                          <span className={styles.hint}>
+                            {c.hint.split(' ').map((key) => (
+                              <kbd key={key}>{key}</kbd>
+                            ))}
+                          </span>
+                        ) : null}
+                        <Icon name="arrowRight" size={16} className={styles.go} />
+                      </div>
+                    )
+                  })}
+                </div>
               ))}
-            </ul>
+            </div>
+            {results.length === 0 ? (
+              <p className={styles.empty} role="status">
+                Nichts gefunden für „{query.trim()}“.
+              </p>
+            ) : null}
+            <p className={styles.footer} aria-hidden="true">
+              <span>
+                <kbd>↑</kbd>
+                <kbd>↓</kbd> auswählen
+              </span>
+              <span>
+                <kbd>↵</kbd> öffnen
+              </span>
+              <span>
+                <kbd>Esc</kbd> schließen
+              </span>
+            </p>
           </div>
-        </div>
-      ) : null}
+        ) : null}
+      </dialog>
     </>
   )
 }

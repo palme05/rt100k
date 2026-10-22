@@ -105,7 +105,8 @@ test('Sparplan: aus drei Monatskäufen erkannt, fehlende Ausführung im Depot un
   await expect(plans).toContainText('Vanguard')
   await expect(plans).toContainText('! Fehlt seit')
   await plans.getByRole('link', { name: 'jetzt buchen' }).click()
-  await expect(page).toHaveURL(new RegExp(`/app/buchen\\?depot=${id}$`))
+  // vorbelegt mit Wert, Betrag und erwartetem Tag
+  await expect(page).toHaveURL(new RegExp(`/app/buchen\\?depot=${id}&wert=[0-9a-f-]{36}&betrag=10000&datum=\\d{4}-\\d{2}-\\d{2}$`))
 
   await page.goto('/app')
   await expect(page.getByRole('region', { name: 'Offene Punkte' })).toContainText('Sparplan fehlt: Vanguard')

@@ -1,24 +1,42 @@
 import type { Command } from '@/components/command/CommandPalette'
-import type { NavItem } from '@/components/shell/AppHeader'
+import type { NavItem } from '@/components/shell/nav'
 
 export const APP_BASE = '/app'
 
 /**
- * Alle Ziele der App – gleich auf Desktop und Handy: `primary` steht am
- * Desktop oben, `tab` am Handy in der Leiste unten, der Rest jeweils unter „Mehr“.
+ * Alle Seiten der Hauptnavigation – gleich auf Desktop und Handy: `primary`
+ * steht am Desktop oben, `tab` am Handy in der Leiste unten, der Rest jeweils
+ * unter „Mehr“. Hinweise (Glocke) und Konto (Konto-Menü) haben eigene Plätze
+ * in der Kopfzeile und stehen deshalb nicht hier.
  */
-export function appNav(isAdmin: boolean): NavItem[] {
+export function appNav(): NavItem[] {
   return [
     { href: APP_BASE, label: 'Übersicht', icon: 'home', primary: true, tab: true },
-    { href: `${APP_BASE}/depots`, label: 'Depots', icon: 'depots', activePrefix: `${APP_BASE}/depots`, primary: true, tab: true },
-    { href: `${APP_BASE}/analyse`, label: 'Analyse', icon: 'analysis', primary: true, tab: true },
-    { href: `${APP_BASE}/steuer`, label: 'Steuer', icon: 'tax', activePrefix: `${APP_BASE}/steuer`, primary: true },
-    { href: `${APP_BASE}/road`, label: 'Road to 100k', short: 'Road', icon: 'road', primary: true, tab: true },
-    { href: `${APP_BASE}/import`, label: 'Import', icon: 'import' },
-    { href: `${APP_BASE}/hinweise`, label: 'Hinweise und Kursalarme', icon: 'bell' },
-    { href: `${APP_BASE}/rueckblick`, label: 'Monatsrückblick', icon: 'review' },
-    { href: `${APP_BASE}/sicherheit`, label: 'Konto und Sicherheit', icon: 'shield' },
-    ...(isAdmin ? [{ href: `${APP_BASE}/admin`, label: 'Admin', icon: 'admin' as const }] : []),
+    {
+      href: `${APP_BASE}/depots`,
+      label: 'Depots',
+      icon: 'depots',
+      // Wertpapier-Seiten und geteilte Depots erreicht man aus den Depots
+      activePrefixes: [`${APP_BASE}/depots`, `${APP_BASE}/wertpapier`, `${APP_BASE}/geteilt`, `${APP_BASE}/freigabe`],
+      primary: true,
+      tab: true,
+    },
+    { href: `${APP_BASE}/analyse`, label: 'Analyse', icon: 'analysis', activePrefixes: [`${APP_BASE}/analyse`], primary: true, tab: true },
+    { href: `${APP_BASE}/steuer`, label: 'Steuer', icon: 'tax', activePrefixes: [`${APP_BASE}/steuer`], primary: true },
+    { href: `${APP_BASE}/road`, label: 'Road to 100k', short: 'Road', icon: 'route', activePrefixes: [`${APP_BASE}/road`], primary: true, tab: true },
+    { href: `${APP_BASE}/import`, label: 'Import', icon: 'import', activePrefixes: [`${APP_BASE}/import`] },
+    { href: `${APP_BASE}/rueckblick`, label: 'Monatsrückblick', icon: 'review', activePrefixes: [`${APP_BASE}/rueckblick`] },
+  ]
+}
+
+/** Glocke in der Kopfzeile – aktiv auf der Hinweis-Seite. */
+export const NOTICES_LINK = { href: `${APP_BASE}/hinweise`, activePrefixes: [`${APP_BASE}/hinweise`] } as const
+
+/** Einträge im Konto-Menü (rechts in der Kopfzeile). */
+export function accountLinks(isAdmin: boolean): NavItem[] {
+  return [
+    { href: `${APP_BASE}/sicherheit`, label: 'Konto und Sicherheit', icon: 'shield', activePrefixes: [`${APP_BASE}/sicherheit`, `${APP_BASE}/konto`] },
+    ...(isAdmin ? [{ href: `${APP_BASE}/admin`, label: 'Admin', icon: 'admin' as const, activePrefixes: [`${APP_BASE}/admin`] }] : []),
   ]
 }
 

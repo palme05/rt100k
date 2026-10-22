@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { useState, useTransition } from 'react'
+import { Icon } from '../shell/icons'
 import { Row, Rows } from '../ui/Rows'
 import styles from './tasks.module.css'
 
@@ -11,6 +12,8 @@ export interface TaskItem {
   body: string | null
   href: string | null
   taskId: string | null
+  /** Beschriftung des Links rechts (Standard „Beheben“) */
+  actionLabel?: string
 }
 
 const SHOWN = 6
@@ -45,16 +48,19 @@ export function TaskList({ tasks, complete }: { tasks: readonly TaskItem[]; comp
         {shown.map((t) => (
           <Row
             key={t.key}
+            emphasis
             label={t.href ? <Link href={t.href}>{t.title}</Link> : t.title}
             sub={t.body ?? undefined}
             value={
               t.taskId ? (
-                <button type="button" className={styles.done} disabled={pending} onClick={() => finish(t)} aria-label={`Erledigt: ${t.body ?? t.title}`}>
-                  ✓ Erledigt
+                <button type="button" className={styles.action} disabled={pending} onClick={() => finish(t)} aria-label={`Erledigt: ${t.body ?? t.title}`}>
+                  <Icon name="check" size={16} />
+                  Erledigt
                 </button>
               ) : t.href ? (
-                <Link className={styles.done} href={t.href} aria-label={`Beheben: ${t.title}`}>
-                  Beheben →
+                <Link className={styles.action} href={t.href} aria-label={`${t.actionLabel ?? 'Beheben'}: ${t.title}`}>
+                  {t.actionLabel ?? 'Beheben'}
+                  <Icon name="chevronRight" size={16} />
                 </Link>
               ) : null
             }
@@ -62,7 +68,7 @@ export function TaskList({ tasks, complete }: { tasks: readonly TaskItem[]; comp
         ))}
       </Rows>
       {open.length > SHOWN ? (
-        <button type="button" className={styles.more} onClick={() => setAll((a) => !a)}>
+        <button type="button" className={styles.more} onClick={() => setAll((a) => !a)} aria-expanded={all}>
           {all ? 'Weniger anzeigen' : `Alle ${open.length} anzeigen`}
         </button>
       ) : null}

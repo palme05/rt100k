@@ -21,11 +21,11 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     <PrivacyProvider>
       <AppShell
         homeHref={APP_BASE}
-        nav={appNav(isAdmin)}
+        nav={appNav()}
         commands={appCommands(portfolios, isAdmin)}
         hotkeys={APP_HOTKEYS}
         quickAdd={QUICK_ADD_HREF}
-        account={<AccountMenu name={user.name} unread={unread} />}
+        account={<AccountMenu name={user.name} email={user.email} unread={unread} isAdmin={isAdmin} />}
       >
         {children}
       </AppShell>

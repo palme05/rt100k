@@ -2,56 +2,38 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useId, useRef, useState, type KeyboardEvent } from 'react'
 import { CommandPalette, GoHotkeys, type Command } from '../command/CommandPalette'
 import { PrivacyToggle } from '../privacy/privacy'
-import { Icon, type IconName } from './icons'
+import { Brand } from './BrandMark'
+import { Icon } from './icons'
 import { LinkPending } from './LinkPending'
+import { isActive, quickAddTarget, type NavItem } from './nav'
 import styles from './shell.module.css'
 
-export interface NavItem {
-  href: string
-  label: string
-  icon: IconName
-  /** Aktiv auch für Unterseiten mit diesem Präfix */
-  activePrefix?: string
-  /** Desktop: direkt in der Kopfzeile (sonst im Menü „Mehr“) */
-  primary?: boolean
-  /** Handy: in der Leiste unten (sonst im Blatt „Mehr“) */
-  tab?: boolean
-  /** Kurzform für die Leiste unten */
-  short?: string
-}
-
-export const isActive = (pathname: string, item: NavItem) => pathname === item.href || (item.activePrefix !== undefined && pathname.startsWith(item.activePrefix))
-
-const DEPOT_PAGE = /^\/app\/depots\/([0-9a-f-]{36})(?:\/|$)/
-
-/**
- * Ziel für „Neue Buchung“ von der aktuellen Seite aus: im Depot gleich dieses
- * Depot vorwählen; auf der Erfassungs- und Bearbeiten-Seite selbst nichts.
- */
-export function quickAddTarget(pathname: string, base: string | undefined): string | null {
-  if (!base || pathname.startsWith(base) || pathname.includes('/buchung/')) return null
-  const depot = DEPOT_PAGE.exec(pathname)?.[1]
-  return depot ? `${base}?depot=${depot}` : base
-}
-
-/** Logo: die Strecke mit aktueller Position. */
-function BrandMark() {
+/** Name im Menü: lange Bezeichnungen haben eine Kurzform für schmale Kopfzeilen. */
+function NavLabel({ item }: { item: NavItem }) {
+  if (!item.short) return <>{item.label}</>
   return (
-    <svg className={styles.brandMark} width="22" height="10" viewBox="0 0 22 10" aria-hidden="true">
-      <line x1="2" y1="5" x2="20" y2="5" strokeWidth="2" strokeLinecap="round" />
-      <line x1="2" y1="5" x2="13" y2="5" strokeWidth="2.5" strokeLinecap="round" />
-      <circle cx="13" cy="5" r="3.5" strokeWidth="1.5" />
-    </svg>
+    <>
+      <span className={styles.labelFull}>{item.label}</span>
+      <span className={styles.labelShort} aria-hidden="true">
+        {item.short}
+      </span>
+    </>
   )
 }
 
-/** Desktop: weitere Seiten als aufklappbare Liste (Esc, Klick daneben und Seitenwechsel schließen). */
+/**
+ * Desktop: weitere Seiten als aufklappbare Liste von Links (Disclosure).
+ * Esc, Klick daneben, Fokus woanders hin und Seitenwechsel schließen; Pfeile
+ * wandern durch die Liste.
+ */
 function MoreMenu({ items, pathname }: { items: readonly NavItem[]; pathname: string }) {
   const [open, setOpen] = useState(false)
-  const ref = useRef<HTMLDivElement>(null)
+  const root = useRef<HTMLLIElement>(null)
+  const button = useRef<HTMLButtonElement>(null)
+  const listId = useId()
   const [seenPath, setSeenPath] = useState(pathname)
   if (seenPath !== pathname) {
     setSeenPath(pathname)
@@ -59,43 +41,73 @@ function MoreMenu({ items, pathname }: { items: readonly NavItem[]; pathname: st
   }
   useEffect(() => {
     if (!open) return
-    const onPointer = (e: PointerEvent) => {
-      if (!ref.current?.contains(e.target as Node)) setOpen(false)
-    }
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setOpen(false)
+    const outside = (target: EventTarget | null) => !root.current?.contains(target as Node)
+    const onPointer = (e: PointerEvent) => outside(e.target) && setOpen(false)
+    const onFocus = (e: FocusEvent) => outside(e.target) && setOpen(false)
+    const onKey = (e: globalThis.KeyboardEvent) => {
+      if (e.key !== 'Escape') return
+      setOpen(false)
+      if (!outside(document.activeElement)) button.current?.focus()
     }
     document.addEventListener('pointerdown', onPointer)
+    document.addEventListener('focusin', onFocus)
     document.addEventListener('keydown', onKey)
     return () => {
       document.removeEventListener('pointerdown', onPointer)
+      document.removeEventListener('focusin', onFocus)
       document.removeEventListener('keydown', onKey)
     }
   }, [open])
+
+  const onKey = (e: KeyboardEvent<HTMLLIElement>) => {
+    if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return
+    const links = Array.from(root.current?.querySelectorAll<HTMLElement>('ul a') ?? [])
+    if (links.length === 0) return
+    e.preventDefault()
+    if (!open) setOpen(true)
+    const index = links.indexOf(document.activeElement as HTMLElement)
+    const next = index < 0 ? (e.key === 'ArrowDown' ? 0 : links.length - 1) : (index + (e.key === 'ArrowDown' ? 1 : -1) + links.length) % links.length
+    // nach dem Öffnen ist die Liste erst im nächsten Bild sichtbar
+    requestAnimationFrame(() => links[next]?.focus())
+  }
+
   if (items.length === 0) return null
   const active = items.some((i) => isActive(pathname, i))
   return (
-    <div className={styles.more} ref={ref}>
-      <button type="button" className={styles.navLink} aria-expanded={open} aria-controls="mehr-menue" aria-current={active ? 'page' : undefined} onClick={() => setOpen((o) => !o)}>
-        Mehr <span aria-hidden="true">▾</span>
+    <li className={styles.more} ref={root} onKeyDown={onKey}>
+      <button
+        ref={button}
+        type="button"
+        className={styles.navLink}
+        aria-expanded={open}
+        aria-controls={listId}
+        aria-current={active ? 'page' : undefined}
+        onClick={() => setOpen((o) => !o)}
+      >
+        Mehr
+        <Icon name="chevronDown" size={14} className={styles.chevron} />
       </button>
-      {open ? (
-        <ul id="mehr-menue" className={styles.moreList}>
-          {items.map((item) => (
-            <li key={item.href}>
-              <Link href={item.href} className={styles.moreLink} aria-current={isActive(pathname, item) ? 'page' : undefined}>
-                <Icon name={item.icon} size={18} />
-                {item.label}
-                <LinkPending />
-              </Link>
-            </li>
-          ))}
-        </ul>
-      ) : null}
-    </div>
+      <ul id={listId} className={styles.moreList} hidden={!open}>
+        {items.map((item) => (
+          <li key={item.href}>
+            <Link href={item.href} className={styles.moreLink} aria-current={isActive(pathname, item) ? 'page' : undefined}>
+              <Icon name={item.icon} size={18} />
+              {item.label}
+              <LinkPending />
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </li>
   )
 }
 
+/**
+ * Kopfzeile: immer eine Zeile in fester Höhe (`--head-h`), klebt oben mit
+ * leicht durchscheinendem Grund und Haarlinie. Links Logo und Navigation,
+ * rechts Suche, „+ Buchung“ (einzige gefüllte Schaltfläche) und ruhige
+ * Symbole: Beträge ausblenden, Hinweise, Konto (`children`).
+ */
 export function AppHeader({
   homeHref,
   nav,
@@ -109,7 +121,7 @@ export function AppHeader({
   commands: readonly Command[]
   hotkeys: Readonly<Record<string, string>>
   quickAdd?: string | undefined
-  /** Konto-Bereich rechts (z. B. Sicherheit, Abmelden) */
+  /** Rechts außen: Glocke und Konto-Menü */
   children?: React.ReactNode
 }) {
   const pathname = usePathname()
@@ -118,32 +130,40 @@ export function AppHeader({
     <header className={styles.header}>
       <div className={styles.headerInner}>
         <Link href={homeHref} className={styles.brand} aria-label="rt100k – Übersicht">
-          <BrandMark />
-          rt100k
+          <Brand wordClassName={styles.brandWord} />
         </Link>
         <nav className={styles.nav} aria-label="Hauptnavigation">
-          {nav
-            .filter((item) => item.primary)
-            .map((item) => (
-              <Link key={item.href} href={item.href} className={styles.navLink} aria-current={isActive(pathname, item) ? 'page' : undefined}>
-                {item.label}
-                <LinkPending />
-              </Link>
-            ))}
-          <MoreMenu items={nav.filter((item) => !item.primary)} pathname={pathname} />
+          <ul className={styles.navList}>
+            {nav
+              .filter((item) => item.primary)
+              .map((item) => (
+                <li key={item.href}>
+                  <Link href={item.href} className={styles.navLink} aria-current={isActive(pathname, item) ? 'page' : undefined}>
+                    <NavLabel item={item} />
+                    <LinkPending />
+                  </Link>
+                </li>
+              ))}
+            <MoreMenu items={nav.filter((item) => !item.primary)} pathname={pathname} />
+          </ul>
         </nav>
         <div className={styles.tools}>
+          <CommandPalette commands={commands} />
           {add ? (
             <Link href={add} className={styles.addButton} aria-label="Neue Buchung" title="Neue Buchung (G B)">
               <Icon name="plus" size={16} />
-              Buchung
+              <span className={styles.addLabel}>Buchung</span>
               <LinkPending />
             </Link>
-          ) : null}
+          ) : (
+            // Auf der Erfassungsseite selbst: gleicher Platz, ruhig als „hier“ markiert (kein zweiter Link)
+            <span className={`${styles.addButton} ${styles.addHere}`} aria-hidden="true">
+              <Icon name="plus" size={16} />
+              <span className={styles.addLabel}>Buchung</span>
+            </span>
+          )}
+          <span className={styles.divider} aria-hidden="true" />
           <PrivacyToggle />
-          <span className={styles.search}>
-            <CommandPalette commands={commands} />
-          </span>
           {children}
         </div>
       </div>

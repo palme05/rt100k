@@ -133,6 +133,12 @@
   --chart-grid: var(--rule);
   --chart-band: rgb(226 98 11 / 10%);
   --chart-track: var(--rule);
+  /* App-Rahmen (Shell): Leiste unten und „+“ am Handy. Dunkel ist das „+“
+     keine helle Scheibe, sondern eine erhabene Fläche mit Rand. */
+  --tabbar-h: 3.5rem;
+  --fab-bg: var(--ink);
+  --fab-ink: var(--bg);
+  --fab-border: transparent;
 }
 
 /* ═══ Dunkles Design ══════════════════════════════════════════════════════
@@ -180,6 +186,10 @@
     --chart-grid: #2f3135;
     --chart-band: rgb(240 128 47 / 10%);
     --chart-track: #303236;
+    /* App-Rahmen (Shell) */
+    --fab-bg: var(--surface-raised);
+    --fab-ink: var(--ink);
+    --fab-border: var(--rule-strong);
     color-scheme: dark;
   }
 }
@@ -222,6 +232,10 @@
   --chart-grid: #2f3135;
   --chart-band: rgb(240 128 47 / 10%);
   --chart-track: #303236;
+  /* App-Rahmen (Shell) */
+  --fab-bg: var(--surface-raised);
+  --fab-ink: var(--ink);
+  --fab-border: var(--rule-strong);
   color-scheme: dark;
 }
 

@@ -3,6 +3,8 @@ import { and, asc, eq, gte, sql } from 'drizzle-orm'
 import { withUser } from '../db/client'
 import { portfolioSnapshot } from '../db/schema'
 import type { Actor } from './actor'
+import { ownedPortfolio } from './bookings'
+import { parseId } from './ids'
 
 export interface DailyTotal {
   day: string
@@ -39,6 +41,23 @@ export async function listPortfolioSeries(actor: Actor, since: string): Promise<
   const out = new Map<string, number[]>()
   for (const r of rows) out.set(r.portfolioId, [...(out.get(r.portfolioId) ?? []), Number(r.valueCents)])
   return out
+}
+
+/**
+ * Tageswerte eines Depots (Wertverlauf der Depot-Seite), älteste zuerst.
+ * Fremde oder ungültige Depot-IDs → NotFoundError (wie listBookings).
+ */
+export async function listPortfolioHistory(actor: Actor, portfolioId: unknown): Promise<DailyTotal[]> {
+  const id = parseId(portfolioId)
+  return withUser(actor.id, async (tx) => {
+    await ownedPortfolio(tx, actor, id)
+    const rows = await tx
+      .select({ day: portfolioSnapshot.day, valueCents: portfolioSnapshot.valueCents, investedCents: portfolioSnapshot.investedCents })
+      .from(portfolioSnapshot)
+      .where(and(eq(portfolioSnapshot.ownerId, actor.id), eq(portfolioSnapshot.portfolioId, id)))
+      .orderBy(asc(portfolioSnapshot.day))
+    return rows.map((r) => ({ day: r.day, valueCents: Number(r.valueCents), investedCents: Number(r.investedCents) }))
+  })
 }
 
 export interface SnapshotInput {

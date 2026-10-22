@@ -1,29 +1,47 @@
-/* Buchungsliste: Filterleiste, Monatsgruppen, Aktionen je Zeile. */
+/* Buchungsliste: Filterleiste in einer Zeile, Monatsgruppen mit gleichem
+   Abstand, eine Zeile je Buchung (Datum · Name/Details · Betrag · Aktionen). */
 
 .list {
   display: grid;
-  gap: var(--space-4);
+  gap: var(--space-block);
   min-width: 0;
+  container-type: inline-size;
 }
 
+/* ── Filter: Suche breiter, Auswahlfelder gleich breit, kompakte Höhe ── */
 .filters {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 9.5rem), 1fr));
+  display: flex;
+  flex-wrap: wrap;
   gap: var(--space-2);
+}
+
+.search {
+  display: block;
+  flex: 2 1 12rem;
+  min-width: 0;
 }
 
 .filter {
   display: block;
+  flex: 1 1 8rem;
   min-width: 0;
 }
 
+.filters .search input,
+.filters .filter select {
+  min-height: var(--control-h-sm);
+  height: var(--control-h-sm);
+  font-size: var(--text-md);
+}
+
 .count {
-  margin: 0;
+  margin: calc(var(--space-block) * -1 + var(--space-stack)) 0 0;
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-3);
+  gap: var(--space-1) var(--space-3);
   align-items: baseline;
   font-size: var(--text-sm);
+  line-height: var(--leading-meta);
   color: var(--ink-3);
 }
 
@@ -36,7 +54,17 @@
   text-decoration: underline;
   text-underline-offset: 2px;
   cursor: pointer;
-  min-height: 2.75rem;
+}
+
+.reset:hover {
+  color: var(--ink);
+}
+
+@media (pointer: coarse) {
+  .reset {
+    min-height: var(--hit);
+    margin-block: calc((var(--hit) - 1.2em) / -2);
+  }
 }
 
 .error {
@@ -45,71 +73,254 @@
   font-size: var(--text-sm);
 }
 
-.month {
+/* ── Monate: ein Abstand zwischen Gruppen, Kopf mit kräftiger Linie ─── */
+.months {
   display: grid;
-  gap: var(--space-2);
+  gap: var(--space-8);
+  min-width: 0;
+}
+
+.month {
+  min-width: 0;
   /* senkrecht scrollt der Browser, waagrecht wischt die Zeile */
   touch-action: pan-y;
 }
 
 .monthHead {
-  margin: var(--space-2) 0 0;
+  margin: 0;
+  padding-bottom: var(--space-2);
+  border-bottom: 1px solid var(--rule-strong);
   font-size: var(--text-sm);
   font-weight: var(--weight-semibold);
-  color: var(--ink-3);
+  line-height: var(--leading-meta);
+  color: var(--ink-2);
 }
 
-/* Text oben, Aktionen immer in eigener Zeile – gleich bei kurzen und langen Namen */
-.sub {
+.rows {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+/* ── Zeile: schmal Betrag über den Aktionen, breit alles nebeneinander ── */
+.row {
   display: grid;
-  justify-items: start;
+  grid-template-columns: 2.75rem minmax(0, 1fr) auto;
+  grid-template-areas:
+    'date main value'
+    'date main actions'
+    'confirm confirm confirm';
+  column-gap: var(--space-3);
+  align-items: start;
+  padding: var(--row-y) 0;
+  border-bottom: 1px solid var(--rule);
 }
 
+.row:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+
+@container (min-width: 36rem) {
+  .row {
+    /* Aktionen links vom Betrag: Beträge bleiben am rechten Rand bündig */
+    grid-template-columns: 3.25rem minmax(0, 1fr) auto auto;
+    grid-template-areas:
+      'date main actions value'
+      '. confirm confirm confirm';
+    column-gap: var(--space-4);
+  }
+}
+
+.date {
+  grid-area: date;
+  font-size: var(--text-sm);
+  line-height: var(--leading-body);
+  color: var(--ink-3);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.main {
+  grid-area: main;
+  min-width: 0;
+}
+
+.title {
+  display: block;
+  font-weight: var(--weight-medium);
+  line-height: var(--leading-body);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.title a:hover {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.sub {
+  display: block;
+  font-size: var(--text-sm);
+  line-height: var(--leading-meta);
+  color: var(--ink-3);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Kurs auffällig, aber nicht über Farbe allein: Symbol + Text */
+.flag {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  margin-left: var(--space-2);
+  color: var(--ink);
+  font-weight: var(--weight-medium);
+  white-space: nowrap;
+}
+
+.flag svg {
+  flex: none;
+}
+
+.value {
+  grid-area: value;
+  text-align: right;
+  line-height: var(--leading-body);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* Symbol-Knöpfe: Tippfläche groß, ohne die Zeile höher zu machen */
 .actions {
+  grid-area: actions;
+  justify-self: end;
+  display: flex;
+  gap: var(--space-1);
+  margin-block: calc((1.5em - var(--control-h-sm)) / 2);
+  transition: opacity 120ms ease;
+}
+
+.icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--control-h-sm);
+  height: var(--control-h-sm);
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--ink-3);
+  cursor: pointer;
+  transition:
+    background-color 120ms ease,
+    color 120ms ease;
+}
+
+.icon:hover,
+.icon:focus-visible {
+  background: var(--wash);
+  color: var(--ink);
+}
+
+.icon:disabled {
+  opacity: var(--opacity-muted);
+  cursor: default;
+}
+
+.iconDanger {
+  composes: icon;
+}
+
+.iconDanger:hover,
+.iconDanger:focus-visible,
+.iconDanger[aria-expanded='true'] {
+  background: var(--wash);
+  color: var(--neg);
+}
+
+/* Maus: Aktionen erscheinen an der Zeile (Hover oder Tastaturfokus) – nie display:none */
+@media (hover: hover) and (pointer: fine) {
+  .actions {
+    opacity: 0;
+  }
+
+  .row:hover .actions,
+  .row:focus-within .actions,
+  .actions:has([aria-expanded='true']) {
+    opacity: 1;
+  }
+
+  .icon {
+    width: 2rem;
+    height: 2rem;
+  }
+
+  .actions {
+    margin-block: calc((1.5em - 2rem) / 2);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .actions,
+  .icon {
+    transition: none;
+  }
+}
+
+/* ── Löschen bestätigen: eigene Zeile unter der Buchung ─────────────── */
+.confirm {
+  grid-area: confirm;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0 var(--space-4);
+  justify-content: flex-end;
+  gap: var(--space-2) var(--space-4);
+  margin-top: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border-left: 2px solid var(--neg);
+  background: var(--wash);
+  border-radius: 0 var(--radius-md) var(--radius-md) 0;
 }
 
-/* Link und Knopf sehen gleich aus; Tippfläche 44 px hoch */
-.action {
+.confirmText {
+  margin-right: auto;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--ink);
+}
+
+.cancel {
   display: inline-flex;
   align-items: center;
-  min-height: 2.75rem;
+  min-height: var(--control-h-sm);
   padding: 0;
   border: 0;
   background: none;
   font: inherit;
+  font-size: var(--text-sm);
   color: var(--ink-2);
   text-decoration: underline;
   text-underline-offset: 2px;
-  white-space: nowrap;
   cursor: pointer;
 }
 
-.action:hover {
+.cancel:hover {
   color: var(--ink);
-}
-
-.action:disabled {
-  opacity: 0.5;
-  cursor: default;
-}
-
-.confirm {
-  white-space: nowrap;
-  font-size: var(--text-sm);
-  color: var(--ink);
-  font-weight: var(--weight-medium);
 }
 
 .danger {
-  composes: action;
+  composes: cancel;
   color: var(--neg);
   font-weight: var(--weight-medium);
 }
 
 .danger:hover {
   color: var(--neg);
+}
+
+.cancel:disabled {
+  opacity: var(--opacity-muted);
+  cursor: default;
 }

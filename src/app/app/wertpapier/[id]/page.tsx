@@ -1,39 +1,26 @@
 import { notFound } from 'next/navigation'
 import { BookingList } from '@/components/bookings/BookingList'
+import { PriceText } from '@/components/bookings/PriceText'
 import { PriceChart } from '@/components/charts/PriceChart'
 import { Amount } from '@/components/privacy/privacy'
-import { BackLink, Grid, Note, Section, TextLink } from '@/components/ui/layout'
+import { Grid, MoreLink, Note, Section, SectionHead, TextLink } from '@/components/ui/layout'
 import { Row, Rows } from '@/components/ui/Rows'
-import { HeroSummary } from '@/components/ui/Summary'
+import { HeroSummary, type KeyStat } from '@/components/ui/Summary'
 import { Trend } from '@/components/ui/Trend'
-import { eur, monthLabel, share } from '@/lib/display'
+import { bookingTypeLabel, listAmount, unitPriceText } from '@/lib/booking-display'
+import { dayLabel, monthLabel, share } from '@/lib/display'
 import { formatDate, formatTime } from '@/lib/format'
-import { formatQuantity, quantityFromDb } from '@/lib/quantity'
+import { displayUnitPrice, formatQuantity, quantityFromDb, unitPriceFromAmount, UNIT_PRICE_ONE } from '@/lib/quantity'
 import { ASSET_KIND_LABEL } from '@/lib/valuation'
 import { requireUser } from '@/server/auth/session'
 import { NotFoundError } from '@/server/dal/errors'
 import { loadInstrumentDetail } from '@/server/instrument'
 import { deleteBookingAction } from '../../depots/actions'
+import styles from '../../depots/depots.module.css'
 
 export const metadata = { title: 'Wertpapier' }
 // Kurshistorie beim ersten Aufruf vom Anbieter (danach aus der Datenbank)
 export const maxDuration = 60
-
-const TYPE_LABEL: Record<string, string> = {
-  buy: 'Kauf',
-  sell: 'Verkauf',
-  dividend: 'Dividende',
-  interest: 'Zinsen',
-  fee: 'Gebühr',
-  tax: 'Steuer',
-  transfer_in: 'Übertrag ein',
-  transfer_out: 'Übertrag aus',
-  split: 'Split',
-  staking: 'Staking',
-  age: 'AGE',
-  tax_refund: 'Steuergutschrift',
-}
-const SIGN: Record<string, 1 | -1 | 0> = { buy: -1, sell: 1, dividend: 1, interest: 1, fee: -1, tax: -1, tax_refund: 1, transfer_in: 0, transfer_out: 0, split: 0, staking: 0 }
 
 export default async function InstrumentPage({ params }: { params: Promise<{ id: string }> }) {
   const user = await requireUser()
@@ -48,98 +35,172 @@ export default async function InstrumentPage({ params }: { params: Promise<{ id:
   const i = d.instrument
   const unit = i.kind === 'metal' ? 'g' : 'Stk.'
   const open = d.quantity > 0n
+  const average = open && d.costCents > 0 ? unitPriceFromAmount(d.costCents, d.quantity) : null
+  const depotNames = new Map(d.holdings.map((h) => [h.portfolioId, h.portfolioName]))
+  const bookingDepots = new Set(d.bookings.map((b) => b.portfolioId))
+  // Zurück dorthin, wo der Wert liegt – bei mehreren Depots zur Liste
+  const only = bookingDepots.size === 1 ? [...bookingDepots][0]! : null
+  const back = only && depotNames.has(only) ? { href: `/app/depots/${only}`, label: depotNames.get(only)! } : { href: '/app/depots', label: 'Depots' }
+
+  const buys = d.bookings.filter((b) => b.type === 'buy')
+  const sells = d.bookings.filter((b) => b.type === 'sell')
+  const buySum = buys.reduce((sum, b) => sum + b.amountCents, 0)
+  const days = d.bookings.map((b) => b.occurredOn).sort()
+  const first = days[0] ?? null
+  const lastBuy =
+    buys
+      .map((b) => b.occurredOn)
+      .sort()
+      .at(-1) ?? null
+
+  const stats: KeyStat[] = [
+    { label: 'Gewinn', value: open && d.costCents > 0 ? <Trend value={d.gainCents / d.costCents} /> : '–', note: <Amount value={d.gainCents / 100} signed whole /> },
+    {
+      label: 'Bestand',
+      value: open ? `${formatQuantity(d.quantity, 3)} ${unit}` : 'verkauft',
+      note: (
+        <>
+          Einstand <Amount value={d.costCents / 100} whole />
+        </>
+      ),
+    },
+    {
+      label: 'Ø Einstand',
+      value: average ? <PriceText text={displayUnitPrice(average)} /> : '–',
+      note:
+        d.realizedCents !== 0 ? (
+          <>
+            realisiert <Amount value={d.realizedCents / 100} signed whole />
+          </>
+        ) : (
+          `je ${i.kind === 'metal' ? 'Gramm' : 'Stück'}`
+        ),
+    },
+    {
+      label: 'Kurs',
+      value: d.priceEur === null ? '–' : <Amount value={d.priceEur} />,
+      note: d.quoteAsOf ? `${d.delayed ? 'verzögert · ' : ''}${formatDate(d.quoteAsOf)}, ${formatTime(d.quoteAsOf)} Uhr` : 'kein Kurs',
+    },
+  ]
 
   return (
     <>
-      <BackLink href="/app/depots">Depots</BackLink>
       <HeroSummary
         id="wertpapier-titel"
+        back={back}
         eyebrow={[ASSET_KIND_LABEL[i.kind as keyof typeof ASSET_KIND_LABEL] ?? i.kind, i.isin, i.symbol].filter(Boolean).join(' · ')}
         title={i.name}
         value={d.valueCents / 100}
-        stats={[
-          { label: 'Gewinn', value: open && d.costCents > 0 ? <Trend value={d.gainCents / d.costCents} /> : '–', note: <Amount value={d.gainCents / 100} signed whole /> },
-          { label: 'Bestand', value: open ? `${formatQuantity(d.quantity, 6)} ${unit}` : 'verkauft', note: <>Einstand <Amount value={d.costCents / 100} whole /></> },
-          { label: 'Kurs', value: d.priceEur === null ? '–' : eur(d.priceEur), note: d.quoteAsOf ? `${d.delayed ? 'verzögert, ' : ''}${formatDate(d.quoteAsOf)} ${formatTime(d.quoteAsOf)}` : 'kein Kurs' },
-          { label: 'Realisiert', value: <Amount value={d.realizedCents / 100} signed whole />, note: 'aus Verkäufen' },
-        ]}
+        stats={stats}
       />
 
       <Grid>
-        <Section label="Kursverlauf">
-          {d.points.length > 1 ? (
-            <PriceChart points={d.points} events={d.events} title={`Kursverlauf ${i.name} in Euro`} />
-          ) : (
-            <>
-              <h2 className="sr-only">Kursverlauf</h2>
-              <Note>Für dieses Wertpapier gibt es noch keine Kurshistorie.</Note>
-            </>
-          )}
-        </Section>
+        <div className={styles.split}>
+          <div className={styles.splitMain}>
+            <Section label="Kursverlauf">
+              {d.points.length > 1 ? (
+                <PriceChart points={d.points} events={d.events} title={`Kursverlauf ${i.name} in Euro`} averageCost={average ? Number(average) / Number(UNIT_PRICE_ONE) : null} />
+              ) : (
+                <>
+                  <SectionHead title="Kursverlauf" />
+                  <Note>Für dieses Wertpapier gibt es noch keine Kurshistorie.</Note>
+                </>
+              )}
+            </Section>
+          </div>
+          <div className={styles.splitAside}>
+            <Section id="depots-wert" title="In deinen Depots">
+              {d.holdings.length === 0 ? (
+                <Note>Kein Bestand mehr – alles verkauft oder übertragen.</Note>
+              ) : (
+                <Rows>
+                  {d.holdings.map((h) => (
+                    <Row
+                      key={h.portfolioId}
+                      emphasis
+                      label={<TextLink href={`/app/depots/${h.portfolioId}`}>{h.portfolioName}</TextLink>}
+                      sub={`${formatQuantity(h.quantity, 3)} ${unit}${d.valueCents > 0 && d.holdings.length > 1 ? ` · ${share(h.valueCents / d.valueCents)}` : ''}`}
+                      value={<Amount value={h.valueCents / 100} />}
+                    />
+                  ))}
+                </Rows>
+              )}
+            </Section>
 
-        <Section id="depots-wert" title="In deinen Depots" span="third">
-          {d.holdings.length === 0 ? (
-            <Note>Kein Bestand mehr – alles verkauft oder übertragen.</Note>
-          ) : (
-            <Rows>
-              {d.holdings.map((h) => (
-                <Row key={h.portfolioId} label={<TextLink href={`/app/depots/${h.portfolioId}`}>{h.portfolioName}</TextLink>} sub={`${formatQuantity(h.quantity, 6)} ${unit}`} value={<Amount value={h.valueCents / 100} />} />
-              ))}
-            </Rows>
-          )}
-        </Section>
+            <Section id="steuer-wert" title="Steuer" meta="≈ Schätzung">
+              {d.saleTaxCents === null ? (
+                <Note>
+                  {i.kind === 'metal' ? 'Edelmetalle: nach einem Jahr Haltedauer steuerfrei (Spekulationsfrist). Fristen je Kauf im Steuer-Cockpit.' : 'Für diese Anlage gibt es keine Schätzung.'}
+                </Note>
+              ) : (
+                <Rows>
+                  <Row label="KESt bei Verkauf heute" sub="27,5 % auf den Kursgewinn, ohne Verlustausgleich" value={<Amount value={-d.saleTaxCents / 100} signed />} />
+                  {open ? <Row label="≈ Netto nach KESt" sub="Wert heute minus Steuer" value={<Amount value={(d.valueCents - d.saleTaxCents) / 100} />} /> : null}
+                </Rows>
+              )}
+              <MoreLink href="/app/steuer">Zum Steuer-Cockpit</MoreLink>
+            </Section>
+          </div>
+        </div>
 
-        <Section id="dividenden" title="Dividenden" meta="brutto" span="third">
-          {d.dividends.byYear.length === 0 ? (
-            <Note>Noch keine Ausschüttungen gebucht.</Note>
-          ) : (
-            <Rows>
-              <Row label="Letzte 12 Monate" value={<Amount value={d.dividends.last12Cents / 100} />} />
-              <Row label="Rendite auf den Einstand" sub="≈ erwartet, 12 Monate" value={d.dividends.yieldOnCost === null ? '–' : share(d.dividends.yieldOnCost, 2)} />
-              {d.dividends.upcoming[0] ? <Row label="Nächste Zahlung" sub="≈ erwartet" value={<>{monthLabel(d.dividends.upcoming[0].month)} · <Amount value={d.dividends.upcoming[0].cents / 100} /></>} /> : null}
-              {[...d.dividends.byYear].reverse().map((y) => (
-                <Row key={y.year} label={y.year} value={<Amount value={y.cents / 100} />} />
-              ))}
-            </Rows>
-          )}
-        </Section>
+        {/* Eckdaten zuerst im Quelltext (am Handy vor der langen Liste), am Desktop rechts */}
+        <div className={styles.split}>
+          <div className={styles.splitAside}>
+            <Section id="eckdaten" title="Eckdaten">
+              <Rows>
+                {first ? <Row label="Erste Buchung" value={dayLabel(first)} /> : null}
+                <Row label="Käufe" sub={lastBuy ? `${buys.length}× · zuletzt am ${dayLabel(lastBuy)}` : undefined} value={buys.length > 0 ? <Amount value={buySum / 100} /> : '–'} />
+                {sells.length > 0 ? <Row label="Verkäufe" sub={`${sells.length}× · realisiert`} value={<Amount value={d.realizedCents / 100} signed />} /> : null}
+                <Row label="Erträge bisher" sub="Dividenden, Zinsen" value={<Amount value={d.incomeCents / 100} />} />
+                <Row label="Gebühren bisher" sub="Kauf- und Verkaufsspesen" value={<Amount value={-d.feesCents / 100} signed />} />
+              </Rows>
+            </Section>
 
-        <Section id="steuer-wert" title="Steuer" meta="Schätzung" span="third">
-          {d.saleTaxCents === null ? (
-            <Note>{i.kind === 'metal' ? 'Edelmetalle: nach einem Jahr Haltedauer steuerfrei (Spekulationsfrist). Fristen je Kauf im Steuer-Cockpit.' : 'Für diese Anlage gibt es keine Schätzung.'}</Note>
-          ) : (
-            <Rows>
-              <Row label="KESt bei Verkauf heute" sub="27,5 % auf den Kursgewinn, ohne Verlustausgleich" value={<Amount value={-d.saleTaxCents / 100} signed />} />
-              <Row label="Erträge bisher" sub="Dividenden, Zinsen" value={<Amount value={d.incomeCents / 100} />} />
-              <Row label="Gebühren bisher" value={<Amount value={-d.feesCents / 100} signed />} />
-            </Rows>
-          )}
-          <TextLink href="/app/steuer">Zum Steuer-Cockpit</TextLink>
-        </Section>
-
-        <Section id="buchungen" title="Buchungen" meta={`${d.bookings.length} insgesamt`}>
-          <BookingList
-            remove={deleteBookingAction}
-            linkInstruments={false}
-            items={d.bookings.map((b) => {
-              const sign = SIGN[b.type] ?? 0
-              return {
-                id: b.id,
-                occurredOn: b.occurredOn,
-                type: b.type,
-                typeLabel: TYPE_LABEL[b.type] ?? b.type,
-                instrumentId: b.instrumentId,
-                instrumentName: b.instrumentName,
-                quantityText: b.quantity ? `${formatQuantity(quantityFromDb(b.quantity))} ${unit}` : '',
-                amount: b.amountCents ? (sign === 0 ? b.amountCents : sign * b.amountCents) / 100 : null,
-                signed: sign !== 0,
-                note: b.note,
-                imported: b.source === 'import',
-                editHref: `/app/depots/${b.portfolioId}/buchung/${b.id}`,
-              }
-            })}
-          />
-        </Section>
+            {d.dividends.byYear.length > 0 ? (
+              <Section id="dividenden" title="Dividenden" meta="brutto">
+                <Rows>
+                  <Row label="Letzte 12 Monate" value={<Amount value={d.dividends.last12Cents / 100} />} />
+                  <Row label="Rendite auf den Einstand" sub="≈ erwartet, 12 Monate" value={d.dividends.yieldOnCost === null ? '–' : share(d.dividends.yieldOnCost, 2)} />
+                  {d.dividends.upcoming[0] ? (
+                    <Row label="Nächste Zahlung" sub={`≈ erwartet im ${monthLabel(d.dividends.upcoming[0].month, 'long')}`} value={<Amount value={d.dividends.upcoming[0].cents / 100} />} />
+                  ) : null}
+                  {[...d.dividends.byYear].reverse().map((y) => (
+                    <Row key={y.year} label={y.year} value={<Amount value={y.cents / 100} />} />
+                  ))}
+                </Rows>
+              </Section>
+            ) : null}
+          </div>
+          <div className={styles.splitMain}>
+            <Section id="buchungen" title="Buchungen" meta={d.bookings.length === 1 ? '1 insgesamt' : `${d.bookings.length} insgesamt`}>
+              <BookingList
+                remove={deleteBookingAction}
+                linkInstruments={false}
+                context="instrument"
+                groupBy="year"
+                items={d.bookings.map((b) => {
+                  const amount = listAmount(b.type, b.amountCents)
+                  return {
+                    id: b.id,
+                    occurredOn: b.occurredOn,
+                    type: b.type,
+                    typeLabel: bookingTypeLabel(b.type),
+                    instrumentId: b.instrumentId,
+                    instrumentName: b.instrumentName,
+                    quantityText: b.quantity ? `${formatQuantity(quantityFromDb(b.quantity))} ${unit}` : '',
+                    amount: amount?.value ?? null,
+                    signed: amount?.signed ?? false,
+                    note: b.note,
+                    imported: b.source === 'import',
+                    editHref: `/app/depots/${b.portfolioId}/buchung/${b.id}`,
+                    unitPrice: unitPriceText(b.type, b.quantity, b.amountCents),
+                    portfolioName: bookingDepots.size > 1 ? (depotNames.get(b.portfolioId) ?? null) : null,
+                  }
+                })}
+              />
+            </Section>
+          </div>
+        </div>
       </Grid>
     </>
   )

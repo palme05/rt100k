@@ -29,6 +29,14 @@ test('Navigation: jede Seite erreichbar – Desktop oben mit „Mehr“, Handy m
     await expect(nav.getByRole('link', { name: 'Import' })).toBeVisible()
     await page.keyboard.press('Escape')
     await expect(nav.getByRole('link', { name: 'Import' })).toBeHidden()
+    // Rückblick-Unterseiten markieren „Mehr“, Depot-Unterseiten „Depots“
+    await expect(nav.getByRole('button', { name: /Mehr/ })).toHaveAttribute('aria-current', 'page')
+    // Kopfzeile bleibt einzeilig (feste Höhe), auch in schmalen Desktop-Fenstern
+    for (const width of [721, 1024, 1280, 1440]) {
+      await page.setViewportSize({ width, height: 800 })
+      const box = await page.getByRole('banner').boundingBox()
+      expect(box?.height, `Kopfzeile bei ${width} px`).toBeLessThanOrEqual(57)
+    }
   }
   await expectNoOverflow(page)
   expect(problems).toEqual([])

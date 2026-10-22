@@ -1,0 +1,31 @@
+/* Anteilsbalken in Tabellenzellen: Länge = Anteil an 100 %, eine Farbe,
+   Spur dahinter. Der Prozentwert steht immer als Text daneben. */
+
+.bar {
+  display: block;
+  flex: none;
+  overflow: visible;
+}
+
+.track {
+  fill: var(--chart-track);
+}
+
+.fill {
+  fill: var(--second);
+}
+
+/* Balken links, Prozent rechts – in einer Zeile, rechtsbündig */
+.cell {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-3);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.pct {
+  min-width: 3.25rem;
+  text-align: right;
+}

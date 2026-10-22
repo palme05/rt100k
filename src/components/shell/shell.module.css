@@ -1,79 +1,451 @@
-/* App-Rahmen: Kopfzeile mit Haarlinie, Inhalt in einer Spalte mit max. Breite. */
+/* App-Rahmen: klebende Kopfzeile in fester Höhe, Inhalt in einer Spalte,
+   am Handy Leiste unten mit „+“. Abstände nur aus Tokens. */
 
+.shell {
+  min-height: 100dvh;
+}
+
+/* Sprungmarken (z. B. #buchen) nicht unter der klebenden Kopfzeile */
+:global(html):has(.shell) {
+  scroll-padding-top: calc(var(--head-h) + env(safe-area-inset-top, 0px) + var(--space-4));
+}
+
+/* ── Sprunglink: erst bei Tastaturfokus sichtbar ─────────────────────────── */
+.skip {
+  position: absolute;
+  top: calc(env(safe-area-inset-top, 0px) + var(--space-2));
+  left: max(var(--gutter), env(safe-area-inset-left, 0px));
+  z-index: 70;
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-pill);
+  background: var(--ink);
+  color: var(--bg);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  translate: 0 calc(-100% - var(--space-6));
+  transition: translate 120ms ease-out;
+}
+
+.skip:focus,
+.skip:focus-visible {
+  translate: 0 0;
+}
+
+/* ── Kopfzeile ──────────────────────────────────────────────────────────── */
 .header {
-  border-bottom: 1px solid var(--rule);
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  padding-top: env(safe-area-inset-top, 0px);
   background: var(--bg);
+  border-bottom: 1px solid var(--rule);
+}
+
+/* Leicht durchscheinend, Inhalt läuft weich darunter (sonst deckend) */
+@supports (backdrop-filter: blur(1px)) {
+  .header {
+    background: color-mix(in oklab, var(--bg) 88%, transparent);
+    backdrop-filter: saturate(1.4) blur(14px);
+  }
 }
 
 .headerInner {
   max-width: var(--content-max);
+  height: var(--head-h);
   margin: 0 auto;
-  padding: 0 var(--gutter);
-  min-height: 3.5rem;
+  padding-inline: max(var(--gutter), env(safe-area-inset-left, 0px)) max(var(--gutter), env(safe-area-inset-right, 0px));
   display: flex;
+  flex-wrap: nowrap;
   align-items: center;
-  gap: var(--space-8);
-  flex-wrap: wrap;
+  gap: var(--space-6);
 }
 
 .brand {
+  flex: none;
   display: inline-flex;
   align-items: center;
-  gap: 0.55rem;
-  font-weight: var(--weight-semibold);
-  font-size: 1rem;
-  letter-spacing: -0.01em;
+  min-height: var(--hit);
+  margin-inline: calc(var(--space-2) * -1);
+  padding-inline: var(--space-2);
+  border-radius: var(--radius-md);
 }
 
-.brandMark {
-  display: block;
+.brand:focus-visible {
+  outline-offset: -2px;
 }
 
-.brandMark line:first-child {
-  stroke: var(--rule-strong);
+/* Wird nur in schmalen Desktop-Fenstern ausgeblendet (unten) */
+.brandWord {
+  white-space: nowrap;
 }
 
-.brandMark line:nth-child(2) {
-  stroke: var(--accent);
-}
-
-.brandMark circle {
-  fill: var(--accent);
-  stroke: var(--bg);
-}
-
+/* ── Navigation (Desktop) ── */
 .nav {
-  display: flex;
-  gap: var(--space-6);
+  flex: 0 1 auto;
+  min-width: 0;
   align-self: stretch;
+  display: flex;
+}
+
+.navList {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.navList > li {
+  position: relative;
+  display: flex;
+  align-items: center;
 }
 
 .navLink {
+  position: relative;
   display: inline-flex;
   align-items: center;
-  white-space: nowrap;
+  gap: var(--space-1);
+  height: var(--control-h-sm);
+  padding: 0 var(--space-3);
+  font: inherit;
   font-size: var(--text-md);
+  font-weight: var(--weight-medium);
+  line-height: 1;
   color: var(--ink-3);
-  border-bottom: 2px solid transparent;
-  margin-bottom: -1px;
+  white-space: nowrap;
+  background: none;
+  border: 0;
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+  transition:
+    color 120ms ease,
+    background-color 120ms ease;
 }
 
 .navLink:hover {
   color: var(--ink);
+  background: var(--wash);
 }
 
-.navLink[aria-current='page'] {
+.navLink[aria-current='page'],
+.navLink[aria-expanded='true'] {
   color: var(--ink);
-  border-bottom-color: var(--accent);
 }
 
+/* Aktive Seite: Akzent-Strich genau auf der Haarlinie der Kopfzeile */
+.navLink[aria-current='page']::after {
+  content: '';
+  position: absolute;
+  left: var(--space-3);
+  right: var(--space-3);
+  bottom: calc((var(--head-h) - var(--control-h-sm)) / -2 - 1px);
+  height: 2px;
+  border-radius: 2px 2px 0 0;
+  background: var(--accent);
+}
+
+.navLink:focus-visible {
+  outline-offset: -2px;
+  border-radius: var(--radius-pill);
+}
+
+/* Kurzform („Road“) nur in schmalen Desktop-Fenstern */
+.labelShort {
+  display: none;
+}
+
+.chevron {
+  flex: none;
+  margin-right: calc(var(--space-1) * -1);
+  color: var(--ink-3);
+  transition: rotate 120ms ease;
+}
+
+.navLink[aria-expanded='true'] .chevron {
+  rotate: 180deg;
+}
+
+/* ── Menü „Mehr“ (Desktop) ── */
+.more {
+  position: relative;
+}
+
+.moreList,
+.menu {
+  position: absolute;
+  top: calc(100% + (var(--head-h) - var(--control-h-sm)) / 2 + var(--space-1));
+  z-index: 40;
+  margin: 0;
+  padding: var(--space-1);
+  list-style: none;
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-menu);
+  animation: menuIn 120ms ease-out;
+}
+
+.moreList {
+  left: 0;
+  min-width: 15rem;
+}
+
+.moreList[hidden] {
+  display: none;
+}
+
+@keyframes menuIn {
+  from {
+    opacity: 0;
+    translate: 0 calc(var(--space-1) * -1);
+  }
+}
+
+.moreLink,
+.menuItem {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  min-height: 2.5rem;
+  padding: 0 var(--space-3);
+  font: inherit;
+  font-size: var(--text-md);
+  line-height: var(--leading-snug);
+  color: var(--ink-2);
+  text-align: left;
+  white-space: nowrap;
+  background: none;
+  border: 0;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.moreLink svg,
+.menuItem svg {
+  flex: none;
+  color: var(--ink-3);
+}
+
+.moreLink:hover,
+.moreLink[aria-current='page'],
+.menuItem:hover,
+.menuItem:focus-visible,
+.menuItem[aria-current='page'] {
+  background: var(--wash);
+  color: var(--ink);
+}
+
+.moreLink[aria-current='page'] svg,
+.menuItem[aria-current='page'] svg {
+  color: var(--ink);
+}
+
+.moreLink:focus-visible,
+.menuItem:focus-visible {
+  outline-offset: -2px;
+}
+
+.menuItem:disabled {
+  cursor: progress;
+  opacity: var(--opacity-muted);
+}
+
+/* ── Werkzeuge rechts ── */
 .tools {
+  flex: none;
   margin-left: auto;
   display: flex;
-  gap: var(--space-2);
   align-items: center;
+  gap: var(--space-1);
 }
 
+/* Neue Buchung: einzige gefüllte Schaltfläche der Kopfzeile */
+.addButton {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  height: var(--control-h-sm);
+  margin-left: var(--space-2);
+  padding: 0 var(--space-4) 0 var(--space-3);
+  border-radius: var(--radius-pill);
+  background: var(--ink);
+  color: var(--bg);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  line-height: 1;
+  white-space: nowrap;
+  transition: background-color 120ms ease;
+}
+
+.addButton svg {
+  flex: none;
+}
+
+a.addButton:hover {
+  background: var(--ink-2);
+}
+
+a.addButton:active {
+  translate: 0 1px;
+}
+
+/* Auf der Erfassungsseite: gleicher Platz, ruhig als „hier“ */
+.addHere {
+  background: var(--wash);
+  color: var(--ink-3);
+  cursor: default;
+}
+
+.divider {
+  flex: none;
+  width: 1px;
+  height: 1.25rem;
+  margin-inline: var(--space-2);
+  background: var(--rule-strong);
+}
+
+/* ── Konto-Menü ── */
+.account {
+  position: relative;
+  display: flex;
+}
+
+.accountButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: var(--control-h-sm);
+  height: var(--control-h-sm);
+  padding: 0;
+  background: transparent;
+  border: 0;
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+}
+
+.avatar,
+.menuAvatar {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  border-radius: var(--radius-pill);
+  font-weight: var(--weight-semibold);
+  line-height: 1;
+  letter-spacing: var(--tracking-snug);
+  color: var(--ink-2);
+  background: var(--wash);
+  border: 1px solid var(--rule-strong);
+}
+
+.avatar {
+  width: 1.875rem;
+  height: 1.875rem;
+  font-size: var(--text-2xs);
+  transition:
+    border-color 120ms ease,
+    color 120ms ease,
+    background-color 120ms ease;
+}
+
+.accountButton:hover .avatar,
+.accountButton[aria-expanded='true'] .avatar {
+  color: var(--ink);
+  border-color: var(--ink-3);
+}
+
+/* Auf Konto-Seiten: Ring in Tinte als „hier“ */
+.accountButton[data-active] .avatar {
+  color: var(--ink);
+  border-color: var(--ink);
+}
+
+.accountButton:focus-visible {
+  outline-offset: 0;
+}
+
+.menu {
+  right: 0;
+  width: 17rem;
+  max-width: calc(100vw - 2 * var(--gutter));
+}
+
+.menuUser {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3);
+}
+
+.menuAvatar {
+  width: 2.25rem;
+  height: 2.25rem;
+  font-size: var(--text-xs);
+}
+
+.menuWho {
+  display: grid;
+  min-width: 0;
+  line-height: var(--leading-snug);
+}
+
+.menuName,
+.menuEmail {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.menuName {
+  font-size: var(--text-md);
+  font-weight: var(--weight-semibold);
+  color: var(--ink);
+}
+
+.menuEmail {
+  font-size: var(--text-sm);
+  color: var(--ink-3);
+}
+
+.menuItems {
+  display: grid;
+  padding-top: var(--space-1);
+  border-top: 1px solid var(--rule);
+  margin-inline: calc(var(--space-1) * -1);
+  padding-inline: var(--space-1);
+}
+
+.menuSeparator {
+  height: 1px;
+  margin: var(--space-1) calc(var(--space-1) * -1);
+  background: var(--rule);
+}
+
+/* Konto im Blatt (Handy): gleicher Inhalt, größere Ziele */
+.menuSheet .menuUser {
+  padding-inline: 0;
+}
+
+.menuSheet .menuItems {
+  margin-inline: 0;
+  padding-inline: 0;
+}
+
+.menuSheet .menuSeparator {
+  margin-inline: 0;
+}
+
+.menuSheet .menuItem {
+  min-height: 3.25rem;
+  padding-inline: var(--space-2);
+  font-size: var(--text-base);
+  border-radius: var(--radius-md);
+}
+
+/* ── Inhalt ─────────────────────────────────────────────────────────────── */
 .main {
   max-width: var(--content-max);
   margin: 0 auto;
@@ -81,6 +453,11 @@
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   gap: var(--space-section);
+}
+
+/* Fokus landet nach dem Sprunglink hier – ohne Rahmen um die ganze Seite */
+.main:focus {
+  outline: none;
 }
 
 /* Seiteninhalt: gleiches Raster wie main, kurz einblenden */
@@ -95,146 +472,52 @@
 @keyframes enter {
   from {
     opacity: 0;
-    translate: 0 0.35rem;
+    translate: 0 var(--space-1);
   }
 }
 
-@media (max-width: 720px) {
-  .headerInner {
-    gap: var(--space-1) var(--space-4);
-    padding-block: 0.6rem 0;
-  }
-
-  /* Fünf Punkte und mehr: enger, notfalls innerhalb der Leiste wischen (nie die Seite) */
-  .nav {
-    order: 3;
-    width: 100%;
-    min-height: 2.5rem;
-    gap: var(--space-4);
-    overflow-x: auto;
-    scrollbar-width: none;
-  }
-
-  /* Suche ist am Handy über die Navigation erreichbar, Kürzel gibt es dort nicht */
-  .search {
-    display: none;
-  }
+/* ── Fehler in einer App-Seite (error.tsx, not-found.tsx) ────────────────── */
+.errorState {
+  display: grid;
+  gap: var(--space-8);
+  max-width: var(--measure);
 }
 
-/* Hinweis-Glocke: Symbol plus Zahl (nie nur Farbe) */
-.bell {
-  display: inline-flex;
+.errorActions {
+  display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 0.3rem;
+  gap: var(--space-3) var(--space-6);
 }
 
-.bell svg {
-  display: block;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 1.6;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-
-.bellCount {
-  font-size: var(--text-2xs);
-  font-weight: var(--weight-semibold);
-  font-variant-numeric: tabular-nums;
-  color: var(--bg);
-  background: var(--ink);
-  border-radius: var(--radius-pill);
-  padding: 0 0.4rem;
-  line-height: 1.35rem;
-}
-
-/* ── Neue Buchung: Knopf in der Kopfzeile (Desktop), „+“ unten (Handy) ── */
-
-.addButton {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.3rem;
-  min-height: 2.25rem;
-  padding: 0 0.85rem 0 0.6rem;
-  border-radius: var(--radius-pill);
-  background: var(--ink);
-  color: var(--bg);
+.errorCode {
+  flex-basis: 100%;
+  margin: 0;
   font-size: var(--text-sm);
-  font-weight: var(--weight-medium);
-  white-space: nowrap;
+  color: var(--ink-3);
 }
 
-.addButton:hover {
-  background: var(--ink-2);
+.errorCode code {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
 }
 
+/* ── Handy: Leiste unten, „+“ und Blätter ───────────────────────────────── */
+.tabbar,
 .fab {
   display: none;
 }
 
-/* ── Desktop: Menü „Mehr“ ─────────────────────────────────────────────── */
-
-.more {
-  position: relative;
-  display: flex;
-}
-
-.more > button {
-  background: none;
-  border: 0;
-  border-bottom: 2px solid transparent;
-  padding: 0;
-  font: inherit;
-  font-size: var(--text-md);
-  cursor: pointer;
-  gap: 0.3rem;
-}
-
-.moreList {
-  position: absolute;
-  top: 100%;
-  right: 0;
-  z-index: 30;
-  min-width: 15rem;
-  margin: 0.4rem 0 0;
-  padding: var(--space-2);
-  list-style: none;
-  background: var(--surface);
-  border: 1px solid var(--rule);
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-pop);
-}
-
-.moreLink {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  min-height: 2.75rem;
-  padding: 0 var(--space-3);
-  border-radius: var(--radius-sm);
-  color: var(--ink-2);
-  font-size: var(--text-md);
-}
-
-.moreLink:hover,
-.moreLink[aria-current='page'] {
-  background: var(--wash);
-  color: var(--ink);
-}
-
-/* ── Handy: Leiste unten und Blatt „Mehr“ ─────────────────────────────── */
-
-.tabbar {
-  display: none;
-}
-
 .sheet {
-  border: 0;
-  padding: 0;
-  margin: auto 0 0;
   width: 100%;
   max-width: 100%;
+  max-height: calc(100dvh - var(--space-12));
+  margin: auto 0 0;
+  padding: 0;
+  color: var(--ink);
   background: transparent;
+  border: 0;
+  overflow: visible;
 }
 
 .sheet::backdrop {
@@ -242,55 +525,59 @@
 }
 
 .sheetInner {
+  max-height: inherit;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: var(--space-2) max(var(--gutter), env(safe-area-inset-right, 0px)) calc(var(--space-6) + env(safe-area-inset-bottom, 0px)) max(var(--gutter), env(safe-area-inset-left, 0px));
   background: var(--surface);
   border-radius: var(--radius-lg) var(--radius-lg) 0 0;
-  padding: var(--space-4) var(--gutter) calc(var(--space-6) + env(safe-area-inset-bottom, 0px));
-  box-shadow: var(--shadow-pop);
+}
+
+.sheet[open] .sheetInner {
+  animation: rise 200ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+@keyframes rise {
+  from {
+    translate: 0 2rem;
+    opacity: 0.6;
+  }
 }
 
 .grip {
   display: block;
-  width: 2.5rem;
+  width: 2.25rem;
   height: 0.25rem;
   margin: 0 auto var(--space-2);
   border-radius: var(--radius-pill);
   background: var(--rule-strong);
 }
 
-.sheet[open] .sheetInner {
-  animation: rise 180ms ease-out;
-}
-
-@keyframes rise {
-  from {
-    translate: 0 1.5rem;
-    opacity: 0.6;
-  }
-}
-
 .sheetHead {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  font-weight: var(--weight-semibold);
+  gap: var(--space-4);
+  min-height: var(--hit);
   margin-bottom: var(--space-2);
 }
 
-.sheetClose {
-  min-width: 2.75rem;
-  min-height: 2.75rem;
-  border: 0;
-  background: none;
-  color: var(--ink-3);
-  font-size: 1.1rem;
-  cursor: pointer;
+.sheetHead > button {
+  margin-right: calc(var(--space-2) * -1);
+}
+
+.sheetTitle {
+  margin: 0;
+  font-size: var(--text-title);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-snug);
 }
 
 .sheetList {
-  list-style: none;
+  display: grid;
   margin: 0;
   padding: 0;
-  display: grid;
+  list-style: none;
 }
 
 .sheetLink {
@@ -299,114 +586,45 @@
   gap: var(--space-4);
   min-height: 3.25rem;
   padding: 0 var(--space-2);
-  border-bottom: 1px solid var(--rule);
+  border-radius: var(--radius-md);
   color: var(--ink);
 }
 
-.sheetLink[aria-current='page'] {
-  font-weight: var(--weight-semibold);
+.sheetLink svg {
+  flex: none;
+  color: var(--ink-2);
 }
 
-.sheetLink svg {
+.sheetLabel {
+  flex: 1;
+  min-width: 0;
+}
+
+.sheetLink .sheetChevron {
   color: var(--ink-3);
 }
 
-@media (max-width: 720px) {
-  .nav {
-    display: none;
-  }
-
-  /* Platz für Leiste und „+“, damit nichts darunter verschwindet */
-  .main {
-    padding-bottom: calc(10rem + env(safe-area-inset-bottom, 0px));
-  }
-
-  .addButton {
-    display: none;
-  }
-
-  .fab {
-    position: fixed;
-    right: max(var(--gutter), env(safe-area-inset-right, 0px));
-    bottom: calc(3.5rem + var(--space-4) + env(safe-area-inset-bottom, 0px));
-    z-index: 20;
-    display: grid;
-    place-items: center;
-    width: 3.5rem;
-    height: 3.5rem;
-    border-radius: var(--radius-pill);
-    background: var(--ink);
-    color: var(--bg);
-    box-shadow: var(--shadow-pop);
-    -webkit-tap-highlight-color: transparent;
-    transition:
-      transform 120ms ease-out,
-      opacity 160ms ease-out,
-      translate 200ms ease-out;
-  }
-
-  .fab:active {
-    transform: scale(0.94);
-  }
-
-  .fabHidden {
-    opacity: 0;
-    translate: 0 1.5rem;
-    pointer-events: none;
-  }
-
-  .tabbar {
-    position: fixed;
-    inset: auto 0 0;
-    z-index: 20;
-    display: grid;
-    grid-template-columns: repeat(5, minmax(0, 1fr));
-    padding: 0 max(var(--space-2), env(safe-area-inset-left, 0px)) env(safe-area-inset-bottom, 0px) max(var(--space-2), env(safe-area-inset-right, 0px));
-    background: var(--bg);
-    border-top: 1px solid var(--rule);
-  }
-
-  .tab {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 0.15rem;
-    min-height: 3.5rem;
-    padding: 0.35rem 0 0.3rem;
-    border: 0;
-    border-top: 2px solid transparent;
-    margin-top: -1px;
-    background: none;
-    font: inherit;
-    font-size: var(--text-2xs);
-    color: var(--ink-3);
-    cursor: pointer;
-    -webkit-tap-highlight-color: transparent;
-  }
-
-  .tab span {
-    max-width: 100%;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .tab[aria-current='page'] {
-    color: var(--ink);
-    border-top-color: var(--accent);
-  }
-
-  .tab:active {
-    background: var(--wash);
-  }
+.sheetLink:active,
+.sheetLink[aria-current='page'] {
+  background: var(--wash);
 }
 
-/* ── Aktualisieren: Knopf und Ziehen in der installierten App ─────────── */
+.sheetLink[aria-current='page'] {
+  font-weight: var(--weight-medium);
+}
 
+.sheetLink[aria-current='page'] svg {
+  color: var(--ink);
+}
+
+.sheetLink:focus-visible {
+  outline-offset: -2px;
+}
+
+/* ── Aktualisieren: Knopf und Ziehen in der installierten App ───────────── */
 .pull {
   position: fixed;
-  top: calc(env(safe-area-inset-top, 0px) + var(--space-3));
+  top: calc(env(safe-area-inset-top, 0px) + var(--head-h) + var(--space-3));
   left: 50%;
   z-index: 40;
   translate: -50% 0;
@@ -418,29 +636,34 @@
   background: var(--surface);
   color: var(--ink);
   font-size: var(--text-sm);
-  box-shadow: var(--shadow-pop);
+  box-shadow: var(--shadow-menu);
   animation: drop 160ms ease-out;
 }
 
 @keyframes drop {
   from {
     opacity: 0;
-    translate: -50% -0.75rem;
+    translate: -50% calc(var(--space-3) * -1);
   }
 }
 
 .refresh {
   display: inline-flex;
   align-items: center;
-  gap: 0.35rem;
-  min-height: 2.75rem;
+  gap: var(--space-2);
+  min-height: var(--control-h-sm);
   padding: 0;
   border: 0;
   background: none;
   font: inherit;
   font-size: var(--text-sm);
+  line-height: 1;
   color: var(--ink-2);
   cursor: pointer;
+}
+
+.refresh svg {
+  flex: none;
 }
 
 .refresh:hover {
@@ -461,8 +684,7 @@
   }
 }
 
-/* ── Seitenwechsel: Balken oben, solange die nächste Seite lädt ───────── */
-
+/* ── Seitenwechsel: Balken oben, solange die nächste Seite lädt ─────────── */
 .navProgress {
   position: fixed;
   top: env(safe-area-inset-top, 0px);
@@ -483,5 +705,233 @@
 
   to {
     transform: scaleX(0.9);
+  }
+}
+
+/* ═══ Breiten ══════════════════════════════════════════════════════════════
+   ≥ 1280 px  alles ausgeschrieben, Suche als Feld (command.module.css)
+   1024–1279  Suche als Symbol
+   721–1023   nur Logo-Zeichen, „Road“ statt „Road to 100k“, „+“ ohne Wort
+   ≤ 720 px   Leiste unten, oben nur Logo und Symbole (je 44 px) */
+
+@media (max-width: 1199px) {
+  .headerInner {
+    gap: var(--space-4);
+  }
+
+  .navList {
+    gap: 0;
+  }
+}
+
+@media (max-width: 1023px) {
+  /* Platz für 44-px-Ziele auf Tablets: Werkzeuge ohne Lücke, keine Trennlinie */
+  .headerInner {
+    gap: var(--space-3);
+  }
+
+  .tools {
+    gap: 0;
+  }
+
+  .divider {
+    display: none;
+  }
+
+  .addButton {
+    margin-inline: 0 var(--space-1);
+  }
+
+  .brandWord {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .navLink {
+    padding-inline: var(--space-2);
+  }
+
+  .navLink[aria-current='page']::after {
+    left: var(--space-2);
+    right: var(--space-2);
+  }
+
+  .labelFull {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .labelShort {
+    display: inline;
+  }
+
+  .addButton {
+    width: var(--control-h-sm);
+    justify-content: center;
+    padding: 0;
+  }
+
+  .addLabel {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+}
+
+@media (max-width: 720px) {
+  /* Alle Ziele oben mindestens 44 px, auch mit Maus im schmalen Fenster */
+  .header {
+    --control-h-sm: var(--hit);
+  }
+
+  .headerInner {
+    gap: var(--space-2);
+  }
+
+  .brandWord {
+    position: static;
+    width: auto;
+    height: auto;
+    overflow: visible;
+    clip-path: none;
+  }
+
+  .nav,
+  .addButton,
+  .divider {
+    display: none;
+  }
+
+  .tools {
+    gap: 0;
+    margin-right: calc(var(--space-2) * -1);
+  }
+
+  .menu {
+    display: none;
+  }
+
+  /* Platz für Leiste und „+“, damit am Ende nichts darunter verschwindet */
+  .main {
+    padding-bottom: calc(var(--page-bottom) + var(--tabbar-h) + env(safe-area-inset-bottom, 0px));
+  }
+
+  .fab {
+    position: fixed;
+    right: max(var(--gutter), env(safe-area-inset-right, 0px));
+    bottom: calc(var(--tabbar-h) + var(--space-4) + env(safe-area-inset-bottom, 0px));
+    z-index: 20;
+    display: grid;
+    place-items: center;
+    width: 3.25rem;
+    height: 3.25rem;
+    border-radius: var(--radius-pill);
+    background: var(--fab-bg);
+    color: var(--fab-ink);
+    border: 1px solid var(--fab-border);
+    box-shadow: var(--shadow-fab);
+    -webkit-tap-highlight-color: transparent;
+    transition:
+      transform 120ms ease-out,
+      opacity 160ms ease-out,
+      translate 200ms ease-out;
+  }
+
+  .fab:active {
+    transform: scale(0.94);
+  }
+
+  .fabHidden {
+    opacity: 0;
+    translate: 0 var(--space-6);
+    pointer-events: none;
+  }
+
+  .tabbar {
+    position: fixed;
+    inset: auto 0 0;
+    z-index: 20;
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    padding: 0 max(var(--space-1), env(safe-area-inset-right, 0px)) env(safe-area-inset-bottom, 0px) max(var(--space-1), env(safe-area-inset-left, 0px));
+    background: var(--bg);
+    border-top: 1px solid var(--rule);
+  }
+
+  .tab {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.125rem;
+    min-width: 0;
+    height: var(--tabbar-h);
+    padding: 0;
+    font: inherit;
+    color: var(--ink-2);
+    background: none;
+    border: 0;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Aktive Seite: weiche Pille hinter dem Symbol, Wort kräftiger */
+  .tabIcon {
+    display: grid;
+    place-items: center;
+    width: 3.5rem;
+    height: 1.75rem;
+    border-radius: var(--radius-pill);
+    transition:
+      background-color 160ms ease,
+      transform 120ms ease-out;
+  }
+
+  .tabLabel {
+    max-width: 100%;
+    overflow: hidden;
+    font-size: var(--text-2xs);
+    font-weight: var(--weight-medium);
+    line-height: var(--leading-snug);
+    color: var(--ink-3);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .tab[aria-current='page'] {
+    color: var(--ink);
+  }
+
+  .tab[aria-current='page'] .tabIcon {
+    background: var(--accent-wash);
+  }
+
+  .tab[aria-current='page'] .tabIcon svg {
+    stroke-width: 2;
+  }
+
+  .tab[aria-current='page'] .tabLabel {
+    color: var(--ink);
+    font-weight: var(--weight-semibold);
+  }
+
+  .tab:active .tabIcon {
+    transform: scale(0.92);
+  }
+
+  .tab:focus-visible {
+    outline-offset: -4px;
+    border-radius: var(--radius-md);
   }
 }

@@ -3,13 +3,15 @@
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useId, useMemo, useState, useTransition } from 'react'
-import { monthLabel } from '@/lib/display'
+import { dayLabel, monthLabel } from '@/lib/display'
+import { displayName } from '@/lib/names'
 import { haptic } from '../hooks/haptics'
 import { useSwipe } from '../hooks/useSwipe'
 import { Amount } from '../privacy/privacy'
+import { Icon } from '../shell/icons'
 import { Button, Input, Select } from '../ui/forms'
 import { Note } from '../ui/layout'
-import { Row, Rows } from '../ui/Rows'
+import { PriceText } from './PriceText'
 import styles from './bookings.module.css'
 
 /** Buchung für die Liste – auf dem Server fertig aufbereitet. */
@@ -29,24 +31,41 @@ export interface BookingListItem {
   note: string | null
   imported: boolean
   editHref: string
+  /** Kurs je Stück (Kauf, Verkauf, Übertrag), fertig formatiert: „97,41 €“ */
+  unitPrice?: string | null
+  /** Kurs passt nicht zum Schlusskurs des Tages (Plausibilitätsprüfung) */
+  flagged?: boolean
+  /** Depot der Buchung (nur auf der Wertpapier-Seite nötig) */
+  portfolioName?: string | null
 }
 
-const PAGE = 150
+/** So viele Zeilen zuerst, dann schrittweise mehr. */
+const PAGE = 25
 
 /**
  * Alle Buchungen mit Filter (Art, Wertpapier, Jahr) und Suche, nach Monat
- * gruppiert, schrittweise angezeigt. Bearbeiten und Löschen je Zeile –
- * per Tippen, Maus oder Tastatur; am Handy zusätzlich wischen (nach rechts
- * bearbeiten, nach links löschen). Löschen fragt immer einmal nach.
+ * (oder Jahr) gruppiert, schrittweise angezeigt. Eine Zeile je Buchung: Datum, Name,
+ * darunter Art, Stück und Kurs je Stück, rechts Betrag und zwei Symbol-
+ * Knöpfe (Bearbeiten, Löschen) – per Tippen, Maus oder Tastatur; am Handy
+ * zusätzlich wischen (nach rechts bearbeiten, nach links löschen). Löschen
+ * fragt immer einmal nach.
+ *
+ * `context="instrument"` (Wertpapier-Seite): der Name des Werts steht schon
+ * im Seitentitel – die Zeile zeigt die Art und das Depot statt des Namens.
  */
 export function BookingList({
   items,
   remove,
   linkInstruments = true,
+  context = 'portfolio',
+  groupBy = 'month',
 }: {
   items: readonly BookingListItem[]
   remove: (id: string) => Promise<{ ok: boolean; error: string | null }>
   linkInstruments?: boolean
+  context?: 'portfolio' | 'instrument'
+  /** Gruppen nach Monat (Standard) oder Jahr – Jahr für wenige Buchungen je Monat (Sparplan) */
+  groupBy?: 'month' | 'year'
 }) {
   const id = useId()
   const [type, setType] = useState('')
@@ -68,7 +87,7 @@ export function BookingList({
 
   const types = useMemo(() => [...new Map(items.map((b) => [b.type, b.typeLabel])).entries()].sort((a, b) => a[1].localeCompare(b[1], 'de')), [items])
   const instruments = useMemo(
-    () => [...new Map(items.filter((b) => b.instrumentId).map((b) => [b.instrumentId!, b.instrumentName ?? 'Unbekannt'])).entries()].sort((a, b) => a[1].localeCompare(b[1], 'de')),
+    () => [...new Map(items.filter((b) => b.instrumentId).map((b) => [b.instrumentId!, displayName(b.instrumentName ?? 'Unbekannt')])).entries()].sort((a, b) => a[1].localeCompare(b[1], 'de')),
     [items],
   )
   const years = useMemo(() => [...new Set(items.map((b) => b.occurredOn.slice(0, 4)))].sort().reverse(), [items])
@@ -80,19 +99,26 @@ export function BookingList({
         (!type || b.type === type) &&
         (!instrument || b.instrumentId === instrument) &&
         (!year || b.occurredOn.startsWith(year)) &&
-        (!q || [b.instrumentName, b.typeLabel, b.note].some((t) => t?.toLocaleLowerCase('de').includes(q))),
+        (!q || [b.instrumentName, b.typeLabel, b.note, b.portfolioName].some((t) => t?.toLocaleLowerCase('de').includes(q))),
     )
   }, [items, type, instrument, year, query])
 
   const shown = filtered.slice(0, limit)
-  const groups: { month: string; rows: BookingListItem[] }[] = []
+  const groups: { key: string; label: string; rows: BookingListItem[] }[] = []
   for (const b of shown) {
-    const month = b.occurredOn.slice(0, 7)
+    const key = groupBy === 'year' ? b.occurredOn.slice(0, 4) : b.occurredOn.slice(0, 7)
     const last = groups.at(-1)
-    if (last?.month === month) last.rows.push(b)
-    else groups.push({ month, rows: [b] })
+    if (last?.key === key) last.rows.push(b)
+    else groups.push({ key, label: groupBy === 'year' ? key : monthLabel(key, 'long'), rows: [b] })
   }
   const filteredActive = Boolean(type || instrument || year || query.trim())
+  const reset = () => {
+    setType('')
+    setInstrument('')
+    setYear('')
+    setQuery('')
+    setLimit(PAGE)
+  }
 
   const onRemove = (b: BookingListItem) =>
     start(async () => {
@@ -107,7 +133,7 @@ export function BookingList({
   return (
     <div className={styles.list}>
       <div className={styles.filters} role="search" aria-label="Buchungen filtern">
-        <label className={styles.filter}>
+        <label className={styles.search}>
           <span className="sr-only">Suchen</span>
           <Input id={`${id}-q`} type="search" placeholder="Suchen …" value={query} onChange={(e) => (setQuery(e.target.value), setLimit(PAGE))} autoComplete="off" />
         </label>
@@ -150,20 +176,11 @@ export function BookingList({
         ) : null}
       </div>
 
-      <p className={styles.count} aria-live="polite">
+      {/* Anzahl sichtbar nur mit Filter – sonst steht sie im Abschnittskopf; Screenreader hören sie immer */}
+      <p className={filteredActive ? styles.count : 'sr-only'} aria-live="polite">
         {filteredActive ? `${filtered.length} von ${items.length} Buchungen` : items.length === 1 ? '1 Buchung' : `${items.length} Buchungen`}
         {filteredActive ? (
-          <button
-            type="button"
-            className={styles.reset}
-            onClick={() => {
-              setType('')
-              setInstrument('')
-              setYear('')
-              setQuery('')
-              setLimit(PAGE)
-            }}
-          >
+          <button type="button" className={styles.reset} onClick={reset}>
             Filter zurücksetzen
           </button>
         ) : null}
@@ -174,51 +191,33 @@ export function BookingList({
         </p>
       ) : null}
 
-      {groups.map((g) => (
-        <section key={g.month} className={styles.month} aria-label={monthLabel(g.month, 'long')} {...swipe}>
-          <h3 className={styles.monthHead}>{monthLabel(g.month, 'long')}</h3>
-          <Rows>
-            {g.rows.map((b) => (
-              <Row
-                key={b.id}
-                swipeKey={b.id}
-                date={`${b.occurredOn.slice(8, 10)}.${b.occurredOn.slice(5, 7)}.`}
-                label={linkInstruments && b.instrumentId ? <Link href={`/app/wertpapier/${b.instrumentId}`}>{b.instrumentName ?? b.typeLabel}</Link> : (b.instrumentName ?? b.typeLabel)}
-                sub={
-                  <span className={styles.sub}>
-                    <span>
-                      {b.quantityText ? `${b.quantityText} · ` : ''}
-                      {b.typeLabel}
-                      {b.imported ? ' · Import' : ''}
-                    </span>
-                    {confirming === b.id ? (
-                      <span className={styles.actions} role="group" aria-label="Löschen bestätigen">
-                        <span className={styles.confirm}>Wirklich löschen?</span>
-                        <button type="button" className={styles.danger} disabled={pending} onClick={() => onRemove(b)} aria-label={`Ja, ${b.typeLabel} vom ${b.occurredOn} löschen`}>
-                          {pending ? 'Wird gelöscht …' : 'Ja, löschen'}
-                        </button>
-                        <button type="button" className={styles.action} disabled={pending} onClick={() => setConfirming(null)} autoFocus>
-                          Abbrechen
-                        </button>
-                      </span>
-                    ) : (
-                      <span className={styles.actions}>
-                        <Link href={b.editHref} className={styles.action} aria-label={`${b.typeLabel} vom ${b.occurredOn} bearbeiten`}>
-                          Bearbeiten
-                        </Link>
-                        <button type="button" className={styles.action} disabled={pending} onClick={() => setConfirming(b.id)} aria-label={`${b.typeLabel} vom ${b.occurredOn} löschen`}>
-                          Löschen
-                        </button>
-                      </span>
-                    )}
-                  </span>
-                }
-                value={b.amount === null ? '–' : <Amount value={b.amount} signed={b.signed} />}
-              />
-            ))}
-          </Rows>
-        </section>
-      ))}
+      <div className={styles.months}>
+        {groups.map((g) => {
+          const headId = `${id}-${g.key}`
+          return (
+            <div key={g.key} className={styles.month} role="group" aria-labelledby={headId} {...swipe}>
+              <h3 id={headId} className={styles.monthHead}>
+                {g.label}
+              </h3>
+              <ul className={styles.rows}>
+                {g.rows.map((b) => (
+                  <BookingRow
+                    key={b.id}
+                    b={b}
+                    context={context}
+                    linkInstruments={linkInstruments}
+                    confirming={confirming === b.id}
+                    pending={pending}
+                    onAsk={() => setConfirming(b.id)}
+                    onCancel={() => setConfirming(null)}
+                    onRemove={() => onRemove(b)}
+                  />
+                ))}
+              </ul>
+            </div>
+          )
+        })}
+      </div>
       {filtered.length === 0 ? <Note>Keine Buchung passt zu diesem Filter.</Note> : null}
       {filtered.length > limit ? (
         <Button variant="quiet" onClick={() => setLimit((l) => l + PAGE * 2)}>
@@ -226,5 +225,81 @@ export function BookingList({
         </Button>
       ) : null}
     </div>
+  )
+}
+
+function BookingRow({
+  b,
+  context,
+  linkInstruments,
+  confirming,
+  pending,
+  onAsk,
+  onCancel,
+  onRemove,
+}: {
+  b: BookingListItem
+  context: 'portfolio' | 'instrument'
+  linkInstruments: boolean
+  confirming: boolean
+  pending: boolean
+  onAsk: () => void
+  onCancel: () => void
+  onRemove: () => void
+}) {
+  const what = `${b.typeLabel} vom ${dayLabel(b.occurredOn)}`
+  const name = b.instrumentName ? displayName(b.instrumentName) : null
+  const showName = context === 'portfolio' && name !== null
+  const title = showName ? name : b.typeLabel
+  // Art steht in der Unterzeile nur, wenn der Titel der Name des Werts ist (kein „Zinsen / Zinsen“)
+  const facts = [showName ? b.typeLabel : null, context === 'instrument' ? (b.portfolioName ?? null) : null, b.quantityText || null].filter(Boolean).join(' · ')
+  const extra = [b.imported ? 'Import' : null, b.note].filter(Boolean).join(' · ')
+
+  return (
+    <li className={styles.row} data-swipe={b.id}>
+      <span className={styles.date}>{`${b.occurredOn.slice(8, 10)}.${b.occurredOn.slice(5, 7)}.`}</span>
+      <span className={styles.main}>
+        <span className={styles.title} title={showName && b.instrumentName !== name ? (b.instrumentName ?? undefined) : undefined}>
+          {showName && linkInstruments && b.instrumentId ? <Link href={`/app/wertpapier/${b.instrumentId}`}>{title}</Link> : title}
+        </span>
+        {facts || b.unitPrice || extra || b.flagged ? (
+          <span className={styles.sub}>
+            {facts}
+            {b.unitPrice ? (
+              <>
+                {facts ? ' ' : ''}à <PriceText text={b.unitPrice} />
+              </>
+            ) : null}
+            {extra ? `${facts || b.unitPrice ? ' · ' : ''}${extra}` : null}
+            {b.flagged ? (
+              <span className={styles.flag}>
+                <Icon name="alert" size={14} />
+                Kurs prüfen
+              </span>
+            ) : null}
+          </span>
+        ) : null}
+      </span>
+      <span className={styles.value}>{b.amount === null ? '–' : <Amount value={b.amount} signed={b.signed} />}</span>
+      <span className={styles.actions}>
+        <Link href={b.editHref} className={styles.icon} aria-label={`${what} bearbeiten`} title="Bearbeiten">
+          <Icon name="edit" size={18} />
+        </Link>
+        <button type="button" className={styles.iconDanger} disabled={pending} onClick={onAsk} aria-label={`${what} löschen`} title="Löschen" aria-expanded={confirming}>
+          <Icon name="trash" size={18} />
+        </button>
+      </span>
+      {confirming ? (
+        <span className={styles.confirm} role="group" aria-label="Löschen bestätigen">
+          <span className={styles.confirmText}>{what} wirklich löschen?</span>
+          <button type="button" className={styles.danger} disabled={pending} onClick={onRemove} aria-label={`Ja, ${what} löschen`}>
+            {pending ? 'Wird gelöscht …' : 'Ja, löschen'}
+          </button>
+          <button type="button" className={styles.cancel} disabled={pending} onClick={onCancel} autoFocus>
+            Abbrechen
+          </button>
+        </span>
+      ) : null}
+    </li>
   )
 }

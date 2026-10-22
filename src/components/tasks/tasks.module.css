@@ -1,6 +1,8 @@
+/* Offene Punkte: Zeilen wie jede Liste, rechts eine kleine Aktion (Text + Symbol). */
+
 .list {
   display: grid;
-  gap: var(--space-3);
+  gap: var(--space-stack);
 }
 
 .empty {
@@ -15,28 +17,76 @@
   font-size: var(--text-sm);
 }
 
-.done,
-.more {
+/* Aktion: Pill wie die Werkzeug-Knöpfe, ohne die Zeile höher zu machen */
+.action {
   display: inline-flex;
   align-items: center;
-  min-height: 2.75rem;
+  gap: var(--space-1);
+  min-height: 2rem;
+  margin-block: calc((1.5em - 2rem) / 2);
+  padding: 0 var(--space-3);
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+  font: inherit;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--ink-2);
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    border-color 120ms ease,
+    color 120ms ease;
+}
+
+.action:hover {
+  border-color: var(--field-border);
+  color: var(--ink);
+}
+
+.action:disabled {
+  opacity: var(--opacity-muted);
+  cursor: default;
+}
+
+.action svg {
+  flex: none;
+}
+
+@media (pointer: coarse) {
+  .action {
+    min-height: var(--hit);
+    margin-block: calc((1.5em - var(--hit)) / 2);
+  }
+}
+
+.more {
+  justify-self: start;
+  display: inline-flex;
+  align-items: center;
   padding: 0;
   border: 0;
   background: none;
   font: inherit;
   font-size: var(--text-sm);
   color: var(--ink-2);
-  white-space: nowrap;
   text-decoration: underline;
   text-underline-offset: 2px;
   cursor: pointer;
 }
 
-.done:hover,
 .more:hover {
   color: var(--ink);
 }
 
-.more {
-  justify-self: start;
+@media (pointer: coarse) {
+  .more {
+    min-height: var(--hit);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .action {
+    transition: none;
+  }
 }

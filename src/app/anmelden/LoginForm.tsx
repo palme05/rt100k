@@ -3,7 +3,8 @@
 import { useRouter } from 'next/navigation'
 import { useEffect, useId, useState } from 'react'
 import { Divider } from '@/components/shell/AuthFrame'
-import { Actions, Button, Field, Form, Input, Message } from '@/components/ui/forms'
+import { Icon } from '@/components/shell/icons'
+import { Button, Field, Form, Input, Message } from '@/components/ui/forms'
 import { authClient } from '@/lib/auth-client'
 import { authErrorMessage } from '@/lib/auth-errors'
 
@@ -69,6 +70,7 @@ export function LoginForm() {
     <>
       {error ? <Message tone="error">{error}</Message> : null}
       <Button variant="secondary" onClick={withPasskey} disabled={pending}>
+        <Icon name="key" size={18} />
         Mit Passkey anmelden
       </Button>
       <Divider>oder mit Passwort</Divider>
@@ -79,11 +81,10 @@ export function LoginForm() {
         <Field id={`${id}-password`} label="Passwort">
           <Input id={`${id}-password`} name="password" type="password" required autoComplete="current-password" minLength={12} />
         </Field>
-        <Actions>
-          <Button type="submit" disabled={pending}>
-            {pending ? 'Anmelden …' : 'Anmelden'}
-          </Button>
-        </Actions>
+        {/* direkt im Formular-Raster: volle Breite wie „Mit Passkey anmelden“ */}
+        <Button type="submit" disabled={pending} aria-busy={pending || undefined}>
+          {pending ? 'Anmelden …' : 'Anmelden'}
+        </Button>
       </Form>
     </>
   )

@@ -1,107 +1,37 @@
+/* Depot-Seiten (Liste, Detail, Wertpapier, Übersicht): nur Seitenaufbau –
+   Abstände aus den Rhythmus-Tokens, keine eigenen Farben. */
+
 .stack {
   display: grid;
   gap: var(--space-5);
+  align-content: start;
 }
 
-.muted {
+.hint {
   margin: 0;
+  color: var(--ink-2);
   font-size: var(--text-sm);
-  color: var(--ink-3);
+  line-height: var(--leading-meta);
+  max-width: var(--measure);
 }
 
-/* Instrumentsuche */
-.picker {
-  display: grid;
+.buttons {
+  display: flex;
+  flex-wrap: wrap;
   gap: var(--space-3);
 }
 
-.chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2);
-}
-
-.chip {
-  font: inherit;
-  font-size: var(--text-sm);
-  padding: 0.25rem 0.7rem;
-  border-radius: var(--radius-pill);
-  border: 1px solid var(--rule-strong);
-  background: var(--surface);
-  color: var(--ink-2);
-  cursor: pointer;
-}
-
-.chip:hover {
-  border-color: var(--ink-3);
-  color: var(--ink);
-}
-
-.chipActive {
-  composes: chip;
-  background: var(--ink);
-  border-color: var(--ink);
-  color: var(--bg);
-}
-
-.chipActive:hover {
-  color: var(--bg);
-}
-
-.results {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  border: 1px solid var(--rule);
-  border-radius: var(--radius-md);
-  background: var(--surface);
-  max-height: 18rem;
-  overflow-y: auto;
-}
-
-.results li + li {
-  border-top: 1px solid var(--rule);
-}
-
-.result {
-  font: inherit;
-  width: 100%;
-  text-align: left;
+/* mehrere Formulare in einem Abschnitt deutlich trennen */
+.forms {
   display: grid;
-  gap: 0.1rem;
-  padding: 0.6rem 0.8rem;
-  background: none;
-  border: none;
-  cursor: pointer;
-  color: var(--ink);
-}
-
-.result:hover,
-.result:focus-visible {
-  background: var(--wash);
-}
-
-.resultName {
-  font-weight: var(--weight-medium);
-}
-
-.resultDetail {
-  font-size: var(--text-sm);
-  color: var(--ink-3);
-}
-
-/* Gefahrenbereich */
-.danger {
-  display: grid;
-  gap: var(--space-4);
-  max-width: 32rem;
+  gap: var(--space-8);
 }
 
 .empty {
   display: grid;
   gap: var(--space-4);
   justify-items: start;
-  max-width: 36rem;
+  max-width: var(--measure);
 }
 
 .empty p {
@@ -115,21 +45,76 @@
   gap: var(--space-2);
 }
 
-.hint {
-  margin: 0;
-  color: var(--ink-2);
-  font-size: var(--text-sm);
-  max-width: 40rem;
-}
-
-.buttons {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-3);
-}
-
-/* mehrere Formulare in einem Abschnitt deutlich trennen */
-.forms {
+/* ── Hauptspalte + Seitenspalte ────────────────────────────────────────
+   Die Seitenspalte steht im Quelltext zuerst (am Handy oben), ab 1120px
+   rechts neben der Hauptspalte (8 + 4 Spalten wie Grid). Beide Spalten
+   stapeln ihre Abschnitte mit dem Abschnittsabstand. */
+.split {
+  grid-column: 1 / -1;
   display: grid;
-  gap: var(--space-10);
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-section) var(--space-section-x);
+  align-items: start;
+  min-width: 0;
+}
+
+.splitMain,
+.splitAside {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-section);
+  align-content: start;
+  min-width: 0;
+}
+
+@media (min-width: 1120px) {
+  .split {
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+  }
+
+  .split > .splitMain {
+    grid-column: 1 / span 8;
+    grid-row: 1;
+  }
+
+  .split > .splitAside {
+    grid-column: 9 / span 4;
+    grid-row: 1;
+  }
+}
+
+/* ── Verwaltung: Freigaben, Einstellungen, Löschen ruhig nebeneinander ── */
+.manage {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-10) var(--space-section-x);
+}
+
+@media (min-width: 820px) {
+  .manage {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1120px) {
+  .manage {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+.manageItem {
+  display: grid;
+  align-content: start;
+  min-width: 0;
+}
+
+/* Nur am Handy (wenn die Spalte „Anteil“ ausgeblendet ist) */
+.smOnly {
+  display: none;
+}
+
+@media (max-width: 720px) {
+  .smOnly {
+    display: block;
+  }
 }

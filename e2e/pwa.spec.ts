@@ -53,7 +53,8 @@ test('Offline: letzter Stand ohne Netz, beim Abmelden gelöscht', async ({ page,
   if (!isMobile) {
     // Abmelden löscht den gespeicherten Stand
     await page.goto('/app')
-    await page.getByRole('button', { name: 'Abmelden' }).click()
+    await page.getByRole('button', { name: /^Konto:/ }).click()
+    await page.getByRole('menuitem', { name: 'Abmelden' }).click()
     await page.waitForURL(/\/anmelden/)
     await expect.poll(() => page.evaluate(() => caches.has('rt100k-letzter-stand'))).toBe(false)
   }
