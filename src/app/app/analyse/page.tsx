@@ -1,17 +1,18 @@
 import Link from 'next/link'
 import { z } from 'zod'
+import { IncomeCalendar } from '@/components/analysis/IncomeCalendar'
 import { LookthroughPanel } from '@/components/analysis/LookthroughPanel'
 import { PerformancePanel } from '@/components/analysis/PerformancePanel'
 import { RebalancePanel } from '@/components/analysis/RebalancePanel'
+import { BarList } from '@/components/charts/charts'
 import { ASSET_KIND_SLOT, DonutChart } from '@/components/charts/DonutChart'
 import { IncomeChart } from '@/components/charts/IncomeChart'
 import { Amount } from '@/components/privacy/privacy'
 import button from '@/components/ui/button.module.css'
 import { DataTable, NameCell, Td, Th } from '@/components/ui/DataTable'
-import { Grid, Note, PageHead, Section } from '@/components/ui/layout'
+import { Grid, Muted, Note, PageHead, Section } from '@/components/ui/layout'
 import { Row, Rows } from '@/components/ui/Rows'
-import { Stats } from '@/components/ui/Summary'
-import { Trend } from '@/components/ui/Trend'
+import { KeyStats } from '@/components/ui/Summary'
 import { monthLabel, share } from '@/lib/display'
 import { ASSET_KIND_LABEL } from '@/lib/valuation'
 import { loadAnalysis } from '@/server/analysis'
@@ -25,6 +26,11 @@ export const metadata = { title: 'Analyse' }
 export const maxDuration = 60
 
 const params = z.object({ vergleich: z.uuid().optional().catch(undefined) })
+
+/** Betrag oder ein ruhiger Strich – keine Wände aus „0,00 €“. */
+function AmountOrDash({ value }: { value: number }) {
+  return value === 0 ? <Muted>–</Muted> : <Amount value={value} />
+}
 
 export default async function AnalysisPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const user = await requireUser()
@@ -45,8 +51,12 @@ export default async function AnalysisPage({ searchParams }: { searchParams: Pro
     )
   }
 
-  const { income, gains } = analysis
-  const years = income.byYear
+  const { income, gains, allocation } = analysis
+  const thisYear = analysis.today.slice(0, 4)
+  // Erträge und Kosten je Jahr in einer Tabelle, neueste zuerst
+  const incomeOf = new Map(income.byYear.map((y) => [y.year, y.amount]))
+  const costOf = new Map(analysis.costs.map((c) => [c.year, c]))
+  const years = [...new Set([...incomeOf.keys(), ...costOf.keys()])].sort((a, b) => (a < b ? 1 : -1))
 
   return (
     <>
@@ -67,94 +77,86 @@ export default async function AnalysisPage({ searchParams }: { searchParams: Pro
           {analysis.unpriced.length > 0 ? <Note>Ohne Kurse, mit dem Einstand bewertet: {analysis.unpriced.join(', ')}.</Note> : null}
         </Section>
 
-        <Section id="gewinne" title="Gewinne" meta="seit Beginn" span="third">
-          <Rows>
-            <Row label="Realisiert" sub="aus Verkäufen" value={<Amount value={gains.realized} signed />} />
-            <Row label="Nicht realisiert" sub="offene Positionen" value={<Amount value={gains.unrealized} signed />} />
-            <Row label="Dividenden und Zinsen" sub="brutto" value={<Amount value={gains.income} />} />
-            <Row label="Gebühren" value={<Amount value={-gains.fees} signed />} />
-            <Row label="Steuern" sub="laut Buchungen" value={<Amount value={-gains.taxes} signed />} />
-          </Rows>
-        </Section>
-
         <Section id="ertraege" title="Dividenden und Zinsen" meta="24 Monate · Prognose 12 Monate" span="twoThirds">
-          <Stats
+          <KeyStats
             items={[
-              { label: 'Letzte 12 Monate', value: <Amount value={income.last12} /> },
-              { label: 'Erwartet, 12 Monate', value: <Amount value={income.forecast12} /> },
-              { label: 'Yield on Cost', value: income.yieldOnCost !== null ? share(income.yieldOnCost, 2) : '–' },
+              { label: 'Letzte 12 Monate', value: <Amount value={income.last12} />, note: 'erhalten, brutto' },
+              { label: 'Erwartet, 12 Monate', value: <Amount value={income.forecast12} />, note: 'auf den heutigen Bestand' },
+              { label: 'Yield on Cost', value: income.yieldOnCost !== null ? share(income.yieldOnCost, 2) : '–', note: 'Dividenden ÷ Einstand' },
             ]}
           />
           {income.months.some((m) => m.amount > 0) ? (
             <>
               <IncomeChart income={income.months} />
-              <Note>Prognose: jede Zahlung der letzten 12 Monate einmal wiederholt, auf den heutigen Bestand umgerechnet. Yield on Cost = erwartete Dividenden ÷ Einstand der offenen Positionen.</Note>
+              <Note>Prognose: jede Zahlung der letzten 12 Monate einmal wiederholt, auf den heutigen Bestand umgerechnet. Yield on Cost ohne Zinsen.</Note>
             </>
           ) : (
             <Note>Noch keine Dividenden oder Zinsen in den letzten 24 Monaten.</Note>
           )}
         </Section>
 
-        <Section id="jahre" title="Erträge je Jahr" span="third">
-          {years.length === 0 ? (
-            <Note>Noch keine Erträge.</Note>
+        <Section id="kalender" title="Dividendenkalender" meta="≈ erwartet je Monat" span="third">
+          {income.calendar.length === 0 ? <Note>Noch keine Zahlungen, aus denen sich etwas erwarten lässt.</Note> : <IncomeCalendar payments={income.calendar} />}
+        </Section>
+
+        <Section id="klasse" title="Nach Anlageklasse" meta="Anteil am Vermögen" span="twoThirds">
+          {allocation.kind.length > 0 ? <DonutChart title="Zusammensetzung nach Anlageklasse" items={allocation.kind} slots={ASSET_KIND_SLOT} /> : <Note>Noch keine Werte.</Note>}
+        </Section>
+
+        <Section id="gewinne" title="Gewinne" meta="seit Beginn" span="third">
+          <Rows>
+            <Row label="Nicht realisiert" sub="offene Positionen" value={<Amount value={gains.unrealized} signed />} />
+            <Row label="Realisiert" sub="aus Verkäufen" value={<Amount value={gains.realized} signed />} />
+            <Row label="Dividenden und Zinsen" sub="brutto" value={<Amount value={gains.income} signed />} />
+            <Row label="Gebühren" sub="laut Buchungen" value={<Amount value={-gains.fees} signed />} />
+            <Row label="Steuern" sub="laut Buchungen" value={<Amount value={-gains.taxes} signed />} />
+          </Rows>
+        </Section>
+
+        <Section id="waehrung" title="Nach Handelswährung" span="third">
+          {allocation.currency.length > 0 ? <BarList title="Zusammensetzung nach Handelswährung" items={allocation.currency} /> : <Note>Noch keine Werte.</Note>}
+        </Section>
+
+        <Section id="depot" title="Nach Depot" span="third">
+          {allocation.portfolio.length > 0 ? (
+            <BarList title="Zusammensetzung nach Depot" items={allocation.portfolio.map((p) => ({ ...p, href: `/app/depots/${p.key}` }))} />
           ) : (
-            <Rows>
-              {[...years].reverse().map((y, i, all) => {
-                const previous = all[i + 1]
-                return (
-                  <Row
-                    key={y.year}
-                    label={y.year}
-                    sub={previous && previous.amount > 0 ? <Trend value={y.amount / previous.amount - 1} /> : undefined}
-                    value={<Amount value={y.amount} />}
-                  />
-                )
-              })}
-            </Rows>
+            <Note>Noch keine Werte.</Note>
           )}
         </Section>
 
-        <Section id="kosten" title="Gebühren und Steuern" meta="je Jahr" span="third">
-          {analysis.costs.length === 0 ? (
-            <Note>Keine Kosten gebucht.</Note>
+        <Section id="jahre" title="Je Jahr" meta="Erträge und Kosten" span="third">
+          {years.length === 0 ? (
+            <Note>Noch keine Erträge oder Kosten.</Note>
           ) : (
             <DataTable
-              caption="Gebühren und Steuern je Jahr"
+              caption="Erträge, Gebühren und Steuern je Jahr"
               head={
                 <>
-                  <Th>Jahr</Th>
+                  <Th left>Jahr</Th>
+                  <Th>Erträge</Th>
                   <Th>Gebühren</Th>
                   <Th>Steuern</Th>
                 </>
               }
             >
-              {[...analysis.costs].reverse().map((c) => (
-                <tr key={c.year}>
-                  <NameCell name={c.year} />
+              {years.map((year) => (
+                <tr key={year}>
+                  <NameCell name={year} sub={year === thisYear ? `bis ${monthLabel(analysis.today.slice(0, 7), 'long').split(' ')[0]}` : undefined} />
                   <Td>
-                    <Amount value={c.fees} />
+                    <AmountOrDash value={incomeOf.get(year) ?? 0} />
                   </Td>
                   <Td>
-                    <Amount value={c.taxes} />
+                    <AmountOrDash value={costOf.get(year)?.fees ?? 0} />
+                  </Td>
+                  <Td>
+                    <AmountOrDash value={costOf.get(year)?.taxes ?? 0} />
                   </Td>
                 </tr>
               ))}
             </DataTable>
           )}
           <Note>Laufende Fondskosten (TER) sind nicht enthalten – dafür fehlt noch eine kostenlose Datenquelle.</Note>
-        </Section>
-
-        <Section id="klasse" title="Nach Anlageklasse" span="third">
-          {analysis.allocation.kind.length > 0 ? <DonutChart title="Zusammensetzung nach Anlageklasse" items={analysis.allocation.kind} slots={ASSET_KIND_SLOT} /> : <Note>Noch keine Werte.</Note>}
-        </Section>
-
-        <Section id="waehrung" title="Nach Handelswährung" span="third">
-          {analysis.allocation.currency.length > 0 ? <DonutChart title="Zusammensetzung nach Handelswährung" items={analysis.allocation.currency} /> : <Note>Noch keine Werte.</Note>}
-        </Section>
-
-        <Section id="depot" title="Nach Depot" span="third">
-          {analysis.allocation.portfolio.length > 0 ? <DonutChart title="Zusammensetzung nach Depot" items={analysis.allocation.portfolio} /> : <Note>Noch keine Werte.</Note>}
         </Section>
 
         <Section id="durchschau" title="ETF-Durchschau" meta="Länder, Branchen und Einzeltitel hinter deinen ETFs">
@@ -169,21 +171,9 @@ export default async function AnalysisPage({ searchParams }: { searchParams: Pro
           />
         </Section>
 
-        <Section id="kalender" title="Dividendenkalender" meta="≈ erwartet, 12 Monate" span="third">
-          {income.calendar.length === 0 ? (
-            <Note>Noch keine Zahlungen, aus denen sich etwas erwarten lässt.</Note>
-          ) : (
-            <Rows>
-              {income.calendar.map((p) => (
-                <Row key={`${p.month}-${p.name}-${p.type}`} date={monthLabel(p.month)} label={p.name} sub={p.type === 'dividend' ? 'Dividende' : 'Zinsen'} value={<Amount value={p.amount} />} />
-              ))}
-            </Rows>
-          )}
-        </Section>
-
-        <Section id="rebalancing" title="Rebalancing" meta="Zielaufteilung nach Anlageklasse">
+        <Section label="Rebalancing">
           <RebalancePanel
-            classes={analysis.allocation.kind.map((k) => ({ key: k.key, label: k.label, value: k.value }))}
+            classes={allocation.kind.map((k) => ({ key: k.key, label: k.label, value: k.value }))}
             labels={ASSET_KIND_LABEL}
             targets={targets}
             defaultAmount={road.monthlyContributionCents / 100}
@@ -191,9 +181,6 @@ export default async function AnalysisPage({ searchParams }: { searchParams: Pro
           />
         </Section>
       </Grid>
-      <Note>
-        Zeitgewichtete Rendite (TTWROR): unabhängig davon, wann du ein- oder auszahlst – gut für den Vergleich mit einem ETF. Geldgewichtete Rendite (IZF): berücksichtigt den Zeitpunkt deiner Zahlungen – deine persönliche Rendite.
-      </Note>
     </>
   )
 }

@@ -155,8 +155,10 @@ export function monthReview(input: {
   const highlights: Highlight[] = []
   for (const m of milestones) highlights.push([{ text: 'Meilenstein ' }, { cents: m * 100 }, { text: ' erstmals erreicht.' }])
   if (record && milestones.length === 0) highlights.push([{ text: 'Neuer Höchststand: ' }, { cents: maxWithin }, { text: '.' }])
-  if (gainCents > 0) highlights.push([{ text: 'Die Kurse haben ' }, { cents: gainCents }, { text: ' beigetragen' }, ...(twr !== null ? [{ text: ' (' }, { pct: twr }, { text: ')' }] : []), { text: '.' }])
-  if (gainCents < 0) highlights.push([{ text: 'Die Kurse haben ' }, { cents: -gainCents }, { text: ' gekostet' }, ...(twr !== null ? [{ text: ' (' }, { pct: twr }, { text: ')' }] : []), { text: '.' }])
+  // Kurse ohne Dividenden und Zinsen – die stehen im eigenen Highlight
+  const marketCents = gainCents - incomeCents
+  if (marketCents > 0) highlights.push([{ text: 'Die Kurse haben ' }, { cents: marketCents }, { text: ' beigetragen' }, ...(twr !== null ? [{ text: ' (' }, { pct: twr }, { text: ')' }] : []), { text: '.' }])
+  if (marketCents < 0) highlights.push([{ text: 'Die Kurse haben ' }, { cents: -marketCents }, { text: ' gekostet' }, ...(twr !== null ? [{ text: ' (' }, { pct: twr }, { text: ')' }] : []), { text: '.' }])
   if (netInflowCents > 0) highlights.push([{ text: 'Du hast ' }, { cents: netInflowCents }, { text: ' investiert.' }])
   if (netInflowCents < 0) highlights.push([{ text: 'Netto flossen ' }, { cents: -netInflowCents }, { text: ' aus den Depots ab (Verkäufe, Ausschüttungen aufs Konto).' }])
   if (income.length > 0) highlights.push([{ text: `${income.length === 1 ? 'Eine Zahlung' : `${income.length} Zahlungen`} aus Dividenden und Zinsen: ` }, { cents: incomeCents }, { text: '.' }])

@@ -34,6 +34,8 @@ export type IconName =
   | 'dots'
   | 'arrowRight'
   | 'alert'
+  | 'upload'
+  | 'download'
 
 const PATHS: Record<IconName, string[]> = {
   home: ['M4 11.5 12 5l8 6.5', 'M6.5 10v9h11v-9'],
@@ -68,6 +70,8 @@ const PATHS: Record<IconName, string[]> = {
   dots: ['M5 12a1 1 0 1 0 2 0 1 1 0 1 0-2 0', 'M11 12a1 1 0 1 0 2 0 1 1 0 1 0-2 0', 'M17 12a1 1 0 1 0 2 0 1 1 0 1 0-2 0'],
   arrowRight: ['M5 12h13', 'M13 7l5 5-5 5'],
   alert: ['M12 4.5 21 19.5H3z', 'M12 10v4', 'M12 16.8v.01'],
+  upload: ['M12 16V4.5', 'M7.5 9 12 4.5 16.5 9', 'M5 15v4.5h14V15'],
+  download: ['M12 4.5V16', 'M7.5 11.5 12 16l4.5-4.5', 'M5 15v4.5h14V15'],
 }
 
 export function Icon({ name, size = 22, className }: { name: IconName; size?: number; className?: string | undefined }) {

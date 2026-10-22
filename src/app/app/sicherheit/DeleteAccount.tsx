@@ -11,9 +11,6 @@ export function DeleteAccount({ lastAdmin }: { lastAdmin: boolean }) {
   const [state, action, pending] = useActionState(deleteAccountAction, { error: null })
   return (
     <div className={styles.stack}>
-      <p className={styles.text}>
-        Löscht dein Konto mit allen Depots, Buchungen, dem Verlauf, Einstellungen, Passkeys und Sitzungen. Das lässt sich nicht rückgängig machen – lade vorher ein Backup herunter.
-      </p>
       {lastAdmin ? <Message tone="info">Du bist der einzige Admin. Mache zuerst eine zweite Person zum Admin.</Message> : null}
       {state.error ? <Message tone="error">{state.error}</Message> : null}
       <Form action={action}>

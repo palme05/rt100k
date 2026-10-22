@@ -1,5 +1,6 @@
-/* Anteilsbalken in Tabellenzellen: Länge = Anteil an 100 %, eine Farbe,
-   Spur dahinter. Der Prozentwert steht immer als Text daneben. */
+/* Anteilsbalken in Tabellenzellen: Länge = Anteil an 100 %, eine Farbe
+   (oder die Kategorie-Farbe aus dem Ring daneben), Spur dahinter.
+   Der Prozentwert steht immer als Text daneben. */
 
 .bar {
   display: block;
@@ -14,6 +15,16 @@
 .fill {
   fill: var(--second);
 }
+
+/* Farbe je Position wie im Ring daneben (Depot-Seite) */
+.cat1 { fill: var(--cat-1); }
+.cat2 { fill: var(--cat-2); }
+.cat3 { fill: var(--cat-3); }
+.cat4 { fill: var(--cat-4); }
+.cat5 { fill: var(--cat-5); }
+.cat6 { fill: var(--cat-6); }
+.cat7 { fill: var(--cat-7); }
+.cat8 { fill: var(--cat-8); }
 
 /* Balken links, Prozent rechts – in einer Zeile, rechtsbündig */
 .cell {

@@ -6,8 +6,8 @@ import { parseScaled } from '@/lib/quantity'
 import { rebalance } from '@/lib/rebalance'
 import { Amount } from '../privacy/privacy'
 import { DataTable, NameCell, Td, Th } from '../ui/DataTable'
-import { Actions, Button, Field, Input, Message, Select } from '../ui/forms'
-import { Note } from '../ui/layout'
+import { Button, Field, Input, Message } from '../ui/forms'
+import { Muted, Note, SectionHead } from '../ui/layout'
 import { Segmented } from '../ui/Segmented'
 import styles from './analysis.module.css'
 
@@ -36,6 +36,26 @@ function parseBp(text: string): number | null {
   if (t === '') return 0
   const v = parseScaled(t, 2)
   return v === null || v < 0n || v > 10_000n ? null : Number(v)
+}
+
+const BAR_W = 160
+const BAR_H = 6
+
+/**
+ * Ist gegen Ziel als schmaler Balken: Spur, Ist in der Zweitfarbe, Ziel als
+ * Tintenstrich. Gemeinsamer Maßstab für alle Klassen (größter Wert = volle
+ * Breite). Rein dekorativ – die Zahlen stehen daneben.
+ */
+function TargetBar({ actual, target, scale }: { actual: number; target: number | null; scale: number }) {
+  const x = (v: number) => Math.max(0, Math.min(1, v / scale)) * BAR_W
+  const filled = actual > 0 ? Math.max(BAR_H, x(actual)) : 0
+  return (
+    <svg className={styles.targetBar} viewBox={`0 0 ${BAR_W} 14`} preserveAspectRatio="none" aria-hidden="true" focusable="false">
+      <rect className={styles.barTrack} x={0} y={4} width={BAR_W} height={BAR_H} rx={BAR_H / 2} />
+      {filled > 0 ? <rect className={styles.barActual} x={0} y={4} width={filled} height={BAR_H} rx={BAR_H / 2} /> : null}
+      {target !== null && target > 0 ? <rect className={styles.barTarget} x={Math.min(BAR_W - 2, x(target) - 1)} y={0} width={2} height={14} rx={1} /> : null}
+    </svg>
+  )
 }
 
 /**
@@ -84,6 +104,12 @@ export function RebalancePanel({
   const byKind = new Map(rows.map((r) => [r.key, r]))
   const valueOf = new Map(classes.map((c) => [c.key, c.value]))
   const total = classes.reduce((s, c) => s + c.value, 0)
+  const actualOf = (k: string) => (total > 0 ? (valueOf.get(k) ?? 0) / total : 0)
+  const targetOf = (k: string) => {
+    const bp = parseBp(inputs[k] ?? '')
+    return bp === null ? null : bp / 10_000
+  }
+  const scale = Math.max(0.01, ...kinds.map((k) => Math.max(actualOf(k), targetOf(k) ?? 0)))
 
   const onSave = () =>
     start(async () => {
@@ -93,21 +119,20 @@ export function RebalancePanel({
 
   return (
     <>
-      <div className={styles.rebalanceHead}>
-        <div className={styles.amount}>
-          <Field id={`${id}-betrag`} label="Betrag für Nachkäufe (€)" hint="z. B. deine monatliche Sparrate">
-            <Input id={`${id}-betrag`} inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} />
-          </Field>
-        </div>
-        <Segmented label="Vorschlag" options={MODES} value={mode} onChange={setMode} />
+      <SectionHead id={`${id}-titel`} title="Rebalancing" meta="Zielaufteilung nach Anlageklasse" actions={<Segmented label="Vorschlag" options={MODES} value={mode} onChange={setMode} />} />
+
+      <div className={styles.amount}>
+        <Field id={`${id}-betrag`} label="Betrag für Nachkäufe (€)" hint={mode === 'nachkauf' ? 'z. B. deine monatliche Sparrate' : 'kommt beim Umschichten dazu'}>
+          <Input id={`${id}-betrag`} inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} />
+        </Field>
       </div>
 
       <DataTable
         caption="Zielaufteilung und Vorschlag je Anlageklasse"
+        align="middle"
         head={
           <>
-            <Th left>Klasse</Th>
-            <Th hideSm>Ist</Th>
+            <Th left>Klasse · Ist und Ziel</Th>
             <Th>Ziel %</Th>
             <Th hideSm>Abweichung</Th>
             <Th>{mode === 'nachkauf' ? 'Nachkaufen' : 'Kaufen/Verkaufen'}</Th>
@@ -120,8 +145,16 @@ export function RebalancePanel({
           const cents = r ? (mode === 'nachkauf' ? r.buyCents : r.tradeCents) : null
           return (
             <tr key={k}>
-              <NameCell name={labels[k] ?? k} sub={<Amount value={value} whole />} />
-              <Td hideSm>{total > 0 ? share(value / total) : '–'}</Td>
+              <NameCell
+                name={labels[k] ?? k}
+                sub={
+                  <>
+                    <Amount value={value} whole /> · Ist {total > 0 ? share(value / total) : '–'}
+                  </>
+                }
+              >
+                <TargetBar actual={actualOf(k)} target={targetOf(k)} scale={scale} />
+              </NameCell>
               <Td>
                 <span className={styles.targetInput}>
                   <Input
@@ -133,49 +166,47 @@ export function RebalancePanel({
                   />
                 </span>
               </Td>
-              <Td hideSm>{r ? points(r.deviation) : '–'}</Td>
-              <Td>{cents === null ? '–' : cents === 0 ? '–' : <Amount value={cents / 100} signed={mode === 'umschichten'} whole />}</Td>
+              <Td hideSm>{r ? points(r.deviation) : <Muted>–</Muted>}</Td>
+              <Td>{cents === null || cents === 0 ? <Muted>–</Muted> : <Amount value={cents / 100} signed={mode === 'umschichten'} whole />}</Td>
             </tr>
           )
         })}
       </DataTable>
 
-      <div className={styles.rebalanceFoot}>
+      <div className={styles.rebalanceFoot} data-flow="tight">
         <p className={sum === 10_000 && !invalid ? styles.sumOk : styles.sumOpen} aria-live="polite">
           {invalid ? '✗ Bitte nur Zahlen zwischen 0 und 100 eingeben.' : sum === 10_000 ? '✓ Summe der Ziele: 100 %' : `! Summe der Ziele: ${bpText(sum)} % – es fehlen ${bpText(10_000 - sum)} Prozentpunkte`}
         </p>
-        {missing.length > 0 ? (
-          <div className={styles.addKind}>
-            <Field id={`${id}-weitere`} label="Klasse hinzufügen">
-              <Select
-                id={`${id}-weitere`}
-                value=""
-                onChange={(e) => {
-                  const k = e.target.value
-                  if (k) setExtra((x) => [...x, k])
-                }}
-              >
-                <option value="">– wählen –</option>
-                {missing.map((k) => (
-                  <option key={k} value={k}>
-                    {labels[k]}
-                  </option>
-                ))}
-              </Select>
-            </Field>
-          </div>
-        ) : null}
+        <div className={styles.footActions}>
+          {missing.length > 0 ? (
+            <select
+              className={styles.pillSelect}
+              aria-label="Klasse hinzufügen"
+              value=""
+              onChange={(e) => {
+                const k = e.target.value
+                if (k) setExtra((x) => [...x, k])
+              }}
+            >
+              <option value="">+ Klasse hinzufügen</option>
+              {missing.map((k) => (
+                <option key={k} value={k}>
+                  {labels[k]}
+                </option>
+              ))}
+            </select>
+          ) : null}
+          <Button onClick={onSave} disabled={pending || !valid}>
+            Zielaufteilung speichern
+          </Button>
+        </div>
       </div>
-      <Actions>
-        <Button onClick={onSave} disabled={pending || !valid}>
-          Zielaufteilung speichern
-        </Button>
-      </Actions>
       {message ? <Message tone={message.tone}>{message.text}</Message> : null}
       <Note>
         {mode === 'nachkauf'
           ? 'Nur nachkaufen: Der Betrag füllt zuerst die am stärksten untergewichteten Klassen auf – ohne Verkauf, also ohne KESt. Eignet sich auch als Aufteilung der Sparrate.'
-          : 'Voll umschichten: Käufe und Verkäufe bis zur exakten Zielaufteilung. Jeder Verkauf mit Gewinn löst in Österreich KESt aus (27,5 %).'}
+          : 'Voll umschichten: Käufe und Verkäufe bis zur exakten Zielaufteilung. Jeder Verkauf mit Gewinn löst in Österreich KESt aus (27,5 %).'}{' '}
+        Balken: Ist-Anteil, Strich: Ziel.
       </Note>
     </>
   )

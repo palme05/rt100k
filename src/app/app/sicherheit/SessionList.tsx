@@ -2,6 +2,7 @@
 
 import { useTransition } from 'react'
 import { Actions, Button } from '@/components/ui/forms'
+import { Note } from '@/components/ui/layout'
 import { Row, Rows } from '@/components/ui/Rows'
 import { formatDate, formatTime } from '@/lib/format'
 import type { SessionDto } from '@/server/dal/sessions'
@@ -28,10 +29,13 @@ export function SessionList({ sessions }: { sessions: readonly SessionDto[] }) {
           />
         ))}
       </Rows>
+      {sessions.length < 2 ? <Note>Keine anderen Geräte angemeldet.</Note> : null}
       <Actions>
-        <Button variant="secondary" disabled={pending || sessions.length < 2} onClick={() => start(() => revokeOtherSessionsAction())}>
-          Alle anderen abmelden
-        </Button>
+        {sessions.length >= 2 ? (
+          <Button variant="secondary" disabled={pending} onClick={() => start(() => revokeOtherSessionsAction())}>
+            Alle anderen abmelden
+          </Button>
+        ) : null}
         <Button variant="danger" disabled={pending} onClick={() => start(() => revokeAllSessionsAction())}>
           Überall abmelden
         </Button>

@@ -38,7 +38,7 @@ export function AgeReportForm({ funds, today, action }: { funds: readonly AgeFun
   return (
     <div className={styles.ageForm}>
       {state.message && (state.ok || !state.field) ? <Message tone={state.ok ? 'success' : 'error'}>{state.message}</Message> : null}
-      <Form action={submit} key={formKey}>
+      <Form action={submit} key={formKey} wide>
         <Field id={`${id}-fund`} label="Fonds und Depot" hint={fund?.isin ? `ISIN ${fund.isin} – auf my.oekb.at danach suchen` : undefined}>
           <Select
             id={`${id}-fund`}
@@ -58,10 +58,10 @@ export function AgeReportForm({ funds, today, action }: { funds: readonly AgeFun
           </Select>
         </Field>
         <FormRow>
-          <Field id={`${id}-date`} label="Meldedatum" hint="Datum der Meldung laut OeKB" error={err('reportDate')}>
+          <Field id={`${id}-date`} label="Meldedatum" hint="laut OeKB-Meldung" error={err('reportDate')}>
             <Input id={`${id}-date`} name="reportDate" type="date" required max={today} {...describedBy(`${id}-date`, true, err('reportDate'))} />
           </Field>
-          <Field id={`${id}-unit`} label="AGE je Anteil" hint="„Ausschüttungsgleiche Erträge“, Privatanleger" error={err('perUnit')}>
+          <Field id={`${id}-unit`} label="AGE je Anteil" hint="Privatanleger" error={err('perUnit')}>
             <Input id={`${id}-unit`} name="perUnit" inputMode="decimal" required placeholder="z. B. 1,6943" {...describedBy(`${id}-unit`, true, err('perUnit'))} />
           </Field>
         </FormRow>
@@ -80,10 +80,10 @@ export function AgeReportForm({ funds, today, action }: { funds: readonly AgeFun
               <Input id={`${id}-rate`} name="rate" inputMode="decimal" required placeholder="z. B. 1,0850" {...describedBy(`${id}-rate`, true, err('rate'))} />
             </Field>
           ) : null}
+          <Field id={`${id}-tax`} label="Bezahlte KESt in €" hint={fund?.taxSimple ? 'optional – steuereinfache Banken buchen AGE meist selbst' : 'optional, meist leer bei ausländischen Depots'} error={err('tax')}>
+            <Input id={`${id}-tax`} name="tax" inputMode="decimal" {...describedBy(`${id}-tax`, true, err('tax'))} />
+          </Field>
         </FormRow>
-        <Field id={`${id}-tax`} label="Bezahlte KESt in €" hint={fund?.taxSimple ? 'optional – steuereinfache Banken buchen AGE meist selbst (dann lieber die Ertragsmitteilung importieren)' : 'optional, meist leer bei ausländischen Depots'} error={err('tax')}>
-          <Input id={`${id}-tax`} name="tax" inputMode="decimal" {...describedBy(`${id}-tax`, true, err('tax'))} />
-        </Field>
         <Actions>
           <Button type="submit" disabled={pending || !fundKey}>
             {pending ? 'Rechnen …' : 'AGE buchen'}

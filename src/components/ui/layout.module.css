@@ -88,8 +88,10 @@
   line-height: var(--leading-snug);
 }
 
+/* Unterüberschrift im Abschnitt: kleiner und leiser als der Abschnittstitel */
 h3.title {
-  font-size: var(--text-base);
+  font-size: var(--text-md);
+  color: var(--ink-2);
 }
 
 .meta {

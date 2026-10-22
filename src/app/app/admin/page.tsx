@@ -1,7 +1,7 @@
 import { DataTable, NameCell, Td, Th } from '@/components/ui/DataTable'
 import { Grid, Note, PageHead, Section } from '@/components/ui/layout'
 import { Row, Rows } from '@/components/ui/Rows'
-import { Stats } from '@/components/ui/Summary'
+import { KeyStats } from '@/components/ui/Summary'
 import { formatDate } from '@/lib/format'
 import { requireAdmin } from '@/server/auth/session'
 import { listInvitations } from '@/server/dal/invitations'
@@ -17,6 +17,7 @@ export default async function AdminPage() {
   const admin = await requireAdmin()
   const [users, invitations, dbBytes] = await Promise.all([listUsers(admin), listInvitations(admin), databaseSizeBytes(admin)])
   const mb = (dbBytes / 1_048_576).toFixed(1).replace('.', ',')
+  const share = `${((dbBytes / 1_073_741_824) * 100).toFixed(1).replace('.', ',')} %`
 
   return (
     <>
@@ -43,12 +44,12 @@ export default async function AdminPage() {
             </Rows>
           )}
         </Section>
-        <Section id="nutzer" title="Nutzer" meta={`${users.length} Konten`}>
+        <Section id="nutzer" title="Nutzer" meta={`${users.length} Konten`} span="twoThirds">
           <DataTable
             caption="Nutzerkonten"
             head={
               <>
-                <Th>Name</Th>
+                <Th left>Name</Th>
                 <Th>Rolle</Th>
                 <Th hideSm>2FA</Th>
                 <Th hideSm>Passkeys</Th>
@@ -67,9 +68,9 @@ export default async function AdminPage() {
             ))}
           </DataTable>
         </Section>
-        <Section id="betrieb" title="Betrieb" meta="Neon Free: 1 GB Speicher, 100 CU-Stunden/Monat">
-          <Stats items={[{ label: 'Datenbankgröße', value: `${mb} MB` }]} />
-          <Note>Der CU-Verbrauch braucht einen Neon-API-Schlüssel und folgt in Phase 6 (Neon-Konsole → Usage).</Note>
+        <Section id="betrieb" title="Betrieb" meta="Neon Free" span="third">
+          <KeyStats items={[{ label: 'Datenbankgröße', value: `${mb} MB`, note: `${share} von 1 GB Speicher` }]} />
+          <Note>Rechenzeit (100 CU-Stunden im Monat) steht in der Neon-Konsole unter „Usage“ – dafür bräuchte es sonst einen API-Schlüssel.</Note>
         </Section>
       </Grid>
     </>

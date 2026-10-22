@@ -8,30 +8,48 @@
   container-type: inline-size;
 }
 
-/* ── Filter: Suche breiter, Auswahlfelder gleich breit, kompakte Höhe ── */
+/* ── Filter: schmal zweispaltig (Suche und Auswahlfelder füllen Paare,
+   bei zwei Auswahlfeldern steht die Suche allein oben), breit alles in
+   einer Zeile mit breiterer Suche ────────────────────────────────────── */
 .filters {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--space-2);
 }
 
-.search {
-  display: block;
-  flex: 2 1 12rem;
-  min-width: 0;
+.filters:has(> :nth-child(3):last-child) > .search {
+  grid-column: 1 / -1;
 }
 
+.search,
 .filter {
   display: block;
-  flex: 1 1 8rem;
   min-width: 0;
 }
 
-.filters .search input,
-.filters .filter select {
-  min-height: var(--control-h-sm);
-  height: var(--control-h-sm);
-  font-size: var(--text-md);
+@container (min-width: 36rem) {
+  .filters {
+    display: flex;
+    flex-wrap: wrap;
+  }
+
+  .search {
+    flex: 2 1 12rem;
+  }
+
+  .filter {
+    flex: 1 1 8rem;
+  }
+}
+
+/* Maus: kompakte Filter. Touch behält 44 px und 16 px Schrift (kein Zoom unter iOS). */
+@media (pointer: fine) {
+  .filters .search input,
+  .filters .filter select {
+    min-height: var(--control-h-sm);
+    height: var(--control-h-sm);
+    font-size: var(--text-md);
+  }
 }
 
 .count {
@@ -135,7 +153,8 @@
 .date {
   grid-area: date;
   font-size: var(--text-sm);
-  line-height: var(--leading-body);
+  /* gleiche Zeilenhöhe wie der Titel daneben – Grundlinien fluchten */
+  line-height: calc(var(--text-base) * var(--leading-body));
   color: var(--ink-3);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
@@ -166,6 +185,26 @@
   line-height: var(--leading-meta);
   color: var(--ink-3);
   font-variant-numeric: tabular-nums;
+}
+
+/* Wertpapier-Seite: Art und Details in einer Zeile, wenn Platz ist –
+   die Details beginnen bei allen Zeilen an derselben Stelle */
+@container (min-width: 36rem) {
+  .inline .main {
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-4);
+  }
+
+  .inline .title {
+    flex: none;
+    min-width: 6.5rem;
+  }
+
+  .inline .sub {
+    min-width: 0;
+    line-height: calc(var(--text-base) * var(--leading-body));
+  }
 }
 
 /* Kurs auffällig, aber nicht über Farbe allein: Symbol + Text */
@@ -267,6 +306,13 @@
   .icon {
     transition: none;
   }
+}
+
+/* „Weitere anzeigen“ mittig unter der Liste */
+.more {
+  margin: 0;
+  display: flex;
+  justify-content: center;
 }
 
 /* ── Löschen bestätigen: eigene Zeile unter der Buchung ─────────────── */

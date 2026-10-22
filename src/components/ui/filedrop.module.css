@@ -1,10 +1,21 @@
-/* Upload-Fläche: gestrichelte Haarlinie, beim Ziehen und bei Fokus im Akzent. */
+/* Upload-Fläche: gestrichelter Rand, Symbol, Text und ein sichtbarer Knopf.
+   Breit nebeneinander, schmal untereinander. Zustände: Hover (Wash),
+   Ziehen (Tinte, durchgezogen), Fokus (Akzent-Ring), gesperrt (gedämpft). */
 
 .zone {
+  container-type: inline-size;
   position: relative;
-  border: 1px dashed var(--rule-strong);
+  border: 1px dashed var(--field-border);
   border-radius: var(--radius-lg);
   background: var(--surface);
+  transition:
+    background-color 120ms ease,
+    border-color 120ms ease;
+}
+
+.zone:hover {
+  border-color: var(--ink-3);
+  background: var(--wash);
 }
 
 .zone:focus-within {
@@ -12,9 +23,11 @@
   outline-offset: 3px;
 }
 
-.over {
-  border-color: var(--accent);
-  background: var(--accent-wash);
+.over,
+.over:hover {
+  border-style: solid;
+  border-color: var(--ink);
+  background: var(--wash);
 }
 
 /* Sichtbar versteckt, aber fokussierbar */
@@ -29,26 +42,121 @@
 
 .label {
   display: grid;
-  gap: var(--space-2);
+  grid-template-columns: minmax(0, 1fr);
   justify-items: center;
+  gap: var(--space-3);
   padding: var(--space-8) var(--space-5);
   text-align: center;
   cursor: pointer;
 }
 
-.input:disabled + .label {
-  cursor: progress;
-  color: var(--ink-3);
+@container (min-width: 34rem) {
+  .label {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    justify-items: start;
+    gap: var(--space-5);
+    padding: var(--space-6) var(--space-6);
+    text-align: left;
+  }
 }
 
-.title {
-  font-size: var(--text-lg);
-  font-weight: var(--weight-semibold);
+/* Schmale Spalte: kleiner, immer untereinander */
+.compact .label {
+  grid-template-columns: minmax(0, 1fr);
+  justify-items: center;
+  gap: var(--space-2);
+  padding: var(--space-6) var(--space-4);
+  text-align: center;
+}
+
+.input:disabled + .label {
+  cursor: progress;
+  opacity: var(--opacity-muted);
+}
+
+.icon {
+  display: inline-grid;
+  place-items: center;
+  width: var(--control-h);
+  height: var(--control-h);
+  border-radius: var(--radius-pill);
+  background: var(--wash);
+  color: var(--ink-2);
+}
+
+.zone:hover .icon,
+.over .icon {
+  background: var(--surface);
   color: var(--ink);
 }
 
+.text {
+  display: grid;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.title {
+  font-size: var(--text-base);
+  font-weight: var(--weight-semibold);
+  line-height: var(--leading-snug);
+  color: var(--ink);
+}
+
+/* Ziehen gibt es nur mit Maus/Trackpad – am Touch-Gerät der Text ohne „ziehen“ */
+.touch {
+  display: none;
+}
+
+@media (pointer: coarse) {
+  .pointer {
+    display: none;
+  }
+
+  .touch {
+    display: inline;
+  }
+}
+
 .hint {
-  max-width: 36rem;
+  max-width: var(--measure);
   font-size: var(--text-sm);
+  line-height: var(--leading-meta);
   color: var(--ink-3);
+  text-wrap: pretty;
+}
+
+/* Sieht aus wie ein Zweitknopf – die ganze Fläche ist klickbar */
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--control-h-sm);
+  padding: 0 var(--space-4);
+  border: 1px solid var(--field-border);
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+  color: var(--ink);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  white-space: nowrap;
+  transition:
+    border-color 120ms ease,
+    background-color 120ms ease;
+}
+
+.zone:hover .button {
+  border-color: var(--ink-2);
+}
+
+.compact .button {
+  margin-top: var(--space-2);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .zone,
+  .button {
+    transition: none;
+  }
 }

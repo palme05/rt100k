@@ -1,11 +1,11 @@
 import Link from 'next/link'
 import { z } from 'zod'
+import { DeltaBars } from '@/components/charts/charts'
 import { Amount } from '@/components/privacy/privacy'
-import { Highlights, IssueList, Masthead } from '@/components/review/ReviewParts'
+import { Highlights, IssueList, IssuePager, Lead } from '@/components/review/ReviewParts'
 import button from '@/components/ui/button.module.css'
-import { Grid, Note, PageHead, Section } from '@/components/ui/layout'
+import { Disclaimer, Grid, Muted, Note, PageHead, Section, SectionHead } from '@/components/ui/layout'
 import { Row, Rows } from '@/components/ui/Rows'
-import { Stats } from '@/components/ui/Summary'
 import { Trend } from '@/components/ui/Trend'
 import { dayLabel } from '@/lib/display'
 import { monthLabel } from '@/lib/review'
@@ -17,6 +17,11 @@ export const metadata = { title: 'Monatsrückblick' }
 export const maxDuration = 60
 
 const params = z.object({ monat: z.array(z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/)).max(1).optional().catch(undefined) })
+
+/** Betrag oder ein ruhiger Strich, wenn nichts war. */
+function Value({ cents, signed = false }: { cents: number; signed?: boolean }) {
+  return cents === 0 ? <Muted>–</Muted> : <Amount value={cents / 100} signed={signed} />
+}
 
 export default async function ReviewPage({ params: routeParams }: { params: Promise<{ monat?: string[] }> }) {
   const user = await requireUser()
@@ -39,10 +44,32 @@ export default async function ReviewPage({ params: routeParams }: { params: Prom
 
   const { review: r, months, names } = data
   const nameOf = (id: string | null) => (id ? (names[id] ?? 'Unbekannt') : 'Zinsen (Konto)')
+  // Ausgaben: neueste zuerst; die Nummer zählt ab der ersten Ausgabe
+  const index = months.indexOf(r.month)
+  const issue = months.length - index
+  const older = months[index + 1] ?? null
+  const newer = index > 0 ? (months[index - 1] ?? null) : null
+  const worst = r.worst.filter((w) => !r.best.some((b) => b.instrumentId === w.instrumentId))
+  const movers = [
+    { title: 'Stärkste', items: r.best },
+    { title: 'Schwächste', items: worst },
+  ].filter((g) => g.items.length > 0)
+  // Kurse ohne Erträge, damit Kurse + Erträge + Zu-/Abflüsse die Veränderung ergeben
+  const marketCents = r.gainCents - r.incomeCents
 
   return (
     <>
-      <Masthead issue={`Monatsrückblick · ${r.label}${r.partial ? ' · bis heute' : ''}`} headline={r.headline}>
+      <PageHead
+        id="rueckblick-titel"
+        eyebrow={`Monatsrückblick · ${r.label}${r.partial ? ' · bis heute' : ''} · Ausgabe ${issue}`}
+        title={r.headline}
+        actions={
+          <IssuePager
+            prev={older ? { href: `/app/rueckblick/${older}`, label: monthLabel(older) } : null}
+            next={newer ? { href: `/app/rueckblick/${newer}`, label: monthLabel(newer) } : null}
+          />
+        }
+      >
         Vermögen <Amount value={r.startCents / 100} /> → <Amount value={r.endCents / 100} />
         {r.twr !== null ? (
           <>
@@ -50,20 +77,30 @@ export default async function ReviewPage({ params: routeParams }: { params: Prom
             · Rendite <Trend value={r.twr} />
           </>
         ) : null}
-      </Masthead>
+      </PageHead>
 
       <Grid>
         <Section label="Zahlen des Monats">
           <h2 className="sr-only">Zahlen des Monats</h2>
-          <Stats
-            items={[
+          <Lead
+            label="Veränderung im Monat"
+            value={r.changeCents / 100}
+            stats={[
               { label: 'Vermögen am Ende', value: <Amount value={r.endCents / 100} /> },
-              { label: 'Veränderung', value: <Amount value={r.changeCents / 100} signed /> },
-              { label: 'Davon Kurse', value: <Amount value={r.gainCents / 100} signed /> },
-              { label: 'Davon Zu- und Abflüsse', value: <Amount value={r.netInflowCents / 100} signed /> },
-              { label: 'Dividenden und Zinsen', value: <Amount value={r.incomeCents / 100} /> },
+              { label: 'Rendite', value: r.twr !== null ? <Trend value={r.twr} /> : '–', note: 'zeitgewichtet' },
+              { label: 'Dividenden und Zinsen', value: <Amount value={r.incomeCents / 100} />, note: `${r.income.length} ${r.income.length === 1 ? 'Zahlung' : 'Zahlungen'}` },
             ]}
-          />
+          >
+            <DeltaBars
+              title="Veränderung im Monat"
+              items={[
+                { key: 'kurse', label: 'Kurse', value: marketCents / 100, kind: 'market', note: 'ohne Dividenden und Zinsen' },
+                { key: 'fluss', label: 'Zu- und Abflüsse', value: r.netInflowCents / 100, kind: 'flow' },
+                { key: 'ertrag', label: 'Dividenden und Zinsen', value: r.incomeCents / 100, kind: 'income' },
+                { key: 'summe', label: 'Veränderung', value: r.changeCents / 100, kind: 'total' },
+              ]}
+            />
+          </Lead>
         </Section>
 
         <Section id="highlights" title="Das Wichtigste" span="twoThirds">
@@ -72,10 +109,10 @@ export default async function ReviewPage({ params: routeParams }: { params: Prom
 
         <Section id="bewegungen" title="Bewegungen" span="third">
           <Rows>
-            <Row label="Käufe" sub={`${r.buys.count}×`} value={<Amount value={r.buys.cents / 100} />} />
-            <Row label="Verkäufe" sub={`${r.sells.count}×`} value={<Amount value={r.sells.cents / 100} />} />
-            <Row label="Gebühren" value={<Amount value={-r.feesCents / 100} signed={r.feesCents !== 0} />} />
-            <Row label="Steuern" sub="laut Buchungen" value={<Amount value={-r.taxCents / 100} signed={r.taxCents !== 0} />} />
+            <Row label="Käufe" sub={`${r.buys.count}×`} value={<Value cents={r.buys.cents} />} />
+            <Row label="Verkäufe" sub={`${r.sells.count}×`} value={<Value cents={r.sells.cents} />} />
+            <Row label="Gebühren" sub="laut Buchungen" value={<Value cents={-r.feesCents} signed />} />
+            <Row label="Steuern" sub="laut Buchungen" value={<Value cents={-r.taxCents} signed />} />
           </Rows>
         </Section>
 
@@ -91,23 +128,30 @@ export default async function ReviewPage({ params: routeParams }: { params: Prom
           )}
         </Section>
 
-        <Section id="werte" title="Beste und schwächste Werte" meta="Kursveränderung im Monat" span="half">
-          {r.best.length + r.worst.length === 0 ? (
+        <Section id="werte" title="Werte im Monat" meta="Kursveränderung" span="half">
+          {movers.length === 0 ? (
             <Note>Keine Kursveränderungen zum Vergleichen.</Note>
           ) : (
-            <Rows>
-              {[...r.best, ...r.worst].map((m) => (
-                <Row key={m.instrumentId} label={nameOf(m.instrumentId)} value={<Trend value={m.change} />} />
+            <div>
+              {movers.map((g, i) => (
+                <div key={g.title}>
+                  <SectionHead title={g.title} level={3} spaced={i > 0} />
+                  <Rows>
+                    {g.items.map((m) => (
+                      <Row key={m.instrumentId} label={nameOf(m.instrumentId)} value={<Trend value={m.change} />} />
+                    ))}
+                  </Rows>
+                </div>
               ))}
-            </Rows>
+            </div>
           )}
         </Section>
 
-        <Section id="ausgaben" title="Weitere Ausgaben">
-          <IssueList months={months} current={r.month} label={monthLabel} href={(m) => `/app/rueckblick/${m}`} />
+        <Section id="ausgaben" title="Weitere Ausgaben" meta={`${months.length} ${months.length === 1 ? 'Ausgabe' : 'Ausgaben'}`}>
+          <IssueList months={months} current={r.month} href={(m) => `/app/rueckblick/${m}`} />
         </Section>
       </Grid>
-      <Note>Automatisch aus deinen Buchungen und der Kurshistorie erstellt – feste Vorlagen, keine KI. Rendite zeitgewichtet (Ein- und Auszahlungen herausgerechnet).</Note>
+      <Disclaimer>Automatisch aus deinen Buchungen und der Kurshistorie erstellt – feste Vorlagen, keine KI. Rendite zeitgewichtet (Ein- und Auszahlungen herausgerechnet).</Disclaimer>
     </>
   )
 }

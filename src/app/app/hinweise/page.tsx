@@ -1,8 +1,10 @@
 import { MarkRead } from '@/components/notify/MarkRead'
 import { PriceAlerts } from '@/components/notify/PriceAlerts'
+import notify from '@/components/notify/notify.module.css'
 import { PushSettings } from '@/components/notify/PushSettings'
+import { SideColumn } from '@/components/notify/SideColumn'
 import { Amount } from '@/components/privacy/privacy'
-import { Grid, Muted, Note, PageHead, Section, TextLink } from '@/components/ui/layout'
+import { Grid, Note, PageHead, Section, TextLink } from '@/components/ui/layout'
 import { Row, Rows } from '@/components/ui/Rows'
 import { dayLabel } from '@/lib/display'
 import { viennaDay } from '@/lib/format'
@@ -40,38 +42,50 @@ export default async function NotificationsPage() {
       <MarkRead unread={unread} action={markAllReadAction} />
 
       <Grid>
-        <Section id="hinweise-liste" title="Neueste Hinweise" meta={unread > 0 ? `${unread} neu` : undefined} span="twoThirds">
+        <Section id="hinweise-liste" title="Neueste Hinweise" meta={unread > 0 ? `${unread} neu` : notifications.length > 0 ? 'alle gelesen' : undefined} span="twoThirds">
           {notifications.length === 0 ? (
-            <Note>Noch keine Hinweise. Sie erscheinen, sobald eine Dividende eingeht, ein Kursalarm auslöst, ein Meilenstein erreicht ist oder eine Spekulationsfrist abläuft.</Note>
+            <div className={notify.empty}>
+              <p className={notify.emptyTitle}>Noch keine Hinweise.</p>
+              <p className={notify.emptyText}>Sie erscheinen, sobald eine Dividende eingeht, ein Kursalarm auslöst, ein Meilenstein erreicht ist oder eine Spekulationsfrist abläuft.</p>
+              <ul className={notify.kinds} aria-label="Arten von Hinweisen">
+                {Object.values(KIND_LABEL).map((k) => (
+                  <li key={k} className={notify.kind}>
+                    {k}
+                  </li>
+                ))}
+              </ul>
+            </div>
           ) : (
             <Rows>
               {notifications.map((n) => (
                 <Row
                   key={n.id}
                   date={dayLabel(viennaDay(new Date(n.createdAt)), false)}
-                  label={n.link ? <TextLink href={n.link}>{n.title}</TextLink> : n.title}
+                  label={<span className={n.fresh ? notify.unread : notify.title}>{n.link ? <TextLink href={n.link}>{n.title}</TextLink> : n.title}</span>}
                   sub={
                     <>
-                      {n.fresh ? '● neu · ' : null}
+                      {n.fresh ? <strong className={notify.fresh}>neu · </strong> : null}
                       {KIND_LABEL[n.kind]}
                       {n.body ? ` · ${n.body}` : null}
                     </>
                   }
-                  value={n.amount === null ? <Muted>–</Muted> : <Amount value={n.amount} />}
+                  value={n.amount === null ? null : <Amount value={n.amount} />}
                 />
               ))}
             </Rows>
           )}
         </Section>
 
-        <Section id="kursalarme" title="Kursalarme" meta="täglich nach Börsenschluss geprüft, je Alarm einmal" span="third">
-          <PriceAlerts instruments={instruments} alerts={alerts.map((a) => ({ id: a.id, instrumentName: a.instrumentName, direction: a.direction, threshold: a.threshold, triggeredAt: a.triggeredAt }))} create={createPriceAlertAction} remove={deletePriceAlertAction} />
-        </Section>
+        <SideColumn>
+          <Section id="kursalarme" title="Kursalarme" meta="täglich nach Börsenschluss geprüft">
+            <PriceAlerts instruments={instruments} alerts={alerts.map((a) => ({ id: a.id, instrumentName: a.instrumentName, direction: a.direction, threshold: a.threshold, triggeredAt: a.triggeredAt }))} create={createPriceAlertAction} remove={deletePriceAlertAction} />
+          </Section>
 
-        <Section id="mitteilungen" title="Mitteilungen auf diesem Gerät" span="half">
-          <PushSettings publicKey={vapidKeys()?.publicKey ?? null} save={savePushSubscriptionAction} remove={deletePushSubscriptionAction} />
-          <Note>Die Mitteilung sagt nur „Neue Hinweise in rt100k“ – keine Beträge, keine Namen. Was es Neues gibt, steht nach der Anmeldung hier. Beim Abmelden wird sie auf diesem Gerät ausgeschaltet.</Note>
-        </Section>
+          <Section id="mitteilungen" title="Mitteilungen auf diesem Gerät">
+            <PushSettings publicKey={vapidKeys()?.publicKey ?? null} save={savePushSubscriptionAction} remove={deletePushSubscriptionAction} />
+            <Note>Die Mitteilung sagt nur „Neue Hinweise in rt100k“ – keine Beträge, keine Namen. Was es Neues gibt, steht nach der Anmeldung hier. Beim Abmelden wird sie auf diesem Gerät ausgeschaltet.</Note>
+          </Section>
+        </SideColumn>
       </Grid>
     </>
   )
