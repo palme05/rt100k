@@ -155,7 +155,8 @@ test('Offene Punkte: fehlende Kaufkosten beheben, Aufgabe aus dem Import abhaken
   await page.getByRole('button', { name: 'Änderung speichern' }).click()
   await expect(page.getByText('Änderung gespeichert.')).toBeVisible()
   await page.goto('/app')
-  await expect(page.getByRole('region', { name: 'Offene Punkte' })).toHaveCount(0)
+  // ohne Zwei-Faktor bleibt „Offene Punkte“ sichtbar – der behobene Punkt ist weg
+  await expect(page.getByRole('region', { name: 'Offene Punkte' })).not.toContainText('Kaufkosten fehlen')
   expect(problems).toEqual([])
 })
 
@@ -225,7 +226,7 @@ test('Kurs statt Kurswert: unter „Offene Punkte“ gemeldet und mit einem Klic
   await expect(page.getByRole('region', { name: 'Buchungen' })).toContainText('1.926,75')
 
   await page.goto('/app')
-  await expect(page.getByRole('region', { name: 'Offene Punkte' })).toHaveCount(0)
+  await expect(page.getByRole('region', { name: 'Offene Punkte' })).not.toContainText('Kurs statt Kurswert')
   expect(problems).toEqual([])
 })
 

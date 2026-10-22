@@ -73,7 +73,7 @@ export function RefreshButton({ label = 'Aktualisieren' }: { label?: string }) {
   return (
     <button type="button" className={styles.refresh} onClick={() => start(() => router.refresh())} disabled={pending} aria-label={pending ? 'Wird aktualisiert' : label}>
       <Icon name="refresh" size={16} className={pending ? styles.spin : undefined} />
-      <span>{pending ? 'Wird aktualisiert …' : label}</span>
+      <span className={styles.refreshLabel}>{pending ? 'Wird aktualisiert …' : label}</span>
     </button>
   )
 }

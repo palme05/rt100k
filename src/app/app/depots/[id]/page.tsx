@@ -141,6 +141,7 @@ export default async function PortfolioPage({ params, searchParams }: { params: 
               title={`${cash ? 'Kontostand' : 'Wert'} von ${portfolio.name} mit eingezahltem Kapital`}
               milestones={[]}
               height={240}
+              valueLabel={cash ? 'Kontostand' : 'Wert'}
             />
           ) : (
             <>

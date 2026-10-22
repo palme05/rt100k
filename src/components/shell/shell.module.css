@@ -674,6 +674,18 @@ a.addButton:active {
   cursor: progress;
 }
 
+/* Am Handy nur das Symbol (Name bleibt per aria-label), 44 px Tippfläche */
+@media (max-width: 720px) {
+  .refresh {
+    justify-content: center;
+    min-width: var(--hit);
+  }
+
+  .refreshLabel {
+    display: none;
+  }
+}
+
 .spin {
   animation: spin 900ms linear infinite;
 }
