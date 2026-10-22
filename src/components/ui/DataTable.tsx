@@ -38,9 +38,11 @@ export function Th({ children, hideSm = false, left = false }: { children: React
   )
 }
 
-export function Td({ children, hideSm = false, colSpan }: { children: React.ReactNode; hideSm?: boolean; colSpan?: number }) {
+/** Zelle; `left` für Textspalten, `hideSm` blendet sie am Handy aus. */
+export function Td({ children, hideSm = false, left = false, colSpan }: { children: React.ReactNode; hideSm?: boolean; left?: boolean; colSpan?: number }) {
+  const cls = [hideSm ? styles.hideSm : '', left ? styles.left : ''].filter(Boolean).join(' ')
   return (
-    <td className={hideSm ? styles.hideSm : undefined} colSpan={colSpan}>
+    <td className={cls || undefined} colSpan={colSpan}>
       {children}
     </td>
   )
