@@ -25,7 +25,7 @@ test('Analyse: Rendite je Zeitraum, Vergleichswert, Erträge, Aufteilung', async
   await page.goto('/app/analyse')
   await expect(page.getByRole('heading', { name: 'Rendite' })).toBeVisible()
   await expect(page.getByText('Rendite (zeitgewichtet)')).toBeVisible()
-  await expect(page.getByText('Geldgewichtet (IZF)')).toBeVisible()
+  await expect(page.getByText('Geldgewichtet (IZF)', { exact: true })).toBeVisible()
   await expect(page.getByRole('group', { name: 'Zeitraum' }).getByRole('button', { name: 'Max' })).toBeVisible()
   await expect(page.getByRole('group', { name: /Kumulierte Rendite/ })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Nach Anlageklasse' })).toBeVisible()
