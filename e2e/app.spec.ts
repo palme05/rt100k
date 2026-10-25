@@ -16,7 +16,11 @@ test('Depot anlegen, kaufen, Übersicht zeigt Wert und Gewinn', async ({ page })
 
   // Verkauf über den Bestand wird abgewiesen
   await page.goto(`/app/depots/${id}`)
-  await page.getByLabel('Art', { exact: true }).selectOption('sell')
+  // vor der Hydrierung gewählte Werte setzt React zurück – wiederholen, bis das Formular „Verkauf“ zeigt
+  await expect(async () => {
+    await page.getByLabel('Art', { exact: true }).selectOption('sell')
+    await expect(page.getByLabel(/^Verkaufs(erlös|kurs)/)).toBeVisible({ timeout: 1_000 })
+  }).toPass({ timeout: 15_000 })
   await page.getByRole('button', { name: 'Vanguard FTSE All-World UCITS ETF USD Accumulation' }).click()
   // ausdrücklich Gesamtbetrag – nicht auf die gemerkte Eingabeart verlassen
   await amountMode(page, 'Gesamtbetrag')
