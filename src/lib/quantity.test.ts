@@ -171,3 +171,13 @@ describe('Kurs je Stück anzeigen', () => {
     expect(unitPriceFromAmount(100, 0n)).toBe(0n)
   })
 })
+
+describe('unitPriceInput: nur Kurse, die das Kursfeld annimmt', () => {
+  it('mehr als 9 Stellen vor dem Komma → null (Bearbeiten öffnet dann im Gesamtbetrag)', () => {
+    const q = parseQuantity('0,001')!
+    expect(unitPriceInput(100_000_000_000, q)).toBeNull()
+    const ok = unitPriceInput(99_999_999, q)
+    expect(ok).not.toBeNull()
+    expect(parseUnitPrice(ok!)).not.toBeNull()
+  })
+})

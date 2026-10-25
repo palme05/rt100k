@@ -151,6 +151,8 @@ export function unitPriceInput(amountCents: number, quantity: bigint, options: {
   for (let d = 2; d <= UNIT_PRICE_DECIMALS; d++) {
     const price = mulDiv(target, QTY_ONE * 10n ** BigInt(d), quantity * 100n)
     if (amountFromUnitPrice(quantity, price * 10n ** BigInt(UNIT_PRICE_DECIMALS - d)) === target) {
+      // Mehr als 9 Stellen vor dem Komma nimmt das Kursfeld nicht an → dann Gesamtbetrag
+      if (price >= 10n ** BigInt(9 + d)) return null
       const text = toDecimalString(price, d).replace('.', ',')
       return options.grouped ? groupThousands(text) : text
     }

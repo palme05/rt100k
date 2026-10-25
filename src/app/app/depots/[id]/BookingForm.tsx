@@ -6,6 +6,7 @@ import { Amount } from '@/components/privacy/privacy'
 import { Icon } from '@/components/shell/icons'
 import { Actions, Button, Checkbox, describedBy, Field, Form, FormRow, Input, Message, Select, Textarea } from '@/components/ui/forms'
 import { Segmented } from '@/components/ui/Segmented'
+import { displayName } from '@/lib/names'
 import { centsToInput, MAX_AMOUNT_CENTS, MoneyParseError, parseEuroToCents } from '@/lib/money'
 import { amountFromUnitPrice, displayUnitPrice, formatQuantity, parseQuantity, parseUnitPrice, unitPriceFromAmount, unitPriceInput } from '@/lib/quantity'
 import type { InstrumentCandidate } from '@/server/quotes/types'
@@ -145,6 +146,8 @@ interface Saved {
 }
 
 /** Felder mit eigener Fehlerzeile; alles andere steht als Meldung an der Schaltfläche. */
+/** Felder, deren Änderung eine Kurs-Bestätigung nicht aufhebt */
+const UNCONFIRMING: ReadonlySet<string> = new Set(['note', 'fee', 'tax'])
 const INLINE_ERRORS = new Set(['occurredOn', 'quantity', 'factor', 'amount', 'price', 'fee', 'tax', 'note', 'instrumentId'])
 
 /** Vorbelegung einer neuen Buchung (z. B. fehlende Sparplan-Ausführung), bereits geprüft. */
@@ -284,6 +287,8 @@ export function BookingForm({
   const update = (key: keyof Values) => (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const value = event.target.value
     setValues((v) => ({ ...v, [key]: value }))
+    // Eine Bestätigung gilt nur für die Werte, zu denen die Warnung kam
+    if (!UNCONFIRMING.has(key)) setConfirmed(false)
   }
 
   /** Umschalten rechnet den eingegebenen Wert um, damit nichts verloren geht. */
@@ -294,11 +299,13 @@ export function BookingForm({
         if (totalCents <= BigInt(MAX_AMOUNT_CENTS)) setValues((v) => ({ ...v, amount: centsToInput(Number(totalCents), { grouped: true }) }))
       }
       if (next === 'unit' && enteredCents !== null && enteredCents >= 0) {
-        const price = unitPriceInput(enteredCents, q, { grouped: true })
-        if (price !== null) setValues((v) => ({ ...v, price }))
+        // kein exakter Kurs ableitbar → Feld leeren statt einen alten Kurs stehen zu lassen
+        const price = unitPriceInput(enteredCents, q, { grouped: true }) ?? ''
+        setValues((v) => ({ ...v, price }))
       }
     }
     setChosenMode(next)
+    setConfirmed(false)
     try {
       window.localStorage.setItem(MODE_KEY, next)
     } catch {
@@ -347,7 +354,10 @@ export function BookingForm({
       <div className={styles.group}>
         <FormRow>
           <Field id={fieldId('type')} label="Art">
-            <Select id={fieldId('type')} name="type" value={type} onChange={(e) => setType(e.target.value)}>
+            <Select id={fieldId('type')} name="type" value={type} onChange={(e) => {
+                setType(e.target.value)
+                setConfirmed(false)
+              }}>
               {types.map((t) => (
                 <option key={t} value={t}>
                   {LABEL[t]}
@@ -365,7 +375,10 @@ export function BookingForm({
             id={fieldId('instrumentId')}
             held={held}
             value={instrument}
-            onChange={setInstrument}
+            onChange={(next) => {
+              setInstrument(next)
+              setConfirmed(false)
+            }}
             required={NEEDS_INSTRUMENT.has(type)}
             cryptoOnly={kind === 'krypto'}
             metalOnly={kind === 'sachwert'}
@@ -551,6 +564,15 @@ export function InstrumentPicker({
     })
 
   const shown = held.filter((h) => (cryptoOnly ? h.kind === 'crypto' : metalOnly ? h.kind === 'metal' : true))
+  const chipsRef = useRef<HTMLDivElement>(null)
+  // Waagrechte Leiste (Handy): den gewählten Wert sichtbar machen, ohne die Seite zu verschieben
+  useEffect(() => {
+    const box = chipsRef.current
+    const chip = box?.querySelector<HTMLElement>('[data-selected]')
+    if (!box || !chip || box.scrollWidth <= box.clientWidth) return
+    const left = chip.getBoundingClientRect().left - box.getBoundingClientRect().left + box.scrollLeft
+    if (left < box.scrollLeft || left + chip.offsetWidth > box.scrollLeft + box.clientWidth) box.scrollLeft = Math.max(0, left - 16)
+  }, [value?.id])
   const searchingNow = query.trim().length >= 2
   const selectedOutside = value && !shown.some((h) => h.id === value.id) ? value : null
   const label = metalOnly ? 'Metall' : cryptoOnly ? 'Coin' : 'Wertpapier'
@@ -589,7 +611,7 @@ export function InstrumentPicker({
           <Icon name="check" size={16} className={styles.chipIcon} />
           <span className="sr-only">Ausgewählt: </span>
           <span className={styles.chipText} title={selectedOutside.name}>
-            {selectedOutside.name}
+            {displayName(selectedOutside.name)}
           </span>
           {clearable && !required ? (
             <button type="button" className={styles.clear} onClick={() => onChange(null)} aria-label={`${selectedOutside.name} abwählen`}>
@@ -600,7 +622,7 @@ export function InstrumentPicker({
       ) : null}
 
       {!searchingNow && shown.length > 0 ? (
-        <div className={styles.chips} role="group" aria-label="Bereits im Depot">
+        <div ref={chipsRef} className={styles.chips} role="group" aria-label="Bereits im Depot">
           {shown.map((h) => {
             const active = value?.id === h.id
             return (
@@ -609,12 +631,15 @@ export function InstrumentPicker({
                 type="button"
                 className={active ? styles.chipActive : styles.chip}
                 aria-pressed={active}
+                // Kurzname sichtbar, voller Name für Screenreader und als Tooltip
+                aria-label={h.name}
                 title={h.name}
+                data-selected={active || undefined}
                 // Pflichtfeld: gewählt bleibt gewählt; sonst lässt sich die Auswahl aufheben
                 onClick={() => onChange(active && clearable && !required ? null : h)}
               >
                 {active ? <Icon name="check" size={16} className={styles.chipIcon} /> : null}
-                <span className={styles.chipText}>{h.name}</span>
+                <span className={styles.chipText}>{displayName(h.name)}</span>
               </button>
             )
           })}

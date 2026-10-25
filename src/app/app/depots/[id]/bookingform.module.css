@@ -333,9 +333,10 @@
     overscroll-behavior-x: contain;
     scroll-snap-type: x proximity;
     scrollbar-width: none;
-    /* Fokusring und Rand nicht abschneiden */
-    padding: 3px;
-    margin: -3px;
+    /* Leiste läuft bis an den Bildschirmrand – ein angeschnittener Chip zeigt, dass es weitergeht */
+    margin: -3px calc(var(--gutter) * -1);
+    padding: 3px var(--gutter);
+    scroll-padding-inline: var(--gutter);
   }
 
   .chips::-webkit-scrollbar {

@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { buyEtf, collectProblems, createPortfolio, expectNoOverflow, register } from './helpers/app'
+import { amountMode, buyEtf, collectProblems, createPortfolio, expectNoOverflow, register } from './helpers/app'
 
 test('Depot anlegen, kaufen, Übersicht zeigt Wert und Gewinn', async ({ page }) => {
   await register(page)
@@ -18,6 +18,8 @@ test('Depot anlegen, kaufen, Übersicht zeigt Wert und Gewinn', async ({ page })
   await page.goto(`/app/depots/${id}`)
   await page.getByLabel('Art', { exact: true }).selectOption('sell')
   await page.getByRole('button', { name: 'Vanguard FTSE All-World UCITS ETF USD Accumulation' }).click()
+  // ausdrücklich Gesamtbetrag – nicht auf die gemerkte Eingabeart verlassen
+  await amountMode(page, 'Gesamtbetrag')
   await page.getByLabel('Stück', { exact: true }).fill('11')
   await page.getByLabel(/Verkaufserlös/).fill('1.500')
   await page.getByRole('button', { name: 'Buchung speichern' }).click()

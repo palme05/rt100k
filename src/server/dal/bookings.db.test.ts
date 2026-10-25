@@ -291,16 +291,26 @@ describe('Kursprüfung beim Speichern', () => {
     expect((error as Error).message).toMatch(/Kurs je Stück liegt bei 9,75\s€/)
   })
 
-  it('plausibler Kurs, Übertrag oder Tag ohne Schlusskurs: keine Rückfrage', async () => {
+  it('plausibler Kurs, Übertrag mit fernem Ø Einstand oder Tag ohne Schlusskurs: keine Rückfrage', async () => {
     expect(await createBooking(owner, { portfolioId: d, type: 'buy', occurredOn: DAY, instrumentId: fund, quantity: '15', amountMode: 'unit', price: '97,41' })).toMatchObject({ amountCents: 146_115, priceConfirmed: false })
-    expect(await createBooking(owner, { portfolioId: d, type: 'transfer_in', occurredOn: DAY, instrumentId: fund, quantity: '15', amount: '97,41' })).toMatchObject({ amountCents: 9_741 })
+    // Ø Einstand 10 € bei Kurs 97,52 €: für einen Übertrag normal (nur das Muster „Kurs statt Kurswert“ zählt)
+    expect(await createBooking(owner, { portfolioId: d, type: 'transfer_in', occurredOn: DAY, instrumentId: fund, quantity: '15', amountMode: 'unit', price: '10,00' })).toMatchObject({ amountCents: 15_000 })
     expect(await createBooking(owner, { portfolioId: d, type: 'buy', occurredOn: '2025-04-30', instrumentId: fund, quantity: '15', amount: '97,41' })).toMatchObject({ priceConfirmed: false })
   })
 
-  it('Änderung ohne Häkchen wird wieder geprüft und setzt die Bestätigung zurück', async () => {
+  it('Übertrag mit „Kurs statt Anschaffungskosten“: Rückfrage, mit Häkchen gespeichert', async () => {
+    const input = { portfolioId: d, type: 'transfer_in', occurredOn: DAY, instrumentId: fund, quantity: '15', amount: '97,41' }
+    const error = await createBooking(owner, input).catch((e: unknown) => e)
+    expect(error).toBeInstanceOf(ConfirmationRequired)
+    expect((error as Error).message).toMatch(/Anschaffungskosten entsprechen etwa dem Kurs eines Stücks/)
+    expect(await createBooking(owner, { ...input, confirmPrice: 'on' })).toMatchObject({ amountCents: 9_741, priceConfirmed: true })
+  })
+
+  it('Bestätigung bleibt bei unveränderten Kursdaten; jede andere Änderung ohne Häkchen wird wieder geprüft', async () => {
     const b = await createBooking(owner, { portfolioId: d, type: 'buy', occurredOn: DAY, instrumentId: fund, quantity: '10', amount: '97,41', confirmPrice: 'on' })
     expect(b.priceConfirmed).toBe(true)
-    await expect(updateBooking(owner, b.id, { type: 'buy', occurredOn: DAY, instrumentId: fund, quantity: '10', amount: '97,41', note: 'nur Notiz' })).rejects.toBeInstanceOf(ConfirmationRequired)
+    expect(await updateBooking(owner, b.id, { type: 'buy', occurredOn: DAY, instrumentId: fund, quantity: '10', amount: '97,41', note: 'nur Notiz' })).toMatchObject({ priceConfirmed: true, note: 'nur Notiz' })
+    await expect(updateBooking(owner, b.id, { type: 'buy', occurredOn: DAY, instrumentId: fund, quantity: '11', amount: '97,41' })).rejects.toBeInstanceOf(ConfirmationRequired)
     const fixed = await updateBooking(owner, b.id, { type: 'buy', occurredOn: DAY, instrumentId: fund, quantity: '10', amountMode: 'unit', price: '97,41' })
     expect(fixed).toMatchObject({ amountCents: 97_410, priceConfirmed: false })
   })

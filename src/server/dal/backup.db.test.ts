@@ -37,7 +37,7 @@ beforeAll(async () => {
   await createBooking(alice, { portfolioId: depot, type: 'age', occurredOn: '2025-09-15', instrumentId: etf, amount: '9,37', tax: '2,58' })
   await createBooking(alice, { portfolioId: depot, type: 'sell', occurredOn: '2026-03-01', instrumentId: etf, quantity: '2,5', amount: '300,00', tax: '12,00', note: 'Teilverkauf' })
   await createBooking(alice, { portfolioId: depot, type: 'split', occurredOn: '2026-04-01', instrumentId: etf, factor: '2' })
-  await createBooking(alice, { portfolioId: safe, type: 'buy', occurredOn: '2025-05-01', instrumentId: gold, quantity: '100', amount: '7.000' })
+  await createBooking(alice, { portfolioId: safe, type: 'buy', occurredOn: '2025-05-01', instrumentId: gold, quantity: '100', amount: '7.000', confirmPrice: true })
   await withUser(alice.id, (tx) => tx.insert(portfolioSnapshot).values({ ownerId: alice.id, portfolioId: depot, day: '2026-03-01', valueCents: 80_000, investedCents: 75_000 }))
   await withUser(alice.id, (tx) => tx.insert(importFile).values({ ownerId: alice.id, fileHash: 'a'.repeat(64), source: 'flatex', bookings: 1 }))
   await saveRoadSettings(alice, { monthlyContributionCents: 30_000, expectedReturnBp: 500, volatilityBp: 1200, includeTangibles: false })
@@ -54,6 +54,8 @@ describe('Export', () => {
     expect(backup).toMatchObject({ format: BACKUP_FORMAT, version: 1, profile: { name: 'Alice' } })
     expect(backup.portfolios).toHaveLength(2)
     expect(backup.bookings.map((b) => b.type)).toEqual(['buy', 'buy', 'age', 'sell', 'split'])
+    // „Kurs stimmt – trotzdem speichern“ reist mit
+    expect(backup.bookings.filter((b) => b.priceConfirmed).map((b) => b.quantity)).toEqual(['100.000000000000'])
     expect(backup.instruments.map((i) => [i.name, i.private]).sort()).toEqual([
       ['Goldbarren 100 g', true],
       ['Vanguard FTSE All-World UCITS ETF (Acc)', false],
@@ -97,6 +99,7 @@ describe('Wiederherstellen', () => {
     // Gold ist bei Carol ein eigenes privates Instrument, nicht das von Alice
     const carolsBookings = await listAllLedgerBookings(carol)
     expect(carolsBookings.some((b) => b.instrumentId === gold)).toBe(false)
+    expect(carolsBookings.filter((b) => b.priceConfirmed)).toHaveLength(1)
     expect((await getDb().select({ id: instrument.id }).from(instrument)).length).toBe(globalsBefore)
     expect(await getRoadSettings(carol)).toMatchObject({ monthlyContributionCents: 30_000, includeTangibles: false })
     expect((await listEtfBreakdowns(carol)).has(etf)).toBe(true)
