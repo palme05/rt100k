@@ -388,6 +388,7 @@ Unabhängiges Review (eigener Prüfdurchlauf, nur lesend) aller Route-Handler, S
 | Fehlerseiten (`error.tsx`, `global-error.tsx`) zeigen nur den Fehlercode (digest), nie die Meldung; keine Inline-Skripte oder -Stile | ✅ |
 | Konto-Menü zeigt Name und E-Mail der eigenen Sitzung (aus `requireUser`); Abmelden entfernt wie bisher Push-Abo und Offline-Stand. Befehlspalette und Blätter sind native `<dialog>` (Fokus bleibt darin, Hintergrund inert) | ✅ |
 | Darstellungs-Vorschau, Schieberegler, Sprunglinks: nur Anzeige, eigene Tokens, keine Inline-Styles | ✅ |
+| Next.js 16.4.0 → 16.4.2: GHSA-673q-mjm6-r5xr (kritisch, RCE in `use cache` mit Typed Arrays – rt100k nutzt `use cache` nicht) und GHSA-p3m5-59mp-jv5r (hoch, DoS über Server Actions); 16.4.2 erfüllt die 7-Tage-Regel, `pnpm audit` ohne Befund | ✅ |
 | Privatsphäre-Modus: Ø-Einstand-Linie im Kursverlauf entfällt (Bestand ist sichtbar, Ø Einstand × Bestand ergäbe den verborgenen Einstand) | ✅ (Befund aus dem Abschluss-Review behoben) |
 | „Kurs bestätigt“ gilt nur für die Werte der Warnung: jede Änderung an Stück, Kurs, Betrag, Art, Wertpapier oder Datum hebt das Häkchen auf; bleibt beim Speichern alles kursrelevante gleich (z. B. nur Notiz), bleibt die Bestätigung. Backup und Wiederherstellen übernehmen das Feld | ✅ (DB-Tests) |
 
