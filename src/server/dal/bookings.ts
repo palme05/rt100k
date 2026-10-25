@@ -41,8 +41,12 @@ const NO_INSTRUMENT: ReadonlySet<BookingType> = new Set(['deposit', 'withdrawal'
 const NEEDS_AMOUNT: ReadonlySet<BookingType> = new Set(['buy', 'sell', 'dividend', 'interest', 'fee', 'tax', 'deposit', 'withdrawal', 'age', 'tax_refund'])
 /** Diese Arten lassen sich als Stück × Kurs je Stück erfassen (Formular und Server gleich). */
 export const UNIT_PRICE_TYPES: ReadonlySet<BookingType> = new Set(['buy', 'sell', 'transfer_in'])
-/** Beim Speichern gegen den Schlusskurs geprüft – nicht der Übertrag (Ø Einstand darf weit weg liegen). */
-const CONFIRM_TYPES: ReadonlySet<BookingType> = new Set(['buy', 'sell'])
+/**
+ * Beim Speichern gegen den Schlusskurs geprüft. Der Übertrag nur auf das Muster
+ * „Kurs statt Kurswert“ (sein Ø Einstand darf weit vom Kurs liegen) – so lässt
+ * sich ein gemeldeter Übertrag auch bestätigen.
+ */
+const CONFIRM_TYPES: ReadonlySet<BookingType> = new Set(['buy', 'sell', 'transfer_in'])
 
 const optionalText = z
   .string()
@@ -188,7 +192,9 @@ async function assertPlausiblePrice(tx: Tx, data: NormalizedBooking, instrumentD
   const deviation = formatPercentFromBasisPoints(found.deviationBp)
   throw new ConfirmationRequired(
     // Im Modus „Kurs je Stück“ wurde ein Kurs eingetippt – dann zählt die Abweichung, nicht das Muster
-    found.swap && amountMode === 'total'
+    data.type === 'transfer_in'
+      ? `Die Anschaffungskosten entsprechen etwa dem Kurs eines Stücks: je Stück wären das nur ${implied}, der Schlusskurs am ${dayLabel(found.close.day)} war ${close}. Wurde der Ø Einstandskurs statt der Anschaffungskosten eingetragen? Sonst „Kurs stimmt – trotzdem speichern“ ankreuzen.`
+      : found.swap && amountMode === 'total'
       ? `Der Betrag entspricht etwa dem Kurs eines Stücks: je Stück wären das nur ${implied}, der Schlusskurs am ${dayLabel(found.close.day)} war ${close} (${deviation}). Wurde der Kurs statt des Kurswerts eingetragen? Sonst „Kurs stimmt – trotzdem speichern“ ankreuzen.`
       : `Der Kurs je Stück liegt bei ${implied} – der Schlusskurs am ${dayLabel(found.close.day)} war ${close} (${deviation}). Bitte Stück und Betrag prüfen oder „Kurs stimmt – trotzdem speichern“ ankreuzen.`,
     amountMode === 'unit' ? 'price' : 'amount',
@@ -339,7 +345,15 @@ export async function updateBooking(actor: Actor, id: unknown, input: unknown): 
   const { booking: data, amountMode, confirmPrice } = parseBooking({ ...(typeof input === 'object' && input ? input : {}), portfolioId: '' })
   return withUser(actor.id, async (tx) => {
     const [existing] = await tx
-      .select({ portfolioId: booking.portfolioId })
+      .select({
+        portfolioId: booking.portfolioId,
+        priceConfirmed: booking.priceConfirmed,
+        type: booking.type,
+        occurredOn: booking.occurredOn,
+        instrumentId: booking.instrumentId,
+        quantity: booking.quantity,
+        amountCents: booking.amountCents,
+      })
       .from(booking)
       .where(and(eq(booking.id, bookingId), eq(booking.ownerId, actor.id)))
       .limit(1)
@@ -348,11 +362,20 @@ export async function updateBooking(actor: Actor, id: unknown, input: unknown): 
     const instrumentDto = data.instrumentId ? await getInstrument(actor, data.instrumentId, tx) : null
     const ledger = (await ledgerBookings(tx, actor, existing.portfolioId)).map((b) => (b.id === bookingId ? { id: bookingId, ...data } : b))
     assertConsistent(ledger)
-    if (!confirmPrice) await assertPlausiblePrice(tx, data, instrumentDto, amountMode)
-    // Ohne Häkchen wird jede Änderung wieder geprüft
+    // Bestätigung bleibt, solange sich nichts am Kurs ändert (z. B. nur die Notiz);
+    // sonst wird ohne Häkchen wieder geprüft
+    const unchanged =
+      existing.priceConfirmed &&
+      existing.type === data.type &&
+      existing.occurredOn === data.occurredOn &&
+      existing.instrumentId === data.instrumentId &&
+      existing.quantity === data.quantity &&
+      existing.amountCents === data.amountCents
+    const confirmed = confirmPrice || unchanged
+    if (!confirmed) await assertPlausiblePrice(tx, data, instrumentDto, amountMode)
     const [row] = await tx
       .update(booking)
-      .set({ ...data, priceConfirmed: confirmPrice })
+      .set({ ...data, priceConfirmed: confirmed })
       .where(and(eq(booking.id, bookingId), eq(booking.ownerId, actor.id)))
       .returning(dtoColumns)
     if (!row) throw new NotFoundError('Buchung nicht gefunden.')

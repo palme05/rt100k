@@ -145,6 +145,7 @@ export default async function PortfolioPage({ params, searchParams }: { params: 
               milestones={[]}
               height={240}
               valueLabel={cash ? 'Kontostand' : 'Wert'}
+              valueCurve={cash ? 'step' : 'monotone'}
             />
           ) : (
             <>
@@ -254,7 +255,7 @@ export default async function PortfolioPage({ params, searchParams }: { params: 
         {/* Neue Buchung zuerst im Quelltext (am Handy vor der Liste), am Desktop rechts neben der Liste */}
         <div className={styles.split}>
           <div className={styles.splitAside}>
-            <Section id="buchen" title="Neue Buchung" meta="Kurse und Beträge in Euro, wie auf der Abrechnung">
+            <Section id="buchen" title="Neue Buchung" meta="in Euro">
               <BookingForm portfolioId={portfolio.id} kind={portfolio.kind} held={held} today={viennaDay()} />
             </Section>
 
@@ -322,7 +323,7 @@ export default async function PortfolioPage({ params, searchParams }: { params: 
           <div className={styles.manage}>
             <section className={styles.manageItem} aria-labelledby="freigaben">
               <SectionHead id="freigaben" level={3} title="Freigaben" meta="nur lesen" />
-              <ShareSettings portfolioId={portfolio.id} shares={shares} />
+              <ShareSettings portfolioId={portfolio.id} shares={shares} cash={cash} />
             </section>
             <section className={styles.manageItem} aria-labelledby="einstellungen">
               <SectionHead id="einstellungen" level={3} title="Einstellungen" />
@@ -336,7 +337,7 @@ export default async function PortfolioPage({ params, searchParams }: { params: 
               <SectionHead id="loeschen" level={3} title="Löschen" meta="endgültig" />
               <div className={styles.forms}>
                 <DeleteImportsForm id={portfolio.id} count={importCount} />
-                <DeletePortfolioForm id={portfolio.id} name={portfolio.name} />
+                <DeletePortfolioForm id={portfolio.id} name={portfolio.name} noun={cash ? 'Konto' : 'Depot'} />
               </div>
             </section>
           </div>

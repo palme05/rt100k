@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest'
 import { BarList } from './BarList'
 import { bucketMonths } from './columns'
 import { DeltaBars } from './DeltaBars'
-import { LineChart } from './LineChart'
+import { LineChart, referenceLabelPlace } from './LineChart'
 import { Sparkline } from './Sparkline'
 
 describe('LineChart auf dem Server', () => {
@@ -98,5 +98,15 @@ describe('DeltaBars', () => {
     expect(html).toMatch(/\+300,00/)
     expect(html).toMatch(/-100,00|−100,00/)
     expect(html).not.toContain('style=')
+  })
+})
+
+describe('referenceLabelPlace: Beschriftung der Bezugslinie weg von der Kurslinie', () => {
+  it('nimmt das Ende, an dem die Reihe weiter weg ist, und die freie Seite der Linie', () => {
+    // Anfang nahe an der Linie (100), Ende weit darüber → rechts, unter der Linie
+    expect(referenceLabelPlace([99, 101, 100, 120, 140, 150, 160, 170, 180, 190], 100)).toEqual({ left: false, below: true })
+    // Anfang weit darunter, Ende an der Linie → links, über der Linie
+    expect(referenceLabelPlace([50, 55, 60, 80, 90, 95, 98, 100, 101, 99], 100)).toEqual({ left: true, below: false })
+    expect(referenceLabelPlace([], 100)).toEqual({ left: true, below: false })
   })
 })

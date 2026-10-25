@@ -56,7 +56,12 @@ export function PortfolioForm({
       <Field id={`${id}-broker`} label="Bank / Broker" hint="optional, z. B. Trade Republic" error={err('broker')}>
         <Input id={`${id}-broker`} name="broker" maxLength={80} defaultValue={defaults?.broker ?? ''} {...describedBy(`${id}-broker`, true, err('broker'))} />
       </Field>
-      <Checkbox name="taxSimple" defaultChecked={defaults?.taxSimple ?? true} label="Steuereinfach (die Bank führt die KESt ab)" />
+      {/* „steuereinfach“ betrifft nur KESt-pflichtige Depots – bei Konten und Edelmetallen bleibt der Wert unverändert */}
+      {defaults && defaults.kind !== 'depot' && defaults.kind !== 'krypto' ? (
+        defaults.taxSimple ? <input type="hidden" name="taxSimple" value="on" /> : null
+      ) : (
+        <Checkbox name="taxSimple" defaultChecked={defaults?.taxSimple ?? true} label="Steuereinfach (die Bank führt die KESt ab)" />
+      )}
       <Actions>
         <Button type="submit" disabled={pending}>
           {submitLabel}

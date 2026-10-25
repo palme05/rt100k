@@ -97,6 +97,8 @@ const backupSchema = z.object({
         taxCents: cents,
         note: text(500).nullable(),
         importKey: hex64.nullable(),
+        /** „Kurs stimmt – trotzdem speichern“ (ältere Backups ohne Feld: nein) */
+        priceConfirmed: z.boolean().optional().default(false),
       }),
     )
     .max(RESTORE_LIMITS.bookings),
@@ -171,6 +173,7 @@ export async function exportBackup(actor: Actor): Promise<Backup> {
         taxCents: b.taxCents,
         note: b.note,
         importKey: b.importKey,
+        priceConfirmed: b.priceConfirmed,
       })),
       snapshots: snapshots.map((s) => ({ portfolioId: s.portfolioId, day: s.day, valueCents: s.valueCents, investedCents: s.investedCents })),
       importFiles: files.map((f) => ({ fileHash: f.fileHash, source: f.source as 'csv', bookings: f.bookings })),
@@ -291,7 +294,7 @@ export async function restoreBackup(actor: Actor, value: unknown): Promise<Resto
         tax: centsText(b.taxCents),
         note: b.note,
       })
-      return { ...n, portfolioId: b.portfolioId, importKey: b.importKey }
+      return { ...n, portfolioId: b.portfolioId, importKey: b.importKey, priceConfirmed: b.priceConfirmed }
     } catch (error) {
       if (error instanceof ValidationError) throw new ValidationError(`${where}: ${error.message}`)
       throw error
@@ -365,6 +368,7 @@ export async function restoreBackup(actor: Actor, value: unknown): Promise<Resto
           note: b.note,
           source: 'import' as const,
           importKey: b.importKey,
+          priceConfirmed: b.priceConfirmed,
         })),
       ),
     )

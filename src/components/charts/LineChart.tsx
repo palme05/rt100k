@@ -559,12 +559,19 @@ function LinePlot(props: LineChartProps & { width: number; descId: string; onRea
         const py = crisp(y(t.value))
         if (t.value < y0 || t.value > y1) return null
         if (!t.goal && !t.reference && onTick(t.value)) return null
-        const left = props.thresholdLabelSide === 'left' || (t.reference && props.thresholdLabelSide !== 'right')
+        let left = props.thresholdLabelSide === 'left' || (t.reference && props.thresholdLabelSide !== 'right')
+        let below = false
+        if (t.reference) {
+          // Bezugslinie (z. B. Ø Einstand): Beschriftung dort, wo die Hauptlinie am weitesten weg ist
+          const place = referenceLabelPlace(series[0]?.values ?? [], t.value)
+          left = place.left
+          below = place.below
+        }
         const cls = t.goal ? styles.goal : t.reference ? styles.reference : styles.milestone
         return (
           <g key={`${t.label}-${t.value}`} className={cls} aria-hidden="true">
             <line className={styles.threshold} x1={margin.left} x2={plotRight} y1={py} y2={py} />
-            <text className={styles.thresholdText} x={left ? margin.left + 6 : plotRight - 2} y={py - 6} textAnchor={left ? 'start' : 'end'}>
+            <text className={styles.thresholdText} x={left ? margin.left + 6 : plotRight - 2} y={below ? py + fontSize + 4 : py - 6} textAnchor={left ? 'start' : 'end'}>
               {t.label}
             </text>
           </g>
@@ -659,4 +666,24 @@ function LinePlot(props: LineChartProps & { width: number; descId: string; onRea
       ) : null}
     </svg>
   )
+}
+
+/**
+ * Lage der Beschriftung einer Bezugslinie: links oder rechts (wo die Reihe im
+ * ersten bzw. letzten Fünftel weiter von der Linie entfernt ist) und auf der
+ * Seite der Linie, auf der die Reihe dort nicht verläuft.
+ */
+export function referenceLabelPlace(values: readonly (number | null)[], level: number): { left: boolean; below: boolean } {
+  const defined = values.filter((v): v is number => v !== null && Number.isFinite(v))
+  if (defined.length === 0) return { left: true, below: false }
+  const n = Math.max(1, Math.ceil(defined.length / 5))
+  const edge = (part: readonly number[]) => {
+    const nearest = part.reduce((best, v) => (Math.abs(v - level) < Math.abs(best - level) ? v : best), part[0]!)
+    return { gap: Math.min(...part.map((v) => Math.abs(v - level))), above: nearest >= level }
+  }
+  const start = edge(defined.slice(0, n))
+  const end = edge(defined.slice(-n))
+  const pick = start.gap >= end.gap ? { left: true, ...start } : { left: false, ...end }
+  // Reihe über der Linie → Beschriftung darunter
+  return { left: pick.left, below: pick.above }
 }

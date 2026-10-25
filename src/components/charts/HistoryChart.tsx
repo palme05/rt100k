@@ -74,6 +74,7 @@ export function HistoryChart({
   height = 260,
   footer,
   valueLabel = 'Vermögen',
+  valueCurve = 'monotone',
 }: {
   history: readonly HistoryPoint[]
   title: string
@@ -85,6 +86,8 @@ export function HistoryChart({
   footer?: ReactNode
   /** Name der Wertlinie, z. B. „Wert“ für ein Depot oder „Kontostand“ */
   valueLabel?: string
+  /** Kontostände als Treppe (ändern sich nur mit Buchungen) */
+  valueCurve?: 'monotone' | 'step'
 }) {
   const [range, setRange] = useState<RangeId>('max')
   const months = RANGES.find((r) => r.id === range)?.months ?? Infinity
@@ -113,7 +116,7 @@ export function HistoryChart({
         dates={data.map((p) => p.month)}
         series={[
           // Vermögen zuoberst gezeichnet (z), Einzahlungen als Treppe dahinter
-          { id: 'value', label: valueLabel, values: data.map((p) => p.value), tone: 'accent', area: true, endDot: true, z: 1 },
+          { id: 'value', label: valueLabel, values: data.map((p) => p.value), tone: 'accent', area: true, endDot: true, z: 1, curve: valueCurve },
           { id: 'invested', label: 'Eingezahlt', values: data.map((p) => p.invested), tone: 'second', curve: 'step', endDot: false },
         ]}
         markers={markers}

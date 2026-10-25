@@ -388,6 +388,8 @@ Unabhängiges Review (eigener Prüfdurchlauf, nur lesend) aller Route-Handler, S
 | Fehlerseiten (`error.tsx`, `global-error.tsx`) zeigen nur den Fehlercode (digest), nie die Meldung; keine Inline-Skripte oder -Stile | ✅ |
 | Konto-Menü zeigt Name und E-Mail der eigenen Sitzung (aus `requireUser`); Abmelden entfernt wie bisher Push-Abo und Offline-Stand. Befehlspalette und Blätter sind native `<dialog>` (Fokus bleibt darin, Hintergrund inert) | ✅ |
 | Darstellungs-Vorschau, Schieberegler, Sprunglinks: nur Anzeige, eigene Tokens, keine Inline-Styles | ✅ |
+| Privatsphäre-Modus: Ø-Einstand-Linie im Kursverlauf entfällt (Bestand ist sichtbar, Ø Einstand × Bestand ergäbe den verborgenen Einstand) | ✅ (Befund aus dem Abschluss-Review behoben) |
+| „Kurs bestätigt“ gilt nur für die Werte der Warnung: jede Änderung an Stück, Kurs, Betrag, Art, Wertpapier oder Datum hebt das Häkchen auf; bleibt beim Speichern alles kursrelevante gleich (z. B. nur Notiz), bleibt die Bestätigung. Backup und Wiederherstellen übernehmen das Feld | ✅ (DB-Tests) |
 
 ## Notfallplan
 

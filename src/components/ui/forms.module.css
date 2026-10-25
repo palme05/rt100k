@@ -223,6 +223,21 @@ input[type='date'].control {
   border-bottom-color: var(--accent);
 }
 
+/* Textknopf: unsichtbare Tippfläche von 44 px, ohne die Zeile höher zu machen */
+.quiet {
+  position: relative;
+}
+
+.quiet::after {
+  content: '';
+  position: absolute;
+  left: calc(var(--space-2) * -1);
+  right: calc(var(--space-2) * -1);
+  top: 50%;
+  height: var(--hit);
+  translate: 0 -50%;
+}
+
 .actions {
   display: flex;
   flex-wrap: wrap;

@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { dayLabel, eur } from '@/lib/display'
+import { usePrivacy } from '../privacy/privacy'
 import { SectionHead } from '../ui/layout'
 import { Segmented } from '../ui/Segmented'
 import { Legend, type LegendKey } from './Legend'
@@ -73,6 +74,7 @@ export function PriceChart({
   averageCost?: number | null
 }) {
   const [range, setRange] = useState<RangeId>('max')
+  const { hidden } = usePrivacy()
   const first = points[0]?.day ?? ''
   const last = points.at(-1)?.day ?? ''
   const spanDays = first && last ? (time(last) - time(first)) / DAY : 0
@@ -87,7 +89,9 @@ export function PriceChart({
     data,
   )
   const before = events.filter((e) => first && e.day < first)
-  const thresholds: ChartThreshold[] = averageCost && averageCost > 0 ? [{ value: averageCost, label: `Ø Einstand ${eur(averageCost)}`, reference: true }] : []
+  // Im Privatsphäre-Modus keine Einstand-Linie: Bestand ist sichtbar, Ø Einstand × Bestand = Einstand
+  // (auch die Lage der Linie an der Kursachse würde den Wert verraten)
+  const thresholds: ChartThreshold[] = !hidden && averageCost && averageCost > 0 ? [{ value: averageCost, label: `Ø Einstand ${eur(averageCost)}`, reference: true }] : []
 
   const legend: { key: LegendKey; label: string }[] = [{ key: 'ink', label: 'Kurs' }]
   if (thresholds.length) legend.push({ key: 'reference', label: 'Ø Einstand' })

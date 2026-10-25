@@ -16,7 +16,7 @@ interface Share {
 }
 
 /** Depot nur lesend teilen: Einmal-Link erzeugen, Freigaben sehen und widerrufen. */
-export function ShareSettings({ portfolioId, shares }: { portfolioId: string; shares: readonly Share[] }) {
+export function ShareSettings({ portfolioId, shares, cash = false }: { portfolioId: string; shares: readonly Share[]; cash?: boolean }) {
   const id = useId()
   const [link, setLink] = useState<string | null>(null)
   const [message, setMessage] = useState<{ tone: 'error' | 'success'; text: string } | null>(null)
@@ -48,7 +48,7 @@ export function ShareSettings({ portfolioId, shares }: { portfolioId: string; sh
 
   return (
     <div className={styles.stack}>
-      <p className={styles.hint}>Andere sehen das Depot mit Positionen und Buchungen, können aber nichts ändern. Der Link gilt 72 Stunden und nur für eine Person.</p>
+      <p className={styles.hint}>{cash ? 'Andere sehen das Konto mit Kontostand und Buchungen' : 'Andere sehen das Depot mit Positionen und Buchungen'}, können aber nichts ändern. Der Link gilt 72 Stunden und nur für eine Person.</p>
       {link ? (
         <Field id={`${id}-link`} label="Link zum Weitergeben (nur jetzt sichtbar)">
           <Input id={`${id}-link`} readOnly value={link} code onFocus={(e) => e.currentTarget.select()} />
