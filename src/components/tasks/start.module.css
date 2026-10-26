@@ -1,0 +1,139 @@
+/* Erste Schritte: nummerierte Schritte, Fortschritt in Segmenten. */
+
+.guide {
+  display: grid;
+  gap: var(--space-block);
+  min-width: 0;
+}
+
+.progress {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-4);
+  font-size: var(--text-sm);
+  color: var(--ink-2);
+}
+
+.bar {
+  flex: 1 1 8rem;
+  max-width: 16rem;
+  height: 0.375rem;
+}
+
+.seg {
+  fill: var(--chart-track);
+}
+
+.segDone {
+  fill: var(--accent);
+}
+
+.dismiss {
+  margin-left: auto;
+  border: 0;
+  background: none;
+  padding: 0;
+  font: inherit;
+  color: var(--ink-3);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+
+.dismiss:hover {
+  color: var(--ink);
+}
+
+@media (pointer: coarse) {
+  .dismiss {
+    min-height: var(--hit);
+  }
+}
+
+.steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--space-stack);
+  counter-reset: step;
+}
+
+.step {
+  display: grid;
+  grid-template-columns: 2rem minmax(0, 1fr) auto;
+  align-items: start;
+  gap: var(--space-3);
+}
+
+.stepDone {
+  composes: step;
+}
+
+.stepCurrent {
+  composes: step;
+  padding: var(--space-3);
+  margin: 0 calc(var(--space-3) * -1);
+  border-radius: var(--radius-md);
+  background: var(--wash);
+}
+
+.mark {
+  display: inline-grid;
+  place-items: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 50%;
+  border: 1px solid var(--rule-strong);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  color: var(--ink-2);
+  font-variant-numeric: tabular-nums;
+}
+
+.stepDone .mark {
+  border-color: transparent;
+  background: var(--ink);
+  color: var(--bg);
+}
+
+.stepCurrent .mark {
+  border-color: var(--ink);
+  color: var(--ink);
+}
+
+.text {
+  display: grid;
+  gap: var(--space-hair);
+  padding-top: 0.15rem;
+  min-width: 0;
+}
+
+.title {
+  font-weight: var(--weight-medium);
+  color: var(--ink);
+}
+
+.stepDone .title {
+  color: var(--ink-3);
+  font-weight: var(--weight-regular);
+}
+
+.body {
+  font-size: var(--text-sm);
+  color: var(--ink-2);
+  line-height: var(--leading-meta);
+}
+
+/* Handy: Knopf unter dem Text */
+@media (max-width: 560px) {
+  .stepCurrent {
+    grid-template-columns: 2rem minmax(0, 1fr);
+  }
+
+  .stepCurrent > a {
+    grid-column: 2;
+    justify-self: start;
+  }
+}

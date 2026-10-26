@@ -1,3 +1,4 @@
+import { cookies } from 'next/headers'
 import Link from 'next/link'
 import { Sparkline } from '@/components/charts/charts'
 import { ASSET_KIND_SLOT, DonutChart } from '@/components/charts/DonutChart'
@@ -7,8 +8,10 @@ import { Amount } from '@/components/privacy/privacy'
 import { RouteSummary } from '@/components/road/RouteSummary'
 import { SaveOfflineSnapshot } from '@/components/shell/pwa'
 import { RefreshButton } from '@/components/shell/refresh'
+import { Icon } from '@/components/shell/icons'
+import { DismissStart } from '@/components/tasks/DismissStart'
+import { StartGuide } from '@/components/tasks/StartGuide'
 import { TaskList, type TaskItem } from '@/components/tasks/TaskList'
-import button from '@/components/ui/button.module.css'
 import { DataTable, NameCell, Td, Th } from '@/components/ui/DataTable'
 import { Message } from '@/components/ui/forms'
 import { Grid, MoreLink, Note, PageHead, Section, TextLink } from '@/components/ui/layout'
@@ -21,9 +24,12 @@ import { addDays } from '@/lib/days'
 import { formatDate, formatTime, viennaDay } from '@/lib/format'
 import { displayName } from '@/lib/names'
 import { buildSnapshot } from '@/lib/offline'
+import { nextStep, START_COOKIE, startSteps } from '@/lib/onboarding'
 import { requireUser } from '@/server/auth/session'
 import { recentNewDeviceLogin } from '@/server/dal/audit'
+import { listPasskeys } from '@/server/dal/credentials'
 import { listGoals } from '@/server/dal/goals'
+import { roadSettingsSaved } from '@/server/dal/road'
 import { listPortfolioSeries } from '@/server/dal/snapshots'
 import { goalViews } from '@/server/goals'
 import { valuePortfolios } from '@/server/overview'
@@ -31,8 +37,8 @@ import { loadRoad } from '@/server/road'
 import { loadOpenTasks } from '@/server/tasks'
 import { loadTax } from '@/server/tax'
 import { loadDayMoves } from '@/server/today'
-import styles from '../depots/depots.module.css'
 import { completeTaskAction } from '../hinweise/actions'
+import { dismissStartAction } from './actions'
 
 export const metadata = { title: 'Übersicht' }
 
@@ -59,21 +65,28 @@ export default async function OverviewPage() {
   const user = await requireUser()
   const [valuation, newDevice] = await Promise.all([valuePortfolios(user), recentNewDeviceLogin(user)])
 
+  const passkeys = await listPasskeys(user)
+  const secured = Boolean(user.twoFactorEnabled) || passkeys.length > 0
+
   if (valuation.portfolios.length === 0) {
     return (
       <>
         <PageHead id="willkommen" title={`Hallo ${user.name}`}>
-          Noch ist alles leer. So geht es los:
+          Willkommen bei rt100k. Vier Schritte, dann rechnet die App für dich – Kurse holt sie selbst.
         </PageHead>
-        <div className={styles.empty}>
-          <p>1. Ein Depot oder Konto anlegen – z. B. dein Wertpapierdepot oder Tagesgeld.</p>
-          <p>2. Käufe und Einzahlungen erfassen. Kurse holt rt100k automatisch.</p>
-          <p>3. Ab dann wächst dein Verlauf jeden Tag, und die Road to 100k zeigt, wann du ankommst.</p>
-          <Link className={button.button} href="/app/depots/neu">
-            Erstes Depot anlegen
-          </Link>
-          {user.twoFactorEnabled ? null : <TextLink href="/app/sicherheit">Konto mit Passkey oder 2FA absichern</TextLink>}
-        </div>
+        <Grid>
+          <Section id="erste-schritte" title="Erste Schritte" span="twoThirds">
+            <StartGuide steps={startSteps({ portfolios: 0, bookings: 0, planned: false, secured })} />
+          </Section>
+          <Section id="so-gehts" title="Gut zu wissen" span="third">
+            <Rows>
+              <Row label="Abrechnungen bleiben bei dir" sub="PDF und CSV werden nur im Browser gelesen" value={<Icon name="shield" size={18} />} />
+              <Row label="Steuer als Schätzung" sub="KESt nach österreichischem Recht" value={<Icon name="tax" size={18} />} />
+              <Row label="Rückgängig" sub="Löschen und Ändern 30 Minuten lang" value={<Icon name="undo" size={18} />} />
+            </Rows>
+            <MoreLink href="/app/methodik">So wird gerechnet</MoreLink>
+          </Section>
+        </Grid>
       </>
     )
   }
@@ -87,7 +100,10 @@ export default async function OverviewPage() {
     listGoals(user),
   ])
   const goalRows = goalViews(goals, valuation, road.settings)
-  const tasks: TaskItem[] = user.twoFactorEnabled ? openTasks : [TWO_FACTOR_TASK, ...openTasks]
+  const steps = startSteps({ portfolios: valuation.portfolios.length, bookings: valuation.bookings.length, planned: goals.length > 0 || (await roadSettingsSaved(user)), secured })
+  const showStart = nextStep(steps) !== null && (await cookies()).get(START_COOKIE)?.value !== 'aus'
+  // Die ersten Schritte nennen das Absichern schon – nicht doppelt unter „Offene Punkte“
+  const tasks: TaskItem[] = secured || showStart ? openTasks : [TWO_FACTOR_TASK, ...openTasks]
   const total = valuation.totalCents / 100
   const invested = valuation.investedCents / 100
   const gain = total - invested
@@ -131,6 +147,12 @@ export default async function OverviewPage() {
       {valuation.ledgerError ? <Message tone="error">{valuation.ledgerError}</Message> : null}
 
       <Grid>
+        {showStart ? (
+          <Section id="erste-schritte" title="Erste Schritte">
+            <StartGuide steps={steps} aside={<DismissStart dismiss={dismissStartAction} />} />
+          </Section>
+        ) : null}
+
         {tasks.length > 0 ? (
           <Section id="offene-punkte" title="Offene Punkte" meta={tasks.length === 1 ? '1 offen' : `${tasks.length} offen`}>
             <TaskList tasks={tasks} complete={completeTaskAction} />
