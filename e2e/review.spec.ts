@@ -7,7 +7,7 @@ test('Monatsrückblick: Ausgabe je Monat mit Highlights, Bewegungen und Archiv',
   const problems = collectProblems(page)
   await register(page)
   await page.goto('/app/rueckblick')
-  await expect(page.getByText(/die erste Ausgabe erscheint mit dem ersten Kauf/)).toBeVisible()
+  await expect(page.getByText(/Die erste Ausgabe erscheint mit dem ersten Kauf/)).toBeVisible()
 
   await createPortfolio(page, 'Trade Republic')
   await page.goto('/app/import')

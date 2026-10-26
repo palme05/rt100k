@@ -21,7 +21,7 @@ import { loadAnalysis } from '@/server/analysis'
 import { requireUser } from '@/server/auth/session'
 import { getAllocationTargets } from '@/server/dal/allocation'
 import { getRoadSettings } from '@/server/dal/road'
-import { deleteEtfBreakdownAction, saveAllocationTargetsAction, saveEtfBreakdownAction } from './actions'
+import { deleteEtfBreakdownAction, saveAllocationTargetsAction, saveEtfBreakdownAction } from '../actions'
 
 export const metadata = { title: 'Analyse' }
 // Kurshistorie kommt beim ersten Aufruf von den Anbietern (danach 12 h aus dem Cache)

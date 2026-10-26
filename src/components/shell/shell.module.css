@@ -728,6 +728,40 @@ a.addButton:active {
   }
 }
 
+/* Ladekreis über der Seite, erst wenn ein Wechsel spürbar dauert */
+.navSpinner {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  z-index: 61;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-4) var(--space-5);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-lg);
+  background: color-mix(in srgb, var(--surface) 88%, transparent);
+  box-shadow: var(--shadow-pop);
+  backdrop-filter: blur(8px);
+  translate: -50% -50%;
+  pointer-events: none;
+  animation: nav-spinner-in var(--dur-base) var(--ease-spring) 350ms both;
+}
+
+.navSpinnerText {
+  color: var(--ink-2);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+}
+
+@keyframes nav-spinner-in {
+  from {
+    opacity: 0;
+    scale: 0.85;
+  }
+}
+
 /* ═══ Breiten ══════════════════════════════════════════════════════════════
    ≥ 1280 px  alles ausgeschrieben, Suche als Feld (command.module.css)
    1024–1279  Suche als Symbol
