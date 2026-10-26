@@ -1,12 +1,15 @@
 import 'server-only'
-import { and, asc, count, desc, eq } from 'drizzle-orm'
+import { and, asc, between, count, desc, eq } from 'drizzle-orm'
 import { z } from 'zod'
+import { bookingTypeLabel } from '@/lib/booking-display'
+import { addDays } from '@/lib/days'
+import { DUPLICATE_DAYS, findDuplicate } from '@/lib/duplicates'
 import { viennaDay } from '@/lib/format'
 import { dayLabel } from '@/lib/display'
 import { formatPercentFromBasisPoints } from '@/lib/format'
 import { computeLedger, LedgerError, type LedgerBooking } from '@/lib/holdings'
 import { MAX_AMOUNT_CENTS, MoneyParseError, parseEuroToCents } from '@/lib/money'
-import { amountFromUnitPrice, displayUnitPrice, parseQuantity, parseUnitPrice, quantityToDb } from '@/lib/quantity'
+import { amountFromUnitPrice, displayUnitPrice, formatQuantity, parseQuantity, parseUnitPrice, quantityFromDb, quantityToDb } from '@/lib/quantity'
 import { withUser, type Tx } from '../db/client'
 import { booking, BOOKING_TYPES, instrument, portfolio, type BookingType } from '../db/schema'
 import { priceIssueFor } from '../plausibility'
@@ -78,6 +81,11 @@ export const bookingInput = z.object({
     .nullish(),
   /** „Kurs stimmt – trotzdem speichern“ (Checkbox) */
   confirmPrice: z
+    .union([z.literal('on'), z.boolean()], { error: 'Ungültige Bestätigung.' })
+    .nullish()
+    .transform((v) => v === 'on' || v === true),
+  /** „Keine Doppelbuchung – trotzdem speichern“ (Checkbox) */
+  confirmDuplicate: z
     .union([z.literal('on'), z.boolean()], { error: 'Ungültige Bestätigung.' })
     .nullish()
     .transform((v) => v === 'on' || v === true),
@@ -173,6 +181,7 @@ function parseBooking(input: unknown) {
     },
     amountMode: data.amountMode,
     confirmPrice: data.confirmPrice,
+    confirmDuplicate: data.confirmDuplicate,
   }
 }
 
@@ -198,6 +207,33 @@ async function assertPlausiblePrice(tx: Tx, data: NormalizedBooking, instrumentD
       ? `Der Betrag entspricht etwa dem Kurs eines Stücks: je Stück wären das nur ${implied}, der Schlusskurs am ${dayLabel(found.close.day)} war ${close} (${deviation}). Wurde der Kurs statt des Kurswerts eingetragen? Sonst „Kurs stimmt – trotzdem speichern“ ankreuzen.`
       : `Der Kurs je Stück liegt bei ${implied} – der Schlusskurs am ${dayLabel(found.close.day)} war ${close} (${deviation}). Bitte Stück und Betrag prüfen oder „Kurs stimmt – trotzdem speichern“ ankreuzen.`,
     amountMode === 'unit' ? 'price' : 'amount',
+  )
+}
+
+/**
+ * Eine fast gleiche Buchung im selben Depot (Art, Wert, Stück, Betrag, bis
+ * drei Tage auseinander – src/lib/duplicates.ts) speichert erst nach
+ * Bestätigung. Häufig: erst von Hand erfasst, später die Abrechnung importiert.
+ */
+async function assertNoDuplicate(tx: Tx, actor: Actor, portfolioId: string, data: NormalizedBooking, instrumentDto: InstrumentDto | null): Promise<void> {
+  const nearby = await tx
+    .select({ id: booking.id, type: booking.type, occurredOn: booking.occurredOn, instrumentId: booking.instrumentId, quantity: booking.quantity, amountCents: booking.amountCents, source: booking.source })
+    .from(booking)
+    .where(
+      and(
+        eq(booking.portfolioId, portfolioId),
+        eq(booking.ownerId, actor.id),
+        eq(booking.type, data.type),
+        between(booking.occurredOn, addDays(data.occurredOn, -DUPLICATE_DAYS), addDays(data.occurredOn, DUPLICATE_DAYS)),
+      ),
+    )
+  const found = findDuplicate(data, nearby)
+  if (!found) return
+  const pieces = [`${bookingTypeLabel(found.type)} am ${dayLabel(found.occurredOn)}`, found.quantity ? `${formatQuantity(quantityFromDb(found.quantity))} ${instrumentDto?.kind === 'metal' ? 'g' : 'Stück'}` : null].filter(Boolean).join(', ')
+  throw new ConfirmationRequired(
+    `Eine fast gleiche Buchung gibt es in diesem Depot schon: ${pieces}${found.source === 'import' ? ' (importiert)' : ''}. Doppelt erfasst? Sonst „Keine Doppelbuchung – trotzdem speichern“ ankreuzen.`,
+    undefined,
+    'duplicate',
   )
 }
 
@@ -302,13 +338,14 @@ export async function listAllLedgerBookings(actor: Actor): Promise<(LedgerBookin
 
 export async function createBooking(actor: Actor, input: unknown): Promise<BookingDto> {
   const portfolioId = parseId((input as { portfolioId?: unknown } | null)?.portfolioId)
-  const { booking: data, amountMode, confirmPrice } = parseBooking(input)
+  const { booking: data, amountMode, confirmPrice, confirmDuplicate } = parseBooking(input)
   return withUser(actor.id, async (tx) => {
     await ownedPortfolio(tx, actor, portfolioId, { lock: true })
     await assertBookingRoom(tx, actor, 1)
     const instrumentDto = data.instrumentId ? await getInstrument(actor, data.instrumentId, tx) : null
     const existing = await ledgerBookings(tx, actor, portfolioId)
     assertConsistent([...existing, { id: 'neu', ...data }])
+    if (!confirmDuplicate) await assertNoDuplicate(tx, actor, portfolioId, data, instrumentDto)
     if (!confirmPrice) await assertPlausiblePrice(tx, data, instrumentDto, amountMode)
     const [row] = await tx
       .insert(booking)

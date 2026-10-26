@@ -79,5 +79,7 @@ export async function createAgeFromReport(actor: Actor, input: unknown): Promise
     amount: cents(amountCents),
     tax: data.tax || null,
     note,
+    // Gleicher Fonds am selben Tag ist oben schon ausgeschlossen; das AGE-Formular hat kein Häkchen für Doppelbuchungen
+    confirmDuplicate: true,
   })
 }

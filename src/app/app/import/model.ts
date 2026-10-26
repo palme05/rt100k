@@ -53,6 +53,8 @@ export interface ReviewRow {
   assetKey: string | null
   instrument: { id: string; name: string } | null
   duplicate: boolean
+  /** Fast gleiche Buchung schon im Zieldepot (z. B. von Hand erfasst) */
+  similar: { occurredOn: string; source: 'manual' | 'import' } | null
   selected: boolean
   editing: boolean
   draft: Draft
@@ -86,6 +88,7 @@ export async function rowsFrom(fileId: string, result: ParseResult): Promise<Rev
         assetKey: ref ? assetKey(ref) : null,
         instrument: null,
         duplicate: false,
+        similar: null,
         selected: false,
         editing: false,
         draft: draftOf(booking),
@@ -94,9 +97,9 @@ export async function rowsFrom(fileId: string, result: ParseResult): Promise<Rev
   )
 }
 
-/** Vorauswahl: nur sichere Zeilen (kein Duplikat, nicht „niedrig“, Instrument bekannt, falls nötig). */
+/** Vorauswahl: nur sichere Zeilen (kein Duplikat, nichts Ähnliches im Depot, nicht „niedrig“, Instrument bekannt, falls nötig). */
 export function defaultSelected(row: ReviewRow): boolean {
-  if (row.duplicate || row.booking.confidence === 'niedrig') return false
+  if (row.duplicate || row.similar || row.booking.confidence === 'niedrig') return false
   return !NEEDS_INSTRUMENT.has(row.booking.kind) || row.instrument !== null
 }
 

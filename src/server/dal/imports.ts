@@ -1,6 +1,8 @@
 import 'server-only'
-import { and, asc, count, eq, inArray, max, ne } from 'drizzle-orm'
+import { and, asc, between, count, eq, inArray, max, ne } from 'drizzle-orm'
 import { z } from 'zod'
+import { addDays } from '@/lib/days'
+import { DUPLICATE_DAYS, findDuplicate } from '@/lib/duplicates'
 import { withUser } from '../db/client'
 import { booking, csvMapping, IMPORT_SOURCES, importFile, BOOKING_TYPES } from '../db/schema'
 import type { Actor } from './actor'
@@ -70,6 +72,57 @@ export async function findImported(actor: Actor, keys: readonly string[], fileHa
             .from(importFile)
             .where(and(eq(importFile.ownerId, actor.id), inArray(importFile.fileHash, f)))
     return { keys: new Set(existing.map((r) => r.key).filter((v): v is string => !!v)), files: new Set(files.map((r) => r.hash)) }
+  })
+}
+
+const similarInput = z.object({
+  portfolioId: z.string(),
+  items: z
+    .array(
+      z.object({
+        key: hex64,
+        type: z.enum(BOOKING_TYPES),
+        occurredOn: z.iso.date(),
+        instrumentId: z.string().max(40).nullable(),
+        quantity: z.string().regex(/^\d{1,24}(\.\d{1,24})?$/).nullable(),
+        amountCents: z.number().int().min(0).max(100_000_000_000),
+      }),
+    )
+    .max(MAX_IMPORT_BOOKINGS),
+})
+
+export interface SimilarBooking {
+  /** Import-Schlüssel der Zeile im Import */
+  key: string
+  /** Datum und Herkunft der schon gespeicherten Buchung */
+  occurredOn: string
+  source: 'manual' | 'import'
+}
+
+/**
+ * Zeilen eines Imports, die einer schon gespeicherten Buchung im Zieldepot
+ * fast gleichen (src/lib/duplicates.ts) – meist vorher von Hand erfasst.
+ * Genau gleiche Import-Schlüssel meldet `findImported`; die zählen hier nicht.
+ */
+export async function findSimilarImports(actor: Actor, input: unknown): Promise<SimilarBooking[]> {
+  const parsed = similarInput.safeParse(input)
+  if (!parsed.success) throw new ValidationError('Ungültige Import-Daten.')
+  const { items } = parsed.data
+  const portfolioId = parseId(parsed.data.portfolioId)
+  if (items.length === 0) return []
+  const days = items.map((i) => i.occurredOn).sort()
+  const keys = new Set(items.map((i) => i.key))
+  return withUser(actor.id, async (tx) => {
+    await ownedPortfolio(tx, actor, portfolioId)
+    const nearby = await tx
+      .select({ type: booking.type, occurredOn: booking.occurredOn, instrumentId: booking.instrumentId, quantity: booking.quantity, amountCents: booking.amountCents, source: booking.source, importKey: booking.importKey })
+      .from(booking)
+      .where(and(eq(booking.portfolioId, portfolioId), eq(booking.ownerId, actor.id), between(booking.occurredOn, addDays(days[0]!, -DUPLICATE_DAYS), addDays(days.at(-1)!, DUPLICATE_DAYS))))
+    const existing = nearby.filter((b) => !b.importKey || !keys.has(b.importKey))
+    return items.flatMap((item) => {
+      const hit = findDuplicate(item, existing)
+      return hit ? [{ key: item.key, occurredOn: hit.occurredOn, source: hit.source === 'import' ? ('import' as const) : ('manual' as const) }] : []
+    })
   })
 }
 
