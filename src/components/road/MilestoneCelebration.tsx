@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { milestoneToCelebrate, parseCelebrated } from '@/lib/celebrate'
 import { eurWhole } from '@/lib/display'
 import { viennaDay } from '@/lib/format'
@@ -59,19 +60,28 @@ export function MilestoneCelebration({ total, milestones }: { total: number; mil
 
   const label = value === null ? '' : value >= GOAL ? 'Ziel erreicht – 100.000 €!' : hidden ? `${Math.round((value / GOAL) * 100)} % der Strecke geschafft` : `${eurWhole(value)} geschafft`
   return (
-    <div className={styles.slot} role="status">
-      {value === null ? null : (
-        <div className={styles.toast}>
-          <span className={styles.badge}>
-            <Icon name="target" size={18} />
-          </span>
-          <span className={styles.text}>
-            <strong>Meilenstein erreicht</strong>
-            <span>{label}</span>
-          </span>
-          <IconButton icon="close" label="Hinweis schließen" onClick={() => setValue(null)} />
-        </div>
-      )}
-    </div>
+    <>
+      {/* angesagt wird hier, gezeigt in <body> (feste Position, von keinem Abschnitt verschoben) */}
+      <span className="sr-only" role="status">
+        {value === null ? '' : `Meilenstein erreicht: ${label}`}
+      </span>
+      {value === null
+        ? null
+        : createPortal(
+            <div className={styles.slot}>
+              <div className={styles.toast}>
+                <span className={styles.badge} aria-hidden="true">
+                  <Icon name="target" size={18} />
+                </span>
+                <span className={styles.text} aria-hidden="true">
+                  <strong>Meilenstein erreicht</strong>
+                  <span>{label}</span>
+                </span>
+                <IconButton icon="close" label="Hinweis schließen" onClick={() => setValue(null)} />
+              </div>
+            </div>,
+            document.body,
+          )}
+    </>
   )
 }
