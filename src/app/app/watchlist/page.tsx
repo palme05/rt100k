@@ -7,6 +7,7 @@ import { Grid, Note, PageHead, Section, TextLink } from '@/components/ui/layout'
 import { Trend } from '@/components/ui/Trend'
 import { UnwatchButton } from '@/components/watchlist/WatchControls'
 import watch from '@/components/watchlist/watchlist.module.css'
+import { EmptyState } from '@/components/ui/EmptyState'
 import { displayName } from '@/lib/names'
 import { displayUnitPrice } from '@/lib/quantity'
 import { ASSET_KIND_LABEL } from '@/lib/valuation'
@@ -35,7 +36,7 @@ export default async function WatchlistPage() {
       <Grid>
         <Section id="beobachtet" title="Beobachtet" meta={rows.length > 0 ? `${rows.length} von höchstens ${MAX_WATCHLIST}` : undefined} span="twoThirds">
           {rows.length === 0 ? (
-            <Note>Noch nichts auf der Watchlist. Einen Wert per ISIN, Name oder Symbol suchen – er erscheint dann hier mit Kurs und Verlauf.</Note>
+            <EmptyState title="Noch nichts auf der Watchlist">Einen Wert per ISIN, Name oder Symbol suchen – er erscheint dann hier mit Kurs und Verlauf.</EmptyState>
           ) : (
             <DataTable
               caption="Beobachtete Werte mit Kurs, Tagesveränderung und Jahresverlauf"

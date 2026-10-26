@@ -11,6 +11,7 @@ import { DataTable, NameCell, Td, Th } from '@/components/ui/DataTable'
 import { Message } from '@/components/ui/forms'
 import { Disclaimer, Grid, Muted, Note, PageHead, Section, SectionHead } from '@/components/ui/layout'
 import { Row, Rows } from '@/components/ui/Rows'
+import { EmptyState } from '@/components/ui/EmptyState'
 import { dayLabel } from '@/lib/display'
 import { requireUser } from '@/server/auth/session'
 import { loadTax, type E1kvDto } from '@/server/tax'
@@ -69,7 +70,7 @@ export default async function TaxPage({ searchParams }: { searchParams: Promise<
         <PageHead id="steuer-titel" title="Steuer">
           KESt-Schätzung, Verlustausgleich und Werte für die E 1kv.
         </PageHead>
-        <Note>Noch keine Buchungen. Sobald Käufe, Verkäufe oder Erträge erfasst sind, erscheint hier die Schätzung.</Note>
+        <EmptyState title="Noch keine Buchungen">Sobald Käufe, Verkäufe oder Erträge erfasst sind, erscheint hier die Schätzung.</EmptyState>
       </>
     )
   }

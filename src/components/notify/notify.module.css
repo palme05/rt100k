@@ -55,22 +55,6 @@
   color: var(--ink);
 }
 
-.empty {
-  display: grid;
-  gap: var(--space-tight);
-  max-width: var(--measure);
-}
-
-.emptyTitle {
-  margin: 0;
-  font-weight: var(--weight-medium);
-}
-
-.emptyText {
-  margin: 0;
-  color: var(--ink-2);
-}
-
 .kinds {
   display: flex;
   flex-wrap: wrap;
