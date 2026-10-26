@@ -110,7 +110,13 @@ Alle unter `src/components/`. Seiten setzen sich nur daraus zusammen, eigene CSS
 | `AppErrorState`, `NotFoundState` | `shell/` | Ruhige Fehler- und 404-Seiten mit „Erneut versuchen“ bzw. Weg zurück |
 | `MoreLink` | `ui/layout.tsx` | Weiter-Link am Ende eines Abschnitts („Steuer-Cockpit öffnen →“) |
 | `BarList`, `DeltaBars` | `charts/` | Verteilungen außer Anlageklassen als Balkenliste (Name, Prozent, Betrag); Veränderung im Monat als Beiträge (Kurse, Zu-/Abflüsse, Erträge) |
-| `ExpandableBarList` | `charts/` | `BarList`, die zuerst die größten Einträge zeigt (Rest in „Übrige“) und sich mit „Alle N anzeigen“ + Pfeil ganz aufklappen lässt (`aria-expanded`); ETF-Durchschau nach Land, Branche und Einzeltitel |
+| `FullList` | `analysis/FullList.tsx` | Komplette Rangliste auf eigener Seite: Rang, Name, Anteil (kleine Anteile genauer: 0,012 %), Betrag, dünner SVG-Balken; Suche, zeigt 150 und lädt in 300er-Schritten nach |
+| `ClassifyList` | `analysis/ClassifyList.tsx` | Land und Branche je Wert zuordnen: zwei Felder mit Vorschlagsliste (`<datalist>`, Neues eintippen), Speichern je Zeile, Status „✓ zugeordnet“, feste Reihenfolge |
+| `EmptyState` | `ui/EmptyState.tsx` | Leere Seite/Liste mit kleiner Straßen-Illustration (laufende Mittellinie, wehende Zielflagge), Satz und erstem Schritt |
+| `Odometer` | `ui/Odometer.tsx` | Zählwerk: Ziffern rollen beim Erscheinen ein, später nur geänderte; über `AmountSplit roll` für den großen Betrag oben (Screenreader lesen den Betrag am Stück) |
+| `Spinner`, `PageLoading` | `ui/Spinner.tsx`, `shell/PageLoading.tsx` | Ladekreis „Strecke“ (Bogen mit Perle, kleine Route innen); Ladeansicht mit Kreis, Text und schimmernden Platzhaltern |
+| `MilestoneCelebration` | `road/MilestoneCelebration.tsx` | Frisch erreichter Meilenstein: Konfetti (Canvas, Token-Farben), Haptik, Hinweis unten – einmal je Meilenstein und Gerät |
+| `HapticsBridge` | `hooks/HapticsBridge.tsx` | Haptik an einer Stelle: Antippen von Knöpfen/Links/Tabs, Regler-Schritte, neu erscheinende Erfolgs-/Fehlermeldungen (`data-haptic-event`) |
 | `LinkChips` | `ui/Chips.tsx` | Auswahl als Links (z. B. Depot beim Schnell-Erfassen), `aria-current`, 44 px hoch |
 | `RefreshButton`, `PullToRefresh` | `shell/refresh.tsx` | Daten neu laden per Knopf bzw. Ziehen (nur installierte App) |
 | `LastSnapshot` | `shell/LastSnapshot.tsx` | Ladeansicht der Übersicht mit dem letzten Stand dieses Geräts |
@@ -127,7 +133,7 @@ Alle unter `src/components/`. Seiten setzen sich nur daraus zusammen, eigene CSS
 | `Form`, `Field`, `Input`, `Select`, `Textarea`, `Checkbox`, `Button`, `Actions`, `Message` | `ui/forms.tsx` | Formulare: sichtbare Labels, Hinweis und Fehler am Feld (aria-describedby), Meldungen mit Titelwort |
 | `PerformancePanel` | `analysis/PerformancePanel.tsx` | Rendite je Zeitraum: Umschalter, Kennzahlen, kumulierte Rendite gegen Vergleichswert (Prozent-Diagramm) |
 | `RebalancePanel` | `analysis/RebalancePanel.tsx` | Zielanteile je Klasse (Eingabe in der Tabelle), Vorschlag „Nur nachkaufen“/„Voll umschichten“, Abweichung in Prozentpunkten mit Vorzeichen |
-| `LookthroughPanel` | `analysis/LookthroughPanel.tsx` | ETF-Durchschau: Aufteilung nach Land, Branche und Einzeltitel, Bestandslisten je ETF ablegen und entfernen |
+| `LookthroughPanel` | `analysis/LookthroughPanel.tsx` | ETF-Durchschau: die größten Länder, Branchen und Einzeltitel mit „Alle … →“ auf eigene Seiten, Hinweis auf Werte ohne Zuordnung, Bestandslisten je ETF ablegen und entfernen (mit Länderbasis und China-Korrekturen) |
 | `YearNav`, `EstimateNotice`, `TaxHints`, `Countdown`, `Toolbar` | `tax/TaxParts.tsx` | Steuer-Cockpit: Jahreswahl als Links (`aria-current`), Hinweis „Schätzung“, Hinweise mit Textmarke („! Prüfen“/„i Info“), Countdown bis steuerfrei |
 | `AgeReportForm` | `tax/AgeReportForm.tsx` | AGE aus OeKB-Meldung: Fonds, Meldedatum, Betrag je Anteil, Währung und Kurs |
 | `FileDrop` | `ui/FileDrop.tsx` | Dateiauswahl per Ziehen oder Tippen (Mehrfachauswahl, Tastatur, Hinweistext); liest nichts selbst |
@@ -204,10 +210,11 @@ Jede Geste hat eine sichtbare Entsprechung für Maus und Tastatur – nichts ist
 | Ziehen am Seitenanfang (nur installierte App) | „Kurse aktualisieren“ | `PullToRefresh`, `RefreshButton` |
 | „+“ unten rechts | „+ Buchung“ in der Kopfzeile, Tasten `g b`, Palette | `TabBar`, `AppHeader` |
 
-- **Haptik:** kurzes Vibrieren bei Geste erkannt, Löschen bestätigt (`haptic()`); nur Android – iOS kennt keine Vibrations-API, dort trägt der sichtbare Druckzustand (Knopf sinkt leicht ein, „+“ wird kleiner). Bei „Bewegung reduzieren“ aus.
-- **Bewegung:** neue Seiten blenden in 180 ms ein (`template.tsx`), Blätter gleiten hoch. `prefers-reduced-motion` schaltet alles ab.
+- **Haptik (Android zuerst):** Vibrations-API mit Mustern je Anlass (`haptic(kind)`): `select` 8 ms beim Wischen durch Diagramme und je Regler-Schritt (höchstens alle 32 ms), `tap` 12 ms beim Antippen, `success` Doppelimpuls nach dem Speichern, `warning`, `error`, `celebrate` (Meilenstein). Antippen und Meldungen laufen zentral über `HapticsBridge`; abschaltbar je Gerät unter „Darstellung“. iOS kennt keine Muster – ab iOS 18 gibt es ein kurzes Klicken beim Antippen. Haptik ist keine Bewegung und bleibt bei „Bewegung reduzieren“ an.
+- **Bewegung:** Kurven und Dauern nur über Tokens (`--ease-out`, `--ease-spring`, `--dur-fast/base/slow/roll`). Der große Betrag rollt als Zählwerk ein, die Routenlinie wächst von links, Stationen ploppen auf, „Du bist hier“ sendet ein ruhiges Signal. Abschnitte gleiten beim Scrollen ins Bild (CSS-Scroll-Timeline, ohne Skript – Browser ohne Unterstützung zeigen sie sofort); Diagramme zeichnen sich erst, wenn sie im Bild sind. Tab-Pille wächst, Symbol hüpft; Meldungen gleiten herein, Fehler schütteln kurz. Neue Seiten blenden ein (`template.tsx`), Blätter gleiten hoch. Konfetti nur bei einem frisch erreichten Meilenstein. `prefers-reduced-motion` schaltet alles ab.
+- **Feste Positionen:** Was am Bildschirm klebt (Ladekreis, Meilenstein-Hinweis, Konfetti), wird per Portal in `<body>` gezeichnet – Abschnitte mit Scroll-Animation würden es sonst mitbewegen.
 - **Tippflächen:** mindestens 44 px; Werkzeug-Knöpfe und Umschalter wachsen bei Touch (`pointer: coarse`).
-- **Ladezustände:** Jeder Seitenwechsel zeigt oben einen schmalen Akzent-Balken (`LinkPending`), bis die Seite da ist. Eigene Ladeansichten nur für Übersicht (zeigt währenddessen den letzten Stand dieses Geräts, `LastSnapshot`) und Analyse. Nie für Seiten mit `notFound()` (sonst 200 statt 404) und nicht für Seiten mit Eingaben wie Road oder Steuer – dort würden schnelle Eingaben vor der Hydrierung verloren gehen.
+- **Ladezustände:** Jeder Seitenwechsel zeigt sofort oben einen schmalen Akzent-Balken und nach 350 ms den Ladekreis über der Seite (`LinkPending`); Knöpfe, die warten, zeigen einen kleinen Ring (`aria-busy`). Eigene Ladeansichten (`PageLoading`) nur für Seiten ohne Eingaben: Übersicht (zeigt den letzten Stand dieses Geräts, `LastSnapshot`), Analyse, Depot-Liste, Rückblick, Datenstand. Nie für Seiten mit `notFound()` (sonst 200 statt 404) und nicht für Seiten mit Eingaben – dort würden schnelle Eingaben vor der Hydrierung verloren gehen.
 
 ## Do / Don't
 
