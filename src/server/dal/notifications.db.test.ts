@@ -15,6 +15,7 @@ import {
   addNotifications,
   addTasks,
   completeTask,
+  discardAllTasks,
   createPriceAlert,
   deletePriceAlert,
   deletePushSubscription,
@@ -102,6 +103,23 @@ describe('Aufgaben', () => {
     await completeTask(dave, tasks[0]!.id)
     expect(await listTasks(dave)).toHaveLength(1)
     await expect(completeTask(dave, tasks[0]!.id)).rejects.toBeInstanceOf(NotFoundError)
+  })
+
+  it('Aufgaben zählen nicht zur Glocke und lassen sich alle verwerfen – nur die eigenen', async () => {
+    const erin = await createUser('Erin')
+    const frank = await createUser('Frank')
+    await addTasks(erin, ['Importrest 1', 'Importrest 2', 'Importrest 3'])
+    await addTasks(frank, ['Franks Aufgabe'])
+    await addNotifications(erin, [{ kind: 'milestone', title: 'Meilenstein', dedupeKey: 'm' }])
+    expect(await unreadCount(erin)).toBe(1)
+    expect((await listNotifications(erin)).map((n) => n.kind)).toEqual(['milestone'])
+
+    expect(await discardAllTasks(erin)).toBe(3)
+    expect(await listTasks(erin)).toEqual([])
+    // andere Hinweise und fremde Aufgaben bleiben
+    expect((await listNotifications(erin)).map((n) => n.title)).toEqual(['Meilenstein'])
+    expect((await listTasks(frank)).map((t) => t.body)).toEqual(['Franks Aufgabe'])
+    expect(await discardAllTasks(erin)).toBe(0)
   })
 
   it('prüft die Eingabe', async () => {

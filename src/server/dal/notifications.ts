@@ -39,9 +39,18 @@ export interface NewNotification {
   dedupeKey: string
 }
 
+/**
+ * Neueste Hinweise (Glocke, Hinweis-Seite). Aufgaben aus Importen gehören
+ * nicht dazu – sie stehen auf der Import-Seite unter „Von Hand zu buchen“.
+ */
 export async function listNotifications(actor: Actor, limit = 50): Promise<NotificationDto[]> {
   const rows = await withUser(actor.id, (tx) =>
-    tx.select().from(notification).where(eq(notification.ownerId, actor.id)).orderBy(desc(notification.createdAt)).limit(limit),
+    tx
+      .select()
+      .from(notification)
+      .where(and(eq(notification.ownerId, actor.id), ne(notification.kind, 'task')))
+      .orderBy(desc(notification.createdAt))
+      .limit(limit),
   )
   const now = Date.now()
   return rows.map((r) => ({
@@ -62,7 +71,7 @@ export async function unreadCount(actor: Actor): Promise<number> {
     tx
       .select({ n: count() })
       .from(notification)
-      .where(and(eq(notification.ownerId, actor.id), isNull(notification.readAt))),
+      .where(and(eq(notification.ownerId, actor.id), isNull(notification.readAt), ne(notification.kind, 'task'))),
   )
   return row?.n ?? 0
 }
@@ -153,6 +162,17 @@ export async function completeTask(actor: Actor, id: unknown): Promise<void> {
       .returning({ id: notification.id }),
   )
   if (rows.length === 0) throw new NotFoundError('Aufgabe nicht gefunden.')
+}
+
+/** Alle eigenen Aufgaben verwerfen (z. B. alte Importreste); liefert die Anzahl. */
+export async function discardAllTasks(actor: Actor): Promise<number> {
+  const rows = await withUser(actor.id, (tx) =>
+    tx
+      .delete(notification)
+      .where(and(eq(notification.ownerId, actor.id), eq(notification.kind, 'task')))
+      .returning({ id: notification.id }),
+  )
+  return rows.length
 }
 
 // ── Kursalarme ──────────────────────────────────────────────────────────────

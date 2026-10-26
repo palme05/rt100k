@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { ImportedBooking } from './types'
-import { unassignedTask } from './tasks'
+import { unassignedTask, unassignedTasks } from './tasks'
 
 const base: ImportedBooking = {
   kind: 'buy',
@@ -26,5 +26,20 @@ describe('Aufgaben aus dem Import', () => {
     expect(unassignedTask({ ...base, asset: { kind: 'crypto', isin: null, symbol: 'XYZ', name: 'Testcoin' } })).toContain('Testcoin (XYZ)')
     expect(unassignedTask({ ...base, asset: null })).toContain('Unbekannter Wert')
     expect(unassignedTask({ ...base, asset: { ...base.asset!, name: 'x'.repeat(400) } }).length).toBe(300)
+  })
+
+  it('mehrere Buchungen zum selben Wert werden ein Punkt', () => {
+    const coin = { kind: 'crypto' as const, isin: null, symbol: 'CHZ', name: 'Chiliz' }
+    const tasks = unassignedTasks([
+      { ...base, asset: coin, occurredOn: '2020-12-16', kind: 'sell' },
+      { ...base, asset: coin, occurredOn: '2020-12-14' },
+      { ...base, asset: coin, occurredOn: '2021-01-01', kind: 'staking' },
+      base,
+    ])
+    expect(tasks).toEqual([
+      'Chiliz (CHZ): 3 Buchungen (Verkauf, Kauf, Staking/Prämie) vom 14.12.2020 bis 01.01.2021 – Wertpapier nicht zugeordnet – im Import zuordnen oder von Hand buchen',
+      'Kauf Muster Holding (US0000000001) vom 10.03.2026: Wertpapier nicht zugeordnet – im Import zuordnen oder von Hand buchen',
+    ])
+    expect(unassignedTasks([])).toEqual([])
   })
 })
