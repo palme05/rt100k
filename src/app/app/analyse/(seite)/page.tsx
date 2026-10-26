@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { z } from 'zod'
+import { DividendSalary } from '@/components/analysis/DividendSalary'
 import { IncomeCalendar } from '@/components/analysis/IncomeCalendar'
 import { LookthroughPanel } from '@/components/analysis/LookthroughPanel'
 import { PerformancePanel } from '@/components/analysis/PerformancePanel'
@@ -113,6 +114,7 @@ export default async function AnalysisPage({ searchParams }: { searchParams: Pro
         </Section>
 
         <Section id="kalender" title="Dividendenkalender" meta="≈ erwartet je Monat" span="third">
+          {income.dividends12Cents > 0 ? <DividendSalary yearCents={income.dividends12Cents} /> : null}
           {income.calendar.length === 0 ? <Note>Noch keine Zahlungen, aus denen sich etwas erwarten lässt.</Note> : <IncomeCalendar payments={income.calendar} />}
         </Section>
 

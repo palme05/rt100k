@@ -171,7 +171,7 @@ describe('Push-Abos', () => {
 })
 
 describe('Täglicher Lauf', () => {
-  it('erzeugt Kursalarm, Dividende und Meilenstein je einmal', async () => {
+  it('erzeugt Kursalarm, Dividende, Dividenden-Ausblick und Meilenstein je einmal', async () => {
     const carol = await createUser('Carol')
     const today = viennaDay()
     const depot = (await createPortfolio(carol, { name: 'Depot', kind: 'depot' })).id
@@ -185,9 +185,12 @@ describe('Täglicher Lauf', () => {
     expect(valuation.totalCents).toBe(1_200_000)
 
     const first = await generateNotifications(carol, valuation, { quotes, fx: null }, today)
-    expect(first.created).toBe(3)
+    expect(first.created).toBe(4)
     const kinds = (await listNotifications(carol)).map((n) => n.kind).sort()
-    expect(kinds).toEqual(['dividend', 'milestone', 'price_alert'])
+    expect(kinds).toEqual(['dividend', 'dividend', 'milestone', 'price_alert'])
+    // Ausblick: die Zahlung dieses Monats wiederholt sich (Schätzung aus den letzten 12 Monaten)
+    expect((await listNotifications(carol)).find((n) => n.title.startsWith('Dividenden im'))).toMatchObject({ amount: 12.34, link: '/app/analyse' })
+    expect((await listNotifications(bob)).some((n) => n.title.startsWith('Dividenden im'))).toBe(false)
     expect((await listNotifications(carol)).find((n) => n.kind === 'milestone')?.amount).toBe(10_000)
     expect((await listPriceAlerts(carol))[0]?.triggeredAt).not.toBeNull()
 

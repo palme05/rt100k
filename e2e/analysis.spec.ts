@@ -76,6 +76,19 @@ test('Analyse: Dividende erscheint in Erträgen, Prognose und Dividendenkalender
   await expect(calendar).toContainText('Vanguard')
   await expect(calendar).toContainText('5,00')
   await expect(page.getByRole('table', { name: 'Gebühren und Steuern je Jahr' })).toContainText('2026')
+
+  // Dividenden-Gehalt: 5 € im Jahr ≈ 0,42 € im Monat; Stundenlohn bleibt auf dem Gerät
+  const salary = calendar.getByRole('group', { name: 'Dividenden-Gehalt' })
+  await expect(salary).toContainText('0,42 € im Monat')
+  await expect(async () => {
+    await salary.getByLabel(/Netto-Stundenlohn/).fill('25')
+    await expect(salary).toContainText('Ersetzt ≈ 1 Minute Arbeit im Monat', { timeout: 1_000 })
+  }).toPass({ timeout: 15_000 })
+  await salary.getByLabel(/Netto-Stundenlohn/).fill('abc')
+  await expect(salary.getByText('Bitte einen Betrag wie 18,50 eingeben.')).toBeVisible()
+  await salary.getByLabel(/Netto-Stundenlohn/).fill('25')
+  await page.reload()
+  await expect(page.getByRole('region', { name: 'Dividendenkalender' }).getByLabel(/Netto-Stundenlohn/)).toHaveValue('25')
 })
 
 test('Rebalancing: Zielaufteilung eingeben, Nachkauf-Vorschlag, speichern', async ({ page }) => {

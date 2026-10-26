@@ -3,7 +3,8 @@ import { addDays, daysBetween } from '@/lib/days'
 import { dayLabel } from '@/lib/display'
 import { viennaDay } from '@/lib/format'
 import { detectSavingsPlans } from '@/lib/savings'
-import { alertTriggered, milestonesCrossed, speculationEnded } from '@/lib/notify'
+import { alertTriggered, dividendOutlook, milestonesCrossed, speculationEnded } from '@/lib/notify'
+import { dailySeries, expectedPayments } from '@/lib/performance'
 import { estimateTaxYear, type TaxInstrument } from '@/lib/tax'
 import type { Actor } from './dal/actor'
 import { lastImportAt } from './dal/imports'
@@ -20,8 +21,9 @@ export const NOTIFICATION_RETENTION_DAYS = 365
 
 /**
  * Hinweise des täglichen Laufs je Nutzer (in dessen RLS-Kontext):
- * Kursalarm, Dividende eingegangen, Meilenstein erreicht, Spekulationsfrist
- * abgelaufen, Sparplan ausgelassen, monatliche Import-Erinnerung. Neue
+ * Kursalarm, Dividende eingegangen, Dividenden-Ausblick für den Monat,
+ * Meilenstein erreicht, Spekulationsfrist abgelaufen, Sparplan ausgelassen,
+ * monatliche Import-Erinnerung. Neue
  * Hinweise lösen einen Push-Ping an die Geräte aus.
  */
 export async function generateNotifications(
@@ -55,6 +57,18 @@ export async function generateNotifications(
   for (const b of valuation.bookings) {
     if (b.type !== 'dividend' || b.occurredOn < since || b.occurredOn > today) continue
     items.push({ kind: 'dividend', title: `Dividende: ${nameOf(b.instrumentId)}`, body: `Zahltag ${dayLabel(b.occurredOn)}`, amountCents: b.amountCents, link: `/app/depots/${b.portfolioId}`, dedupeKey: `dividende:${b.id}` })
+  }
+
+  // Dividenden-Ausblick: was diesen Monat voraussichtlich kommt (einmal je Monat, ohne Kurse gerechnet)
+  const month = today.slice(0, 7)
+  const series = dailySeries(
+    valuation.portfolios.map((p) => ({ kind: p.kind, bookings: valuation.bookings.filter((b) => b.portfolioId === p.id) })),
+    new Map(),
+    today,
+  )
+  const outlook = dividendOutlook(expectedPayments(series.income, series.quantities, today), month, nameOf)
+  if (outlook) {
+    items.push({ kind: 'dividend', title: outlook.title, body: outlook.body, amountCents: outlook.cents, link: '/app/analyse', dedupeKey: `dividende-ausblick:${month}` })
   }
 
   // Meilensteine – nur mit Vorgeschichte (sonst meldet der erste Tag alles auf einmal)
