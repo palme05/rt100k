@@ -21,15 +21,19 @@ test('Navigation: jede Seite erreichbar – Desktop oben mit „Mehr“, Handy m
   } else {
     await nav.getByRole('link', { name: 'Steuer' }).click()
     await expect(page).toHaveURL(/\/app\/steuer$/)
-    await nav.getByRole('button', { name: /Mehr/ }).click()
-    await nav.getByRole('link', { name: 'Monatsrückblick' }).click()
+    // Rückblick hat am Desktop einen eigenen Tab
+    await nav.getByRole('link', { name: 'Rückblick' }).click()
     await expect(page).toHaveURL(/\/app\/rueckblick$/)
+    await expect(nav.getByRole('link', { name: 'Rückblick' })).toHaveAttribute('aria-current', 'page')
+    await nav.getByRole('button', { name: /Mehr/ }).click()
+    await nav.getByRole('link', { name: 'Watchlist' }).click()
+    await expect(page).toHaveURL(/\/app\/watchlist$/)
     // Esc schließt das Menü
     await nav.getByRole('button', { name: /Mehr/ }).click()
     await expect(nav.getByRole('link', { name: 'Import' })).toBeVisible()
     await page.keyboard.press('Escape')
     await expect(nav.getByRole('link', { name: 'Import' })).toBeHidden()
-    // Rückblick-Unterseiten markieren „Mehr“, Depot-Unterseiten „Depots“
+    // Seiten unter „Mehr“ markieren „Mehr“, Depot-Unterseiten „Depots“
     await expect(nav.getByRole('button', { name: /Mehr/ })).toHaveAttribute('aria-current', 'page')
     // Kopfzeile bleibt einzeilig (feste Höhe), auch in schmalen Desktop-Fenstern
     for (const width of [721, 1024, 1280, 1440]) {

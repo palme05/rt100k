@@ -116,6 +116,13 @@ export default async function OverviewPage() {
   const hasCrypto = valuation.allocation.some((a) => a.key === 'crypto')
   const hasMoves = moves.byPortfolio.size > 0
 
+  const hasHistory = road.history.length >= 2
+  const allocation = (
+    <Section id="aufteilung" title="Aufteilung" meta="nach Anlageklasse" span={hasHistory ? 'third' : 'twoThirds'}>
+      {valuation.allocation.length > 0 ? <DonutChart title="Aufteilung nach Anlageklasse" items={valuation.allocation} slots={ASSET_KIND_SLOT} /> : <Note>Noch keine Werte.</Note>}
+    </Section>
+  )
+
   const stats: KeyStat[] = [
     ...(moves.total ? [{ label: 'Heute', value: <Trend value={moves.total.ratio} />, note: <Amount value={moves.total.changeCents / 100} signed whole /> }] : []),
     { label: 'Kursgewinn', value: invested > 0 ? <Trend value={gain / invested} /> : '–', note: <Amount value={gain} signed whole /> },
@@ -161,21 +168,22 @@ export default async function OverviewPage() {
           </Section>
         ) : null}
 
-        <Section label="Verlauf" span="twoThirds">
-          {road.history.length >= 2 ? (
-            <HistoryChart history={road.history} title="Vermögensverlauf mit eingesetztem Kapital" footer={<MoreLink href="/app/rueckblick">Monatsrückblick lesen</MoreLink>} />
-          ) : (
-            <>
-              <h2 className="sr-only">Verlauf</h2>
-              <Note>Der Verlauf beginnt jetzt: Jeden Abend nach US-Börsenschluss speichert rt100k den Tageswert. Nach dem ersten Monatswechsel erscheint hier die Kurve.</Note>
-              <MoreLink href="/app/rueckblick">Monatsrückblick lesen</MoreLink>
-            </>
-          )}
-        </Section>
-
-        <Section id="aufteilung" title="Aufteilung" meta="nach Anlageklasse" span="third">
-          {valuation.allocation.length > 0 ? <DonutChart title="Aufteilung nach Anlageklasse" items={valuation.allocation} slots={ASSET_KIND_SLOT} /> : <Note>Noch keine Werte.</Note>}
-        </Section>
+        {hasHistory ? (
+          <>
+            <Section label="Verlauf" span="twoThirds">
+              <HistoryChart history={road.history} title="Vermögensverlauf mit eingesetztem Kapital" />
+            </Section>
+            {allocation}
+          </>
+        ) : (
+          // Noch kein Verlauf: die Aufteilung bekommt die breite Spalte, der Hinweis bleibt klein daneben
+          <>
+            {allocation}
+            <Section id="verlauf" title="Verlauf" meta="ab dem ersten Monatswechsel" span="third">
+              <Note>Jeden Abend nach US-Börsenschluss speichert rt100k den Tageswert. Nach dem ersten Monatswechsel erscheint hier die Kurve deines Vermögens.</Note>
+            </Section>
+          </>
+        )}
 
         <Section
           id="depots"

@@ -24,9 +24,10 @@ export function appNav(): NavItem[] {
     { href: `${APP_BASE}/analyse`, label: 'Analyse', icon: 'analysis', activePrefixes: [`${APP_BASE}/analyse`], primary: true, tab: true },
     { href: `${APP_BASE}/steuer`, label: 'Steuer', icon: 'tax', activePrefixes: [`${APP_BASE}/steuer`], primary: true },
     { href: `${APP_BASE}/road`, label: 'Road to 100k', short: 'Road', icon: 'route', activePrefixes: [`${APP_BASE}/road`], primary: true, tab: true },
+    // eigener Tab am Desktop (Wunsch des Betreibers), am Handy unter „Mehr“
+    { href: `${APP_BASE}/rueckblick`, label: 'Rückblick', icon: 'review', activePrefixes: [`${APP_BASE}/rueckblick`], primary: true, wideOnly: true },
     { href: `${APP_BASE}/import`, label: 'Import', icon: 'import', activePrefixes: [`${APP_BASE}/import`] },
     { href: `${APP_BASE}/watchlist`, label: 'Watchlist', icon: 'bookmark', activePrefixes: [`${APP_BASE}/watchlist`] },
-    { href: `${APP_BASE}/rueckblick`, label: 'Monatsrückblick', icon: 'review', activePrefixes: [`${APP_BASE}/rueckblick`] },
   ]
 }
 
