@@ -76,7 +76,7 @@ export default async function WatchlistPage() {
                       ) : null}
                     </Td>
                     <Td>
-                      <span className={watch.heroActions}>
+                      <span className={watch.rowActions}>
                         <IconLink href="/app/hinweise#kursalarme" icon="bell" label={`Kursalarm für ${i.name}`} size={18} />
                         <UnwatchButton instrumentId={i.id} name={i.name} unwatch={unwatchAction} />
                       </span>

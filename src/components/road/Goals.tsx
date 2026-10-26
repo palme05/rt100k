@@ -79,12 +79,14 @@ function Status({ goal }: { goal: GoalItem }) {
       {goal.targetDate ? (
         <p>
           Bis {monthLabel(goal.targetDate.slice(0, 7), 'long')}:{' '}
-          {goal.requiredMonthlyCents !== null ? (
+          {goal.requiredMonthlyCents === null ? (
+            'Zieldatum erreicht'
+          ) : goal.requiredMonthlyCents === 0 ? (
+            'schafft die angenommene Rendite allein'
+          ) : (
             <>
               nötig <Amount value={goal.requiredMonthlyCents / 100} whole /> im Monat
             </>
-          ) : (
-            'Zieldatum erreicht'
           )}
         </p>
       ) : null}
