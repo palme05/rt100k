@@ -776,3 +776,44 @@ export const goalPortfolio = pgTable(
     pgPolicy('goal_portfolio_owner', { for: 'all', to: appRole, using: ownRows, withCheck: ownRows }),
   ],
 ).enableRLS()
+
+export const GOAL_SHARE_ROLES = ['view', 'edit'] as const
+export type GoalShareRole = (typeof GOAL_SHARE_ROLES)[number]
+
+/**
+ * Freigabe eines Ziels – wie `portfolio_share` per Einmal-Link (nur der
+ * SHA-256 des Tokens, 72 h), zusätzlich mit Recht: „view“ zeigt Stand und
+ * Plan, „edit“ erlaubt dazu, die Planwerte zu ändern (Name, Betrag, Datum,
+ * Sparrate, Rendite) – nie die gezählten Depots, nie löschen. Annehmen und
+ * Vorschau über Funktionen (Migration 0022).
+ */
+export const goalShare = pgTable(
+  'goal_share',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    goalId: uuid('goal_id').notNull(),
+    ownerId: text('owner_id')
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    granteeId: text('grantee_id').references(() => user.id, { onDelete: 'cascade' }),
+    role: text('role').$type<GoalShareRole>().notNull(),
+    tokenHash: text('token_hash').unique(),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+    acceptedAt: timestamp('accepted_at', { withTimezone: true }),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    // Ziel und Besitzer gehören zusammen: nur der Besitzer kann sein Ziel freigeben
+    foreignKey({ name: 'goal_share_goal_owner_fk', columns: [t.goalId, t.ownerId], foreignColumns: [goal.id, goal.ownerId] }).onDelete('cascade'),
+    index('goal_share_goal_idx').on(t.goalId),
+    index('goal_share_grantee_idx').on(t.granteeId),
+    uniqueIndex('goal_share_unique_grantee').on(t.goalId, t.granteeId).where(sql`grantee_id is not null`),
+    check('goal_share_role_check', sql`${t.role} in ('view', 'edit')`),
+    check('goal_share_state_check', sql`(${t.granteeId} is null) = (${t.acceptedAt} is null) and (${t.granteeId} is null) = (${t.tokenHash} is not null)`),
+    check('goal_share_token_check', sql`${t.tokenHash} is null or ${t.tokenHash} ~ '^[0-9a-f]{64}$'`),
+    check('goal_share_not_self', sql`${t.granteeId} is null or ${t.granteeId} <> ${t.ownerId}`),
+    pgPolicy('goal_share_owner', { for: 'all', to: appRole, using: ownRows, withCheck: ownRows }),
+    pgPolicy('goal_share_grantee_read', { for: 'select', to: appRole, using: sql`grantee_id = ${currentUser}` }),
+    pgPolicy('goal_share_grantee_leave', { for: 'delete', to: appRole, using: sql`grantee_id = ${currentUser}` }),
+  ],
+).enableRLS()

@@ -36,7 +36,8 @@ const optionalText = z
   .transform((v) => v || null)
   .nullish()
 
-const goalInput = z.object({
+/** Planwerte – auch beim Mitbearbeiten eines geteilten Ziels (src/server/dal/goal-shares.ts) */
+const planInput = z.object({
   name: z.string().trim().min(1, 'Bitte einen Namen angeben.').max(60, 'Name: höchstens 60 Zeichen.'),
   target: z.string().trim().min(1, 'Bitte einen Zielbetrag angeben.').max(40),
   targetDate: z
@@ -47,6 +48,9 @@ const goalInput = z.object({
     .nullish(),
   monthly: optionalText,
   returnPct: optionalText,
+})
+
+const goalInput = planInput.extend({
   scope: z.enum(['all', 'selected'], { error: 'Bitte wählen, welche Depots zählen.' }),
   portfolioIds: z.array(z.string()).max(100).default([]),
 })
@@ -72,28 +76,39 @@ function basisPoints(value: string): number {
   return bp
 }
 
-function parseGoal(input: unknown) {
-  const parsed = goalInput.safeParse(input)
-  if (!parsed.success) {
-    const issue = parsed.error.issues[0]
-    throw new ValidationError(issue?.message ?? 'Ungültige Eingabe.', issue?.path.join('.'))
-  }
-  const d = parsed.data
+function firstIssue(error: z.ZodError): never {
+  const issue = error.issues[0]
+  throw new ValidationError(issue?.message ?? 'Ungültige Eingabe.', issue?.path.join('.'))
+}
+
+function plan(d: z.infer<typeof planInput>) {
   const targetCents = cents(d.target, 'target', 'Zielbetrag')
   if (targetCents <= 0) throw new ValidationError('Bitte einen Zielbetrag größer als 0 angeben.', 'target')
   if (d.targetDate && d.targetDate <= viennaDay()) throw new ValidationError('Das Zieldatum muss in der Zukunft liegen.', 'targetDate')
   if (d.targetDate && d.targetDate > '2100-12-31') throw new ValidationError('Das Zieldatum liegt zu weit in der Zukunft.', 'targetDate')
-  const portfolioIds = d.scope === 'selected' ? [...new Set(d.portfolioIds.map(parseId))] : []
-  if (d.scope === 'selected' && portfolioIds.length === 0) throw new ValidationError('Bitte mindestens ein Depot oder Konto wählen.', 'portfolioIds')
   return {
     name: d.name,
     targetCents,
     targetDate: d.targetDate ?? null,
     monthlyCents: d.monthly ? cents(d.monthly, 'monthly', 'Sparrate') : null,
     returnBp: d.returnPct ? basisPoints(d.returnPct) : null,
-    scope: d.scope,
-    portfolioIds,
   }
+}
+
+/** Nur die Planwerte (Name, Betrag, Datum, Sparrate, Rendite); weitere Felder werden ignoriert. */
+export function parseGoalPlan(input: unknown) {
+  const parsed = planInput.safeParse(input)
+  if (!parsed.success) firstIssue(parsed.error)
+  return plan(parsed.data)
+}
+
+function parseGoal(input: unknown) {
+  const parsed = goalInput.safeParse(input)
+  if (!parsed.success) firstIssue(parsed.error)
+  const d = parsed.data
+  const portfolioIds = d.scope === 'selected' ? [...new Set(d.portfolioIds.map(parseId))] : []
+  if (d.scope === 'selected' && portfolioIds.length === 0) throw new ValidationError('Bitte mindestens ein Depot oder Konto wählen.', 'portfolioIds')
+  return { ...plan(d), scope: d.scope, portfolioIds }
 }
 
 /** Alle gewählten Depots müssen dem Nutzer gehören (sonst wie unbekannt). */
@@ -106,7 +121,7 @@ async function assertOwnPortfolios(tx: Tx, actor: Actor, ids: readonly string[])
   if ((row?.n ?? 0) !== ids.length) throw new NotFoundError('Depot nicht gefunden.')
 }
 
-const columns = {
+export const goalColumns = {
   id: goal.id,
   name: goal.name,
   targetCents: goal.targetCents,
@@ -118,7 +133,7 @@ const columns = {
 
 export async function listGoals(actor: Actor): Promise<GoalDto[]> {
   return withUser(actor.id, async (tx) => {
-    const goals = await tx.select(columns).from(goal).where(eq(goal.ownerId, actor.id)).orderBy(asc(goal.createdAt))
+    const goals = await tx.select(goalColumns).from(goal).where(eq(goal.ownerId, actor.id)).orderBy(asc(goal.createdAt))
     if (goals.length === 0) return []
     const links = await tx
       .select({ goalId: goalPortfolio.goalId, portfolioId: goalPortfolio.portfolioId })
@@ -137,7 +152,7 @@ export async function createGoal(actor: Actor, input: unknown): Promise<GoalDto>
     const [row] = await tx
       .insert(goal)
       .values({ ...data, ownerId: actor.id })
-      .returning(columns)
+      .returning(goalColumns)
     if (!row) throw new Error('Ziel konnte nicht gespeichert werden.')
     if (portfolioIds.length > 0) await tx.insert(goalPortfolio).values(portfolioIds.map((portfolioId) => ({ goalId: row.id, portfolioId, ownerId: actor.id })))
     return { ...row, portfolioIds }
@@ -153,7 +168,7 @@ export async function updateGoal(actor: Actor, id: unknown, input: unknown): Pro
       .update(goal)
       .set(data)
       .where(and(eq(goal.id, goalId), eq(goal.ownerId, actor.id)))
-      .returning(columns)
+      .returning(goalColumns)
     if (!row) throw new NotFoundError('Ziel nicht gefunden.')
     await tx.delete(goalPortfolio).where(and(eq(goalPortfolio.goalId, goalId), eq(goalPortfolio.ownerId, actor.id)))
     if (portfolioIds.length > 0) await tx.insert(goalPortfolio).values(portfolioIds.map((portfolioId) => ({ goalId, portfolioId, ownerId: actor.id })))

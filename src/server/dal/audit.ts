@@ -30,6 +30,7 @@ export const AUDIT_TYPES = [
   'share_revoked',
   'share_accepted',
   'share_left',
+  'shared_goal_edited',
 ] as const
 export type AuditType = (typeof AUDIT_TYPES)[number]
 
