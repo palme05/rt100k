@@ -11,7 +11,8 @@ export function proxy(request: NextRequest) {
   // Ohne Session-Cookie gar nicht erst in die App (nur eine schnelle Vorprüfung –
   // die echte Prüfung macht jede Seite und Server Action mit requireUser()).
   if (request.nextUrl.pathname.startsWith('/app') && !getSessionCookie(request)) {
-    return NextResponse.redirect(new URL('/anmelden', request.url))
+    // 303: ein geteilter POST (Teilen-Ziel) wird zur normalen Seite, nicht erneut gesendet
+    return NextResponse.redirect(new URL('/anmelden', request.url), request.method === 'GET' ? 307 : 303)
   }
 
   const nonce = generateNonce()

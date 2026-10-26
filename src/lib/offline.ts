@@ -10,6 +10,15 @@
 export const SNAPSHOT_CACHE = 'rt100k-letzter-stand'
 export const SNAPSHOT_URL = '/__offline/letzter-stand'
 
+/**
+ * Teilen-Ziel der installierten App: der Service Worker legt geteilte
+ * Abrechnungen kurz hier ab, die Import-Seite holt sie sofort ab und löscht
+ * sie (Dateien verlassen das Gerät nicht). Namen wie in public/sw.js.
+ */
+export const SHARE_CACHE = 'rt100k-geteilt'
+export const SHARE_PREFIX = '/__geteilt/'
+export const SHARE_ACTION = '/app/import/teilen'
+
 export interface OfflineSnapshot {
   v: 1
   /** ISO-Zeitpunkt der Speicherung */
