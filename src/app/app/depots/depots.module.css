@@ -27,18 +27,6 @@
   gap: var(--space-8);
 }
 
-.empty {
-  display: grid;
-  gap: var(--space-4);
-  justify-items: start;
-  max-width: var(--measure);
-}
-
-.empty p {
-  margin: 0;
-  color: var(--ink-2);
-}
-
 .headActions {
   display: inline-flex;
   flex-wrap: wrap;

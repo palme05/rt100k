@@ -9,6 +9,7 @@ import { Grid, Note, Section } from '@/components/ui/layout'
 import { Row, Rows } from '@/components/ui/Rows'
 import { HeroSummary, type KeyStat } from '@/components/ui/Summary'
 import { Trend } from '@/components/ui/Trend'
+import { EmptyState } from '@/components/ui/EmptyState'
 import { dayLabel } from '@/lib/display'
 import { addDays } from '@/lib/days'
 import { viennaDay } from '@/lib/format'
@@ -86,12 +87,16 @@ export default async function PortfoliosPage() {
         {/* Aktionen im Kopf; am Handy unter der Tabelle (zwei gleich breite Knöpfe statt Umbruch im Kopf) */}
         <Section id="liste" title="Alle Depots" actions={<span className={count > 0 ? `${styles.headActions} ${styles.wideOnly}` : styles.headActions}>{actions}</span>}>
           {count === 0 ? (
-            <div className={styles.empty}>
-              <p>Noch keine Depots. Leg dein erstes Depot an und erfasse Käufe – Kurse holt rt100k automatisch.</p>
-              <Link className={button.button} href="/app/depots/neu">
-                Erstes Depot anlegen
-              </Link>
-            </div>
+            <EmptyState
+              title="Noch keine Depots"
+              action={
+                <Link className={button.button} href="/app/depots/neu">
+                  Erstes Depot anlegen
+                </Link>
+              }
+            >
+              Leg dein erstes Depot an und erfasse Käufe – Kurse holt rt100k automatisch.
+            </EmptyState>
           ) : (
             <DataTable
               caption="Depots und Konten mit Wert, Anteil und Gewinn"

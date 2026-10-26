@@ -1,0 +1,159 @@
+/* Leerer Zustand: Bild links (am Handy oben), Text daneben */
+.empty {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-4) var(--space-6);
+  max-width: var(--measure);
+}
+
+.art {
+  flex: none;
+  width: 9rem;
+  height: auto;
+  overflow: visible;
+}
+
+.body {
+  flex: 1 1 16rem;
+  min-width: 0;
+  display: grid;
+  gap: var(--space-tight);
+}
+
+.title {
+  margin: 0;
+  font-size: var(--text-lg);
+  font-weight: var(--weight-semibold);
+}
+
+.text {
+  color: var(--ink-2);
+}
+
+.text > p {
+  margin: 0;
+}
+
+.action {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  padding-top: var(--space-2);
+}
+
+/* ── Bild ── */
+.hill {
+  fill: var(--wash);
+}
+
+.hillBack {
+  fill: var(--rule);
+  opacity: 0.6;
+}
+
+.road {
+  fill: none;
+  stroke: var(--rule-strong);
+  stroke-width: 9;
+  stroke-linecap: round;
+}
+
+.lane {
+  fill: none;
+  stroke: var(--bg);
+  stroke-width: 1.4;
+  stroke-linecap: round;
+  stroke-dasharray: 4 5;
+}
+
+.stop {
+  fill: var(--ink);
+}
+
+.pole {
+  stroke: var(--ink-2);
+  stroke-width: 1.6;
+  stroke-linecap: round;
+}
+
+.cloth {
+  fill: var(--accent);
+}
+
+.you {
+  fill: var(--accent);
+  stroke: var(--bg);
+  stroke-width: 1.6;
+}
+
+.youHalo {
+  fill: var(--accent);
+  opacity: 0.18;
+}
+
+.flag,
+.you,
+.youHalo {
+  transform-box: fill-box;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  /* Mittellinie läuft Richtung Ziel */
+  .lane {
+    animation: empty-lane 1.4s linear infinite;
+  }
+
+  /* Flagge weht um den Mast */
+  .cloth {
+    transform-box: fill-box;
+    transform-origin: 0 50%;
+    animation: empty-wave 2.4s ease-in-out infinite;
+  }
+
+  .youHalo {
+    transform-origin: center;
+    animation: empty-pulse 2.4s var(--ease-out) infinite;
+  }
+
+  .art {
+    animation: empty-in var(--dur-slow) var(--ease-spring) both;
+  }
+}
+
+@keyframes empty-lane {
+  to {
+    stroke-dashoffset: -9;
+  }
+}
+
+@keyframes empty-wave {
+  0%,
+  100% {
+    transform: skewY(0deg) scaleX(1);
+  }
+
+  50% {
+    transform: skewY(-6deg) scaleX(0.9);
+  }
+}
+
+@keyframes empty-pulse {
+  0% {
+    transform: scale(0.6);
+    opacity: 0.35;
+  }
+
+  80%,
+  100% {
+    transform: scale(1.8);
+    opacity: 0;
+  }
+}
+
+@keyframes empty-in {
+  from {
+    opacity: 0;
+    translate: 0 var(--space-3);
+  }
+}

@@ -14,6 +14,7 @@ import { DataTable, NameCell, Td, Th } from '@/components/ui/DataTable'
 import { Grid, Muted, Note, PageHead, Section, TextLink } from '@/components/ui/layout'
 import { Row, Rows } from '@/components/ui/Rows'
 import { KeyStats } from '@/components/ui/Summary'
+import { EmptyState } from '@/components/ui/EmptyState'
 import { monthLabel, share } from '@/lib/display'
 import { ASSET_KIND_LABEL } from '@/lib/valuation'
 import { loadAnalysis } from '@/server/analysis'
@@ -44,10 +45,16 @@ export default async function AnalysisPage({ searchParams }: { searchParams: Pro
         <PageHead id="analyse-titel" title="Analyse">
           Rendite, Risiko, Erträge und Kosten über alle Depots.
         </PageHead>
-        <Note>Noch keine Buchungen. Sobald Käufe erfasst oder importiert sind, erscheint hier die Auswertung.</Note>
-        <Link className={button.button} href="/app/import">
-          Abrechnungen importieren
-        </Link>
+        <EmptyState
+          title="Noch keine Buchungen"
+          action={
+            <Link className={button.button} href="/app/import">
+              Abrechnungen importieren
+            </Link>
+          }
+        >
+          Sobald Käufe erfasst oder importiert sind, erscheint hier die Auswertung.
+        </EmptyState>
       </>
     )
   }

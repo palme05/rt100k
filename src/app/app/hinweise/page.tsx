@@ -6,6 +6,7 @@ import { SideColumn } from '@/components/notify/SideColumn'
 import { Amount } from '@/components/privacy/privacy'
 import { Grid, Note, PageHead, Section, TextLink } from '@/components/ui/layout'
 import { Row, Rows } from '@/components/ui/Rows'
+import { EmptyState } from '@/components/ui/EmptyState'
 import { dayLabel } from '@/lib/display'
 import { viennaDay } from '@/lib/format'
 import { PRICE_ONE } from '@/lib/quantity'
@@ -47,9 +48,8 @@ export default async function NotificationsPage() {
       <Grid>
         <Section id="hinweise-liste" title="Neueste Hinweise" meta={unread > 0 ? `${unread} neu` : notifications.length > 0 ? 'alle gelesen' : undefined} span="twoThirds">
           {notifications.length === 0 ? (
-            <div className={notify.empty}>
-              <p className={notify.emptyTitle}>Noch keine Hinweise.</p>
-              <p className={notify.emptyText}>Sie erscheinen, sobald eine Dividende eingeht, ein Kursalarm auslöst, ein Meilenstein erreicht ist oder eine Spekulationsfrist abläuft.</p>
+            <EmptyState title="Noch keine Hinweise.">
+              <p>Sie erscheinen, sobald eine Dividende eingeht, ein Kursalarm auslöst, ein Meilenstein erreicht ist oder eine Spekulationsfrist abläuft.</p>
               <ul className={notify.kinds} aria-label="Arten von Hinweisen">
                 {Object.values(KIND_LABEL).map((k) => (
                   <li key={k} className={notify.kind}>
@@ -57,7 +57,7 @@ export default async function NotificationsPage() {
                   </li>
                 ))}
               </ul>
-            </div>
+            </EmptyState>
           ) : (
             <Rows>
               {notifications.map((n) => (

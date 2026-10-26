@@ -7,6 +7,7 @@ import button from '@/components/ui/button.module.css'
 import { Disclaimer, Grid, Muted, Note, PageHead, Section, SectionHead } from '@/components/ui/layout'
 import { Row, Rows } from '@/components/ui/Rows'
 import { Trend } from '@/components/ui/Trend'
+import { EmptyState } from '@/components/ui/EmptyState'
 import { dayLabel } from '@/lib/display'
 import { monthLabel } from '@/lib/review'
 import { requireUser } from '@/server/auth/session'
@@ -34,10 +35,16 @@ export default async function ReviewPage({ params: routeParams }: { params: Prom
         <PageHead id="rueckblick-titel" title="Monatsrückblick">
           Jeden Monat eine Ausgabe mit den wichtigsten Zahlen.
         </PageHead>
-        <Note>Noch keine Buchungen – die erste Ausgabe erscheint mit dem ersten Kauf.</Note>
-        <Link className={button.button} href="/app/import">
-          Abrechnungen importieren
-        </Link>
+        <EmptyState
+          title="Noch keine Buchungen"
+          action={
+            <Link className={button.button} href="/app/import">
+              Abrechnungen importieren
+            </Link>
+          }
+        >
+          Die erste Ausgabe erscheint mit dem ersten Kauf.
+        </EmptyState>
       </>
     )
   }
