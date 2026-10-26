@@ -16,14 +16,16 @@ import { Row, Rows } from '@/components/ui/Rows'
 import { HeroSummary, type KeyStat } from '@/components/ui/Summary'
 import { Trend } from '@/components/ui/Trend'
 import { bookingTypeLabel, listAmount } from '@/lib/booking-display'
-import { dayLabel } from '@/lib/display'
+import { dayLabel, monthLabel, share } from '@/lib/display'
 import { addDays } from '@/lib/days'
 import { formatDate, formatTime, viennaDay } from '@/lib/format'
 import { displayName } from '@/lib/names'
 import { buildSnapshot } from '@/lib/offline'
 import { requireUser } from '@/server/auth/session'
 import { recentNewDeviceLogin } from '@/server/dal/audit'
+import { listGoals } from '@/server/dal/goals'
 import { listPortfolioSeries } from '@/server/dal/snapshots'
+import { goalViews } from '@/server/goals'
 import { valuePortfolios } from '@/server/overview'
 import { loadRoad } from '@/server/road'
 import { loadOpenTasks } from '@/server/tasks'
@@ -76,13 +78,15 @@ export default async function OverviewPage() {
     )
   }
 
-  const [road, openTasks, moves, series, tax] = await Promise.all([
+  const [road, openTasks, moves, series, tax, goals] = await Promise.all([
     loadRoad(user, valuation),
     loadOpenTasks(user, valuation),
     loadDayMoves(valuation),
     listPortfolioSeries(user, addDays(viennaDay(), -90)),
     loadTax(user, null),
+    listGoals(user),
   ])
+  const goalRows = goalViews(goals, valuation, road.settings)
   const tasks: TaskItem[] = user.twoFactorEnabled ? openTasks : [TWO_FACTOR_TASK, ...openTasks]
   const total = valuation.totalCents / 100
   const invested = valuation.investedCents / 100
@@ -231,6 +235,32 @@ export default async function OverviewPage() {
             </Rows>
           )}
         </Section>
+
+        {goalRows.length > 0 ? (
+          <Section id="ziele" title="Ziele" meta={`${goalRows.filter((g) => g.plan.reached).length} von ${goalRows.length} erreicht`} span="third">
+            <Rows>
+              {goalRows.slice(0, 5).map((g) => (
+                <Row
+                  key={g.goal.id}
+                  emphasis
+                  label={g.goal.name}
+                  sub={
+                    g.plan.reached ? (
+                      '✓ erreicht'
+                    ) : (
+                      <>
+                        noch <Amount value={g.plan.missing} whole />
+                        {g.plan.etaMonth ? ` · ≈ ${monthLabel(g.plan.etaMonth)}` : ''}
+                      </>
+                    )
+                  }
+                  value={share(Math.min(g.plan.progress, 9.99), 0)}
+                />
+              ))}
+            </Rows>
+            <MoreLink href="/app/road#ziele">Ziele verwalten</MoreLink>
+          </Section>
+        ) : null}
 
         <Section id="markt" title="Börsen" meta="Wiener Zeit" span={moves.top.length > 0 ? 'third' : 'half'}>
           <Markets />
