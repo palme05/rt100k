@@ -231,6 +231,18 @@ async function figiFallback(isin: string): Promise<InstrumentCandidate[]> {
   return found.flat()
 }
 
+const FIXTURE_COINS: InstrumentCandidate[] = [{ provider: 'coingecko', key: 'bitcoin', name: 'Bitcoin', kind: 'crypto', detail: 'BTC · Rang 1' }]
+
+/** Nur CoinGecko durchsuchen (eine Anfrage, eine Stunde zwischengespeichert) – für den Import von Krypto-Symbolen. */
+export async function searchCoins(query: string): Promise<InstrumentCandidate[]> {
+  const q = query.trim().slice(0, 60)
+  if (q.length < 2) return []
+  if (fixtureMode()) return FIXTURE_COINS.filter((c) => `${c.name} ${c.key} ${c.detail}`.toLowerCase().includes(q.toLowerCase()))
+  return providerFetch('CoinGecko', `https://api.coingecko.com/api/v3/search?query=${encodeURIComponent(q)}`, { revalidate: 3600 })
+    .then(parseCoinGeckoSearch)
+    .catch(() => [] as InstrumentCandidate[])
+}
+
 /** Instrumentsuche über alle Anbieter (ISIN, Name, Symbol). */
 export async function searchInstruments(query: string): Promise<InstrumentCandidate[]> {
   const q = query.trim().slice(0, 60)
@@ -240,20 +252,13 @@ export async function searchInstruments(query: string): Promise<InstrumentCandid
     const all: InstrumentCandidate[] = [
       { provider: 'yahoo', key: 'VWCE.DE', name: 'Vanguard FTSE All-World UCITS ETF USD Accumulation', kind: 'etf', detail: 'VWCE.DE · XETRA' },
       { provider: 'yahoo', key: 'AAPL', name: 'Apple Inc.', kind: 'stock', detail: 'AAPL · NASDAQ' },
-      { provider: 'coingecko', key: 'bitcoin', name: 'Bitcoin', kind: 'crypto', detail: 'BTC · Rang 1' },
+      ...FIXTURE_COINS,
       ...METALS,
     ]
     return all.filter((c) => `${c.name} ${c.key} ${c.detail}`.toLowerCase().includes(q.toLowerCase()) || (q === 'IE00BK5BQT80' && c.key === 'VWCE.DE'))
   }
   const isin = ISIN.test(q)
-  const [found, coins] = await Promise.all([
-    yahooSearch(q),
-    isin
-      ? Promise.resolve([] as InstrumentCandidate[])
-      : providerFetch('CoinGecko', `https://api.coingecko.com/api/v3/search?query=${encodeURIComponent(q)}`, { revalidate: 3600 })
-          .then(parseCoinGeckoSearch)
-          .catch(() => [] as InstrumentCandidate[]),
-  ])
+  const [found, coins] = await Promise.all([yahooSearch(q), isin ? Promise.resolve([] as InstrumentCandidate[]) : searchCoins(q)])
   // Yahoo kennt manche ISINs nicht (v. a. europäische ETFs) – dann über OpenFIGI zum Ticker
   const yahoo = isin && !found.some((c) => c.provider === 'yahoo') ? await figiFallback(q) : found
   return [...yahoo, ...coins.slice(0, 4), ...metals]

@@ -5,7 +5,7 @@ import type { Actor } from './dal/actor'
 import { findImported, MAX_IMPORT_FILES } from './dal/imports'
 import { ensureGlobalInstrument, findGlobalInstrumentsByIsin } from './dal/instruments'
 import { METALS } from './quotes/parsers'
-import { searchInstruments, verifyCandidate } from './quotes/service'
+import { searchCoins, searchInstruments, verifyCandidate } from './quotes/service'
 import type { InstrumentCandidate } from './quotes/types'
 
 /**
@@ -51,10 +51,11 @@ async function resolve(a: AssetRef, known: Map<string, { id: string; name: strin
     const verified = metal ? await verifyCandidate('metal', metal.key, null) : null
     return verified ? ensureGlobalInstrument(verified) : null
   }
-  // Krypto: exakter Symbol-Treffer mit dem besten Rang (CoinGecko liefert sortiert)
-  const coin = (await searchInstruments(a.symbol)).find((c) => c.provider === 'coingecko' && c.detail.split(' · ')[0] === a.symbol)
-  const verified = coin ? await verifyCandidate('coingecko', coin.key, null) : null
-  return verified ? ensureGlobalInstrument(verified) : null
+  // Krypto: exakter Symbol-Treffer mit dem besten Rang (CoinGecko liefert sortiert). Nur eine
+  // Anfrage je Coin: der Treffer kommt vom Server selbst, eine zweite Prüfung brächte nichts –
+  // doppelte Abrufe ließen längere Bitpanda-Verläufe ins Abfragelimit von CoinGecko laufen
+  const coin = (await searchCoins(a.symbol)).find((c) => c.detail.split(' · ')[0] === a.symbol && /^[a-z0-9-]{1,80}$/.test(c.key))
+  return coin ? ensureGlobalInstrument({ kind: 'crypto', name: coin.name, isin: null, symbol: null, coingeckoId: coin.key, metal: null, currency: 'EUR' }) : null
 }
 
 const RESOLVE_ATTEMPTS = 2
