@@ -674,3 +674,105 @@ export const roadSettings = pgTable(
     pgPolicy('road_settings_owner', { for: 'all', to: appRole, using: ownRows, withCheck: ownRows }),
   ],
 ).enableRLS()
+
+/**
+ * Rückgängig nach Löschen oder Ändern einer Buchung: der Stand davor als
+ * Kopie, nur kurz aufgehoben (src/server/dal/booking-undo.ts). Gehört zum
+ * Depot und verschwindet mit ihm.
+ */
+export const bookingUndo = pgTable(
+  'booking_undo',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    ownerId: text('owner_id')
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    portfolioId: uuid('portfolio_id').notNull(),
+    bookingId: uuid('booking_id').notNull(),
+    action: text('action').$type<'delete' | 'update'>().notNull(),
+    /** Alle Spalten der Buchung vor der Änderung */
+    snapshot: jsonb('snapshot').notNull(),
+    /** `updated_at` der Buchung nach dem Ändern – Rückgängig nur, solange sie seitdem gleich geblieben ist */
+    changedAt: timestamp('changed_at', { withTimezone: true }),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    foreignKey({ name: 'booking_undo_portfolio_owner_fk', columns: [t.portfolioId, t.ownerId], foreignColumns: [portfolio.id, portfolio.ownerId] }).onDelete('cascade'),
+    index('booking_undo_owner_idx').on(t.ownerId, t.createdAt),
+    check('booking_undo_action_check', sql`${t.action} in ('delete', 'update') and (${t.action} = 'delete') = (${t.changedAt} is null)`),
+    pgPolicy('booking_undo_owner', { for: 'all', to: appRole, using: ownRows, withCheck: ownRows }),
+  ],
+).enableRLS()
+
+/** Beobachtete Werte (Watchlist) – nur allgemeine oder eigene Instrumente. */
+export const watchlistItem = pgTable(
+  'watchlist_item',
+  {
+    ownerId: text('owner_id')
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    instrumentId: uuid('instrument_id')
+      .notNull()
+      .references(() => instrument.id, { onDelete: 'cascade' }),
+    note: text('note'),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.ownerId, t.instrumentId] }),
+    index('watchlist_item_instrument_idx').on(t.instrumentId),
+    check('watchlist_item_note_check', sql`${t.note} is null or char_length(${t.note}) <= 200`),
+    pgPolicy('watchlist_item_owner', { for: 'all', to: appRole, using: ownRows, withCheck: ownRows }),
+  ],
+).enableRLS()
+
+/**
+ * Eigenes Sparziel (Notgroschen, Kinderdepot …): Betrag, optional Datum,
+ * Sparrate und Rendite; zählt alle Depots oder eine Auswahl (goal_portfolio).
+ */
+export const goal = pgTable(
+  'goal',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    ownerId: text('owner_id')
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    name: text('name').notNull(),
+    targetCents: bigint('target_cents', { mode: 'number' }).notNull(),
+    targetDate: date('target_date', { mode: 'string' }),
+    monthlyCents: bigint('monthly_cents', { mode: 'number' }),
+    /** Basispunkte p. a.; NULL = Annahme aus Road to 100k */
+    returnBp: integer('return_bp'),
+    /** 'all' = alle Depots und Konten, 'selected' = nur die in goal_portfolio */
+    scope: text('scope').$type<'all' | 'selected'>().notNull().default('all'),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [
+    index('goal_owner_idx').on(t.ownerId),
+    unique('goal_id_owner_unique').on(t.id, t.ownerId),
+    check('goal_name_check', sql`char_length(${t.name}) between 1 and 60`),
+    check('goal_amounts_check', sql`${t.targetCents} > 0 and (${t.monthlyCents} is null or ${t.monthlyCents} >= 0)`),
+    check('goal_return_check', sql`${t.returnBp} is null or ${t.returnBp} between -2000 and 3000`),
+    check('goal_scope_check', sql`${t.scope} in ('all', 'selected')`),
+    pgPolicy('goal_owner', { for: 'all', to: appRole, using: ownRows, withCheck: ownRows }),
+  ],
+).enableRLS()
+
+/** Depots eines Ziels mit Auswahl; Ziel und Depot gehören demselben Nutzer (zusammengesetzte Fremdschlüssel). */
+export const goalPortfolio = pgTable(
+  'goal_portfolio',
+  {
+    goalId: uuid('goal_id').notNull(),
+    portfolioId: uuid('portfolio_id').notNull(),
+    ownerId: text('owner_id')
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
+  },
+  (t) => [
+    primaryKey({ columns: [t.goalId, t.portfolioId] }),
+    foreignKey({ name: 'goal_portfolio_goal_owner_fk', columns: [t.goalId, t.ownerId], foreignColumns: [goal.id, goal.ownerId] }).onDelete('cascade'),
+    foreignKey({ name: 'goal_portfolio_portfolio_owner_fk', columns: [t.portfolioId, t.ownerId], foreignColumns: [portfolio.id, portfolio.ownerId] }).onDelete('cascade'),
+    index('goal_portfolio_owner_idx').on(t.ownerId),
+    pgPolicy('goal_portfolio_owner', { for: 'all', to: appRole, using: ownRows, withCheck: ownRows }),
+  ],
+).enableRLS()

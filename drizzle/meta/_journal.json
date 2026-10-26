@@ -134,6 +134,20 @@
       "when": 1792606762695,
       "tag": "0018_booking_price_confirmed",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1792974784320,
+      "tag": "0019_vertrauen_und_ziele",
+      "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1792974796117,
+      "tag": "0020_vertrauen_und_ziele_grants",
+      "breakpoints": true
     }
   ]
 }
