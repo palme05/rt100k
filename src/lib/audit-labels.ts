@@ -22,6 +22,7 @@ export const AUDIT_LABELS: Record<string, string> = {
   share_accepted: 'Freigabe angenommen',
   share_left: 'Freigabe verlassen',
   shared_goal_edited: 'Ziel über eine Freigabe geändert',
+  new_device_confirmed: 'Neue Anmeldung als eigene bestätigt',
 }
 
 export function auditLabel(type: string): string {
