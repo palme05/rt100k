@@ -2,6 +2,7 @@ import { DiscardTasks } from '@/components/tasks/DiscardTasks'
 import { TaskList } from '@/components/tasks/TaskList'
 import { Grid, Note, PageHead, Section } from '@/components/ui/layout'
 import { requireUser } from '@/server/auth/session'
+import { taskTitle } from '@/lib/import/tasks'
 import { listCsvMappings } from '@/server/dal/imports'
 import { listTasks } from '@/server/dal/notifications'
 import { listPortfolios } from '@/server/dal/portfolios'
@@ -29,7 +30,7 @@ export default async function ImportPage() {
               Was frühere Importe nicht selbst buchen konnten: Kapitalmaßnahmen und Buchungen ohne zugeordneten Wert. Sie fehlen im Bestand – die Datei erneut importieren und den Wert zuordnen, von Hand buchen, oder
               verwerfen, wenn du den Wert nicht mehr hältst.
             </Note>
-            <TaskList tasks={tasks.map((t) => ({ key: t.id, title: t.title, body: t.body, href: null, taskId: t.id }))} complete={completeTaskAction} />
+            <TaskList tasks={tasks.map((t) => ({ key: t.id, title: taskTitle(t.body), body: t.body, href: null, taskId: t.id }))} complete={completeTaskAction} />
             <DiscardTasks count={tasks.length} discard={discardTasksAction} />
           </Section>
         </Grid>

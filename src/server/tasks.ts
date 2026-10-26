@@ -74,8 +74,8 @@ export async function loadOpenTasks(actor: Actor, valuation?: PortfolioValuation
   if (stored.length > 0) {
     tasks.push({
       key: 'von-hand',
-      title: stored.length === 1 ? 'Aus einem Import von Hand zu buchen: 1 Punkt' : `Aus Importen von Hand zu buchen: ${stored.length} Punkte`,
-      body: 'Kapitalmaßnahmen und Buchungen ohne zugeordneten Wert – zuordnen, buchen oder verwerfen',
+      title: `Von Hand zu buchen: ${stored.length === 1 ? '1 Punkt' : `${stored.length} Punkte`}`,
+      body: 'Aus Importen: Kapitalmaßnahmen und Werte ohne Zuordnung – zuordnen, buchen oder verwerfen',
       href: '/app/import#von-hand',
       taskId: null,
       actionLabel: 'Ansehen',

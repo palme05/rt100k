@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { ImportedBooking } from './types'
-import { unassignedTask, unassignedTasks } from './tasks'
+import { taskTitle, unassignedTask, unassignedTasks } from './tasks'
 
 const base: ImportedBooking = {
   kind: 'buy',
@@ -41,5 +41,11 @@ describe('Aufgaben aus dem Import', () => {
       'Kauf Muster Holding (US0000000001) vom 10.03.2026: Wertpapier nicht zugeordnet – im Import zuordnen oder von Hand buchen',
     ])
     expect(unassignedTasks([])).toEqual([])
+  })
+
+  it('kurzer Titel je Nacharbeit', () => {
+    expect(taskTitle(unassignedTask(base))).toBe('Wert nicht zugeordnet')
+    expect(taskTitle('DELISTING · Testaktie · 02.04.2026 · -7 Stück')).toBe('Kapitalmaßnahme')
+    expect(taskTitle(null)).toBe('Kapitalmaßnahme')
   })
 })
