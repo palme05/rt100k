@@ -2,6 +2,7 @@ import { monthLabel } from '@/lib/display'
 import { GOAL, type MilestoneInfo } from '@/lib/road'
 import { Amount } from '../privacy/privacy'
 import { TextLink } from '../ui/layout'
+import { MilestoneCelebration } from './MilestoneCelebration'
 import styles from './road.module.css'
 import { RouteLine } from './RouteLine'
 
@@ -22,6 +23,7 @@ export function RouteSummary({
   return (
     <>
       <RouteLine total={total} milestones={milestones} />
+      <MilestoneCelebration total={total} milestones={milestones} />
       <p className={styles.routeNote}>
         {total >= GOAL ? (
           <span>

@@ -10,7 +10,7 @@
  * „Bewegung reduzieren“ – Haptik ist keine Bewegung auf dem Bildschirm.
  */
 
-export type HapticKind = 'select' | 'tap' | 'success' | 'warning' | 'error'
+export type HapticKind = 'select' | 'tap' | 'success' | 'warning' | 'error' | 'celebrate'
 
 /** Millisekunden; kürzer als ~8 ms spüren viele Android-Motoren nicht */
 const PATTERNS: Record<HapticKind, number | number[]> = {
@@ -24,6 +24,8 @@ const PATTERNS: Record<HapticKind, number | number[]> = {
   warning: [24, 90, 24],
   /** Fehler */
   error: [40, 60, 40, 60, 40],
+  /** Meilenstein erreicht: anschwellender Dreiklang */
+  celebrate: [18, 60, 28, 60, 60],
 }
 
 /** Rasterticks höchstens so oft – schnelles Wischen soll nicht brummen */
