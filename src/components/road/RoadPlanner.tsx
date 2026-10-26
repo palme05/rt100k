@@ -1,7 +1,8 @@
 'use client'
 
-import { useId, useMemo, useState, useTransition, type ReactNode } from 'react'
+import { useEffect, useId, useMemo, useState, useTransition, type ReactNode } from 'react'
 import { eurCompact, eurWhole, monthLabel, share } from '@/lib/display'
+import { FALLBACK_INFLATION_BP, type InflationInfo } from '@/lib/inflation'
 import { durationLabel, monthsBetween } from '@/lib/months'
 import { GOAL, milestoneInfo, reachedMonth } from '@/lib/road'
 import { Legend, LineChart } from '../charts/charts'
@@ -26,13 +27,17 @@ export function RoadPlanner({
   data,
   fromMonth,
   onSave,
+  inflationInfo,
 }: {
   data: RoadPlannerData
   fromMonth: string
   /** Annahmen als Standard speichern (Server Action) */
   onSave?: (settings: RoadSettings) => Promise<void>
+  /** Inflations-Vorschlag (Eurostat) – kommt nach, die Seite wartet nicht darauf */
+  inflationInfo?: Promise<InflationInfo> | undefined
 }) {
   const [extra, setExtra] = useState(0)
+  const suggestion = useResolved(inflationInfo)
   const { settings, setSettings, reset, stale, simulation, scenario, nowMonth } = useRoadForecast(data, extra)
   const [saving, startSaving] = useTransition()
   const [saved, setSaved] = useState(false)
@@ -66,13 +71,19 @@ export function RoadPlanner({
   const counted = data.totalValue - (settings.includeTangibles ? 0 : data.tangibleValue)
   const milestones = useMemo(() => milestoneInfo(data.history, simulation, data.milestones), [data.history, simulation, data.milestones])
   const plans = data.savingsPlans
+  // Kaufkraft: Vorschlag aus Eurostat, bis er da ist (oder ohne Quelle) das EZB-Ziel
+  const real = settings.inflation !== null
+  const suggested = (suggestion?.bp ?? FALLBACK_INFLATION_BP) / 10_000
+  const suggestedLabel =
+    suggestion?.source === 'eurostat' && suggestion.from && suggestion.to ? `Ø ${suggestion.from}–${suggestion.to} in Österreich (HVPI, Eurostat)` : 'Inflationsziel der EZB'
+  const goalLabel = real ? '100.000 € heutiger Kaufkraft' : '100.000 €'
 
   return (
     <>
       <section className={styles.top} aria-label="Ankunft und Strecke">
         <div className={styles.lead}>
           <dl className={styles.arrival}>
-            <dt>Ankunft bei 100.000 €</dt>
+            <dt>Ankunft bei {goalLabel}</dt>
             <dd>
               <span className={styles.arrivalBig}>{eta.median ? monthLabel(eta.median, 'long') : 'nicht in 40 Jahren'}</span>
               <span className={styles.arrivalSub}>
@@ -99,7 +110,7 @@ export function RoadPlanner({
               {
                 label: 'Noch einzuzahlen',
                 value: toGoal ? money(toGoal.contributed) : '–',
-                note: toGoal ? `dazu ${money(toGoal.gains)} Rendite` : 'bis 100.000 €',
+                note: toGoal ? `dazu ${money(toGoal.gains)} Rendite${real ? ' (nominal)' : ''}` : `bis ${goalLabel}`,
               },
             ]}
           />
@@ -111,7 +122,7 @@ export function RoadPlanner({
 
       <div className={styles.planner}>
         <div className={styles.main}>
-          <Section id={`${ids}-prognose`} title="Prognose" meta="600 Monte-Carlo-Szenarien" dimmed={stale}>
+          <Section id={`${ids}-prognose`} title="Prognose" meta={real ? `600 Szenarien · in heutiger Kaufkraft (${share(settings.inflation ?? 0)} Inflation)` : '600 Monte-Carlo-Szenarien'} dimmed={stale}>
             <Legend
               items={[
                 { key: 'ink', label: 'Bisher' },
@@ -134,7 +145,7 @@ export function RoadPlanner({
               thresholds={[
                 {
                   value: GOAL,
-                  label: 'Ziel 100.000 €',
+                  label: real ? 'Ziel 100.000 € (Kaufkraft heute)' : 'Ziel 100.000 €',
                   goal: true,
                   ...(eta.median && goalIndex >= 0 ? { marker: { index: goalIndex, label: `≈ ${monthLabel(eta.median)}` } } : {}),
                 },
@@ -228,6 +239,42 @@ export function RoadPlanner({
                 value={settings.lumpSum}
                 onChange={(v) => update('lumpSum', v)}
               />
+              <Checkbox
+                id={`${ids}-real`}
+                checked={real}
+                onChange={(e) => update('inflation', e.target.checked ? (data.inflation ?? suggested) : null)}
+                label={
+                  <>
+                    In heutiger Kaufkraft
+                    <span className={styles.checkHint}>Inflation herausgerechnet – 100.000 € in 20 Jahren kaufen weniger als heute</span>
+                  </>
+                }
+              />
+              {real ? (
+                <Slider
+                  id={`${ids}-inflation`}
+                  label="Inflation p. a."
+                  output={share(settings.inflation ?? 0)}
+                  live
+                  hint={
+                    Math.round((settings.inflation ?? 0) * 10_000) === Math.round(suggested * 10_000) ? (
+                      `✓ ${suggestedLabel}`
+                    ) : (
+                      <>
+                        {suggestedLabel}: {share(suggested)}{' '}
+                        <button type="button" className={styles.inlineButton} onClick={() => update('inflation', suggested)}>
+                          übernehmen
+                        </button>
+                      </>
+                    )
+                  }
+                  min={0}
+                  max={0.06}
+                  step={0.001}
+                  value={settings.inflation ?? 0}
+                  onChange={(v) => update('inflation', v)}
+                />
+              ) : null}
               <Slider
                 id={`${ids}-extra`}
                 label="Vergleich: mehr sparen pro Monat"
@@ -290,6 +337,23 @@ export function RoadPlanner({
       </div>
     </>
   )
+}
+
+/** Wert eines Versprechens, sobald es da ist (vorher und bei Fehler: undefined) */
+function useResolved<T>(promise: Promise<T> | undefined): T | undefined {
+  const [state, setState] = useState<{ from: Promise<T>; value: T } | null>(null)
+  useEffect(() => {
+    if (!promise) return
+    let active = true
+    promise.then(
+      (value) => active && setState({ from: promise, value }),
+      () => undefined,
+    )
+    return () => {
+      active = false
+    }
+  }, [promise])
+  return state && state.from === promise ? state.value : undefined
 }
 
 /**

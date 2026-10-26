@@ -120,6 +120,8 @@ const backupSchema = z.object({
       expectedReturnBp: z.number().int().min(-2000).max(3000),
       volatilityBp: z.number().int().min(0).max(10_000),
       includeTangibles: z.boolean(),
+      /** ältere Backups ohne Feld: nominal */
+      inflationBp: z.number().int().min(0).max(1000).nullable().default(null),
     })
     .nullable(),
   allocationTargets: z
@@ -218,7 +220,7 @@ export async function exportBackup(actor: Actor): Promise<Backup> {
       })),
       snapshots: snapshots.map((s) => ({ portfolioId: s.portfolioId, day: s.day, valueCents: s.valueCents, investedCents: s.investedCents })),
       importFiles: files.map((f) => ({ fileHash: f.fileHash, source: f.source as 'csv', bookings: f.bookings })),
-      road: road ? { targetCents: road.targetCents, monthlyContributionCents: road.monthlyContributionCents, expectedReturnBp: road.expectedReturnBp, volatilityBp: road.volatilityBp, includeTangibles: road.includeTangibles } : null,
+      road: road ? { targetCents: road.targetCents, monthlyContributionCents: road.monthlyContributionCents, expectedReturnBp: road.expectedReturnBp, volatilityBp: road.volatilityBp, includeTangibles: road.includeTangibles, inflationBp: road.inflationBp } : null,
       allocationTargets: targets.map((t) => ({ kind: t.kind as (typeof ALLOCATION_KINDS)[number], bp: t.targetBp })),
       etfBreakdowns: breakdowns.map((b) => ({
         instrumentId: b.instrumentId,

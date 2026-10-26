@@ -22,6 +22,7 @@ const PROVIDERS = [
   { key: 'edelmetalle', name: 'Yahoo Finance (COMEX)', what: 'Gold, Silber, Platin – Future-Kurs je Unze, umgerechnet auf Gramm und Euro' },
   { key: 'coingecko', name: 'CoinGecko', what: 'Kryptowährungen in Euro, laufend' },
   { key: 'ecb', name: 'Europäische Zentralbank', what: 'Referenz-Wechselkurse, werktags gegen 16 Uhr' },
+  { key: 'eurostat', name: 'Eurostat', what: 'Inflation Österreich (HVPI) für die Road in heutiger Kaufkraft, jährlich' },
 ] as const
 
 export default async function DataStatusPage() {

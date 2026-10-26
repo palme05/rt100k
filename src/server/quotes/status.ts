@@ -1,6 +1,8 @@
 import 'server-only'
 import { providerFetch } from './fetch'
 import { parseCoinGeckoChart, parseEcbHistoryCsv, parseYahooHistory } from './history-parsers'
+import { parseHicpJsonStat } from '@/lib/inflation'
+import { HICP_SOURCES } from '../inflation'
 import { parseCoinGeckoPrices, parseEcbXml, parseYahooChart } from './parsers'
 
 /**
@@ -22,7 +24,7 @@ async function check(provider: string, fn: () => Promise<boolean>): Promise<bool
 }
 
 export async function providerStatus() {
-  const [yahoo, coingecko, ecb, edelmetalle] = await Promise.all([
+  const [yahoo, coingecko, ecb, edelmetalle, eurostat] = await Promise.all([
     check('Yahoo', async () => parseYahooChart(await providerFetch('Yahoo', 'https://query1.finance.yahoo.com/v8/finance/chart/VWCE.DE?range=1d&interval=1d&status=1', { revalidate: TTL })) !== null),
     check('CoinGecko', async () => parseCoinGeckoPrices(await providerFetch('CoinGecko', 'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=eur&status=1', { revalidate: TTL })).has('bitcoin')),
     check('EZB', async () => {
@@ -30,8 +32,10 @@ export async function providerStatus() {
       return typeof xml === 'string' && parseEcbXml(xml) !== null
     }),
     check('Yahoo Gold', async () => parseYahooChart(await providerFetch('Yahoo', 'https://query1.finance.yahoo.com/v8/finance/chart/GC=F?range=1d&interval=1d&status=1', { revalidate: TTL }))?.currency === 'USD'),
+    // Inflation (Road in heutiger Kaufkraft): aktuelle Eurostat-Reihe, mindestens zehn Jahre
+    check('Eurostat', async () => (parseHicpJsonStat(await providerFetch('Eurostat', `${HICP_SOURCES[0]}&status=1`, { revalidate: TTL }))?.size ?? 0) >= 10),
   ])
-  return { yahoo, coingecko, ecb, edelmetalle }
+  return { yahoo, coingecko, ecb, edelmetalle, eurostat }
 }
 
 /**

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   compoundingTippingPoint,
   contributionSplit,
+  deflators,
   etaQuantile,
   monteCarlo,
   monthlyRate,
@@ -118,5 +119,45 @@ describe('contributionSplit', () => {
     const values = projectDeterministic(base)
     values.forEach((value, m) => expect((contributed[m] ?? 0) + (gains[m] ?? 0)).toBeCloseTo(value, 6))
     expect(gains[0]).toBe(0)
+  })
+})
+
+describe('heutige Kaufkraft (Inflation)', () => {
+  it('Faktor je Monat: nach zwölf Monaten genau 1 / (1 + Inflation)', () => {
+    const d = deflators(24, 0.02)
+    expect(d[0]).toBe(1)
+    expect(d[12]).toBeCloseTo(1 / 1.02, 10)
+    expect(d[24]).toBeCloseTo(1 / 1.02 ** 2, 10)
+    expect([...deflators(3)]).toEqual([1, 1, 1, 1])
+  })
+
+  it('Rendite gleich Inflation: Startwert behält real seinen Wert', () => {
+    const values = projectDeterministic({ ...base, monthlyContribution: 0, annualReturn: 0.02, annualInflation: 0.02, months: 120 })
+    values.forEach((v) => expect(v).toBeCloseTo(60_000, 6))
+  })
+
+  it('nominal gleiche Sparrate verliert an Kaufkraft', () => {
+    const values = projectDeterministic({ ...base, startValue: 0, monthlyContribution: 100, annualReturn: 0, annualInflation: 0.03, months: 12 })
+    // 12 × 100 € nominal sind nach einem Jahr in heutiger Kaufkraft 1.200 € / 1,03
+    expect(values[12]).toBeCloseTo(1_200 / 1.03, 6)
+  })
+
+  it('Monte-Carlo: Perzentile und Ankunft in Kaufkraft, später als nominal', () => {
+    const input = { ...base, annualVolatility: 0 }
+    const nominal = monteCarlo(input, { paths: 20, seed: 1, targets: [200_000] })
+    const real = monteCarlo({ ...input, annualInflation: 0.025, months: 240 }, { paths: 20, seed: 1, targets: [200_000] })
+    const det = projectDeterministic({ ...input, annualInflation: 0.025, months: 240 })
+    real.p50.forEach((v, m) => expect(v).toBeCloseTo(det[m] ?? 0, 6))
+    const eNominal = etaQuantile(nominal.firstHit.get(200_000)!, 0.5)
+    const eReal = etaQuantile(real.firstHit.get(200_000)!, 0.5)
+    expect(eReal).toBe(monthsToTarget(det, 200_000))
+    expect(eReal! > (eNominal ?? 0)).toBe(true)
+  })
+
+  it('Kipppunkt: gleicher Monat wie nominal, Betrag in Kaufkraft dieses Monats', () => {
+    const nominal = compoundingTippingPoint({ ...base, months: 600 })
+    const real = compoundingTippingPoint({ ...base, months: 600, annualInflation: 0.02 })
+    expect(real.month).toBe(nominal.month)
+    expect(real.threshold).toBeCloseTo(nominal.threshold / 1.02 ** (nominal.month! / 12), 4)
   })
 })

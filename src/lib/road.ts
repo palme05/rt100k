@@ -32,6 +32,8 @@ export interface RoadAssumptions {
   annualReturn: number
   annualVolatility: number
   lumpSum?: number
+  /** Inflation p. a.: Prognose in heutiger Kaufkraft (fehlt/0 = nominal) */
+  annualInflation?: number
 }
 
 /** Ankunftsmonate ('YYYY-MM'); null = nicht innerhalb des Horizonts */
@@ -59,7 +61,7 @@ export interface RoadSimulation {
   probabilityByYearEnd: (year: number, target?: number) => number
   /** Ab diesem Vermögen bringen Erträge mehr als die Sparrate */
   tipping: { threshold: number; month: string | null }
-  /** Eigene Einzahlungen und Rendite bis zum Ziel (ohne Schwankung) */
+  /** Eigene Einzahlungen und Rendite bis zum Ziel (ohne Schwankung; Beträge nominal, Ziel ggf. in Kaufkraft) */
   toGoal: (target?: number) => { contributed: number; gains: number } | null
   /** Perzentile für Monat 0…months */
   corridor: (months: number) => { p10: number[]; p50: number[]; p90: number[] }
@@ -79,6 +81,7 @@ export function simulateRoad(
   const input: ForecastInput = { startValue, ...assumptions, months: HORIZON_MONTHS }
   const mc = monteCarlo(input, { paths: SIMULATION_PATHS, seed: SIMULATION_SEED, targets: [...new Set([...targets, GOAL])] })
   const deterministic = projectDeterministic(input)
+  const nominal = assumptions.annualInflation ? projectDeterministic({ ...input, annualInflation: 0 }) : deterministic
   const tipping = compoundingTippingPoint(input)
   const toMonth = (m: number | null) => (m === null ? null : addMonths(nowMonth, m))
   const lumpSum = assumptions.lumpSum ?? 0
@@ -105,7 +108,7 @@ export function simulateRoad(
       const m = monthsToTarget(deterministic, target)
       if (m === null) return null
       const contributed = lumpSum + assumptions.monthlyContribution * m
-      return { contributed, gains: (deterministic[m] ?? 0) - startValue - contributed }
+      return { contributed, gains: (nominal[m] ?? 0) - startValue - contributed }
     },
     corridor(months) {
       return { p10: mc.p10.slice(0, months + 1), p50: mc.p50.slice(0, months + 1), p90: mc.p90.slice(0, months + 1) }

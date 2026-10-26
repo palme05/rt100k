@@ -1,0 +1,2 @@
+ALTER TABLE "road_settings" ADD COLUMN "inflation_bp" integer;--> statement-breakpoint
+ALTER TABLE "road_settings" ADD CONSTRAINT "road_settings_inflation" CHECK ("road_settings"."inflation_bp" is null or "road_settings"."inflation_bp" between 0 and 1000);

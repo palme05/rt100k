@@ -11,7 +11,9 @@ export interface RoadPlannerData {
   totalValue: number
   /** Edelmetalle u. Ä., im Planer abwählbar */
   tangibleValue: number
-  defaults: Required<Omit<RoadAssumptions, 'lumpSum'>>
+  defaults: Required<Omit<RoadAssumptions, 'lumpSum' | 'annualInflation'>>
+  /** gespeicherte Inflation p. a. (Road in heutiger Kaufkraft) oder null = nominal */
+  inflation?: number | null
   milestones: readonly number[]
   goals: readonly number[]
   /** gespeicherte Vorgabe, Standard: Sachwerte zählen mit */
@@ -26,10 +28,12 @@ export interface RoadSettings {
   annualVolatility: number
   lumpSum: number
   includeTangibles: boolean
+  /** Inflation p. a.: alles in heutiger Kaufkraft; null = nominal */
+  inflation: number | null
 }
 
 export function defaultSettings(data: RoadPlannerData): RoadSettings {
-  return { ...data.defaults, lumpSum: 0, includeTangibles: data.includeTangibles ?? true }
+  return { ...data.defaults, lumpSum: 0, includeTangibles: data.includeTangibles ?? true, inflation: data.inflation ?? null }
 }
 
 /**
@@ -45,10 +49,11 @@ export function useRoadForecast(data: RoadPlannerData, extra = 0) {
   const nowMonth = data.history.at(-1)?.month ?? ''
 
   const run = useMemo(() => {
-    const { includeTangibles, ...assumptions } = deferred
+    const { includeTangibles, inflation, ...assumptions } = deferred
     const startValue = data.totalValue - (includeTangibles ? 0 : data.tangibleValue)
     const targets = [...data.milestones, ...data.goals]
-    return (more: number) => simulateRoad(startValue, nowMonth, { ...assumptions, monthlyContribution: assumptions.monthlyContribution + more }, targets)
+    return (more: number) =>
+      simulateRoad(startValue, nowMonth, { ...assumptions, monthlyContribution: assumptions.monthlyContribution + more, annualInflation: inflation ?? 0 }, targets)
   }, [data, deferred, nowMonth])
   const simulation = useMemo(() => run(0), [run])
   const scenario = useMemo(() => (deferredExtra > 0 ? run(deferredExtra) : null), [run, deferredExtra])

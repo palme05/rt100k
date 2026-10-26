@@ -150,7 +150,7 @@ export default async function OverviewPage() {
         })}
       />
       <HeroSummary id="vermoegen" eyebrow="Gesamtvermögen" value={total} stats={stats}>
-        <RouteSummary total={road.countedCents / 100} milestones={road.milestones} monthlyContribution={road.settings.monthlyContributionCents / 100} etaMedian={road.etaMedian} href="/app/road" />
+        <RouteSummary total={road.countedCents / 100} milestones={road.milestones} monthlyContribution={road.settings.monthlyContributionCents / 100} etaMedian={road.etaMedian} href="/app/road" inflation={road.planner.inflation ?? null} />
       </HeroSummary>
 
       {valuation.ledgerError ? <Message tone="error">{valuation.ledgerError}</Message> : null}
