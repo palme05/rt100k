@@ -23,6 +23,7 @@ import { bookingTypeLabel, listAmount } from '@/lib/booking-display'
 import { dayLabel, monthLabel, share } from '@/lib/display'
 import { addDays } from '@/lib/days'
 import { formatDate, formatTime, viennaDay } from '@/lib/format'
+import { quotesLabel } from '@/lib/freshness'
 import { displayName } from '@/lib/names'
 import { buildSnapshot } from '@/lib/offline'
 import { nextStep, START_COOKIE, startSteps } from '@/lib/onboarding'
@@ -179,7 +180,7 @@ export default async function OverviewPage() {
         <Section
           id="depots"
           title="Depots und Konten"
-          meta={asOf ? `Kurse von ${formatTime(asOf)} Uhr${valuation.delayed ? ', teils verzögert' : ''}` : undefined}
+          meta={quotesLabel([...valuation.quotes.values()]) ?? undefined}
           actions={<RefreshButton label="Kurse aktualisieren" />}
           span="twoThirds"
         >
