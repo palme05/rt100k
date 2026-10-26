@@ -3,6 +3,7 @@
 import { useId, useMemo, useState, type KeyboardEvent } from 'react'
 import { eurWhole, share } from '@/lib/display'
 import { foldSlices, type SliceInput } from '@/lib/slices'
+import { haptic } from '../hooks/haptics'
 import { Amount, MASK, usePrivacy } from '../privacy/privacy'
 import styles from './donut.module.css'
 import { ringPath } from './scale'
@@ -74,6 +75,11 @@ export function DonutChart({ title, items, limit, restLabel, remainderLabel, slo
     setActive(move())
   }
 
+  const toggle = (i: number) => {
+    setActive(active === i ? null : i)
+    haptic('select')
+  }
+
   if (slices.length === 0) return null
   return (
     <div className={styles.root}>
@@ -96,7 +102,7 @@ export function DonutChart({ title, items, limit, restLabel, remainderLabel, slo
               d={ringPath(CENTER, CENTER, active === i ? ACTIVE_OUTER : OUTER, INNER, s.start, s.end)}
               // Maus: Hover hebt hervor; Touch: Antippen schaltet um
               onPointerEnter={(event) => event.pointerType !== 'touch' && setActive(i)}
-              onClick={() => setActive(active === i ? null : i)}
+              onClick={() => toggle(i)}
               aria-hidden="true"
             />
           ))}
@@ -115,7 +121,7 @@ export function DonutChart({ title, items, limit, restLabel, remainderLabel, slo
 
         <ul className={styles.legend}>
           {slices.map((s, i) => (
-            <li key={s.key} className={`${styles.item} ${active === i ? styles.itemActive : ''} ${active !== null && active !== i ? styles.itemDim : ''}`} onPointerEnter={(event) => event.pointerType !== 'touch' && setActive(i)} onPointerLeave={(event) => event.pointerType !== 'touch' && setActive(null)} onClick={() => setActive(active === i ? null : i)}>
+            <li key={s.key} className={`${styles.item} ${active === i ? styles.itemActive : ''} ${active !== null && active !== i ? styles.itemDim : ''}`} onPointerEnter={(event) => event.pointerType !== 'touch' && setActive(i)} onPointerLeave={(event) => event.pointerType !== 'touch' && setActive(null)} onClick={() => toggle(i)}>
               <svg className={styles.swatch} width={8} height={8} aria-hidden="true">
                 <circle className={colorOf(s.slot)} cx={4} cy={4} r={4} />
               </svg>

@@ -273,3 +273,18 @@
     transition: none;
   }
 }
+
+/* ── Haptik: Schalter mit Erklärung darunter ─────────────────────────── */
+.haptics {
+  display: grid;
+  gap: var(--space-1);
+  max-width: 30rem;
+}
+
+.hapticsHint {
+  margin: 0;
+  padding-left: calc(1.125rem + var(--space-3));
+  color: var(--ink-3);
+  font-size: var(--text-sm);
+  line-height: var(--leading-snug);
+}

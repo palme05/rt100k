@@ -1,6 +1,7 @@
 'use client'
 
 import { useId, useMemo, useState, type KeyboardEvent, type PointerEvent, type ReactNode } from 'react'
+import { haptic } from '../hooks/haptics'
 import { useElementWidth } from '../hooks/useElementWidth'
 import { calendarTicks, datesFromLabels, type AxisTick } from './axis'
 import styles from './charts.module.css'
@@ -371,7 +372,10 @@ function LinePlot(props: LineChartProps & { width: number; descId: string; onRea
     const rect = event.currentTarget.getBoundingClientRect()
     const index = Math.round(x.invert(event.clientX - rect.left))
     const next = Math.max(0, Math.min(n - 1, index))
-    if (next !== hover) setHover(next)
+    if (next === hover) return
+    setHover(next)
+    // Wischen mit dem Finger: Raster-Ticken je Punkt, an Käufen/Ereignissen deutlicher
+    if (event.pointerType !== 'mouse') haptic(markersAt(next).length > 0 ? 'tap' : 'select')
   }
 
   const onKey = (event: KeyboardEvent<SVGSVGElement>) => {

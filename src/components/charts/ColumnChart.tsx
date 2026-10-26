@@ -1,6 +1,7 @@
 'use client'
 
 import { useId, useState, type KeyboardEvent, type PointerEvent } from 'react'
+import { haptic } from '../hooks/haptics'
 import { useElementWidth } from '../hooks/useElementWidth'
 import { calendarTicks } from './axis'
 import styles from './charts.module.css'
@@ -198,7 +199,9 @@ function ColumnPlot(props: ColumnChartProps & { width: number; descId: string; o
     const rect = event.currentTarget.getBoundingClientRect()
     const i = Math.floor((event.clientX - rect.left - margin.left) / slot)
     const next = i >= 0 && i < n ? i : null
-    if (next !== hover) setHover(next)
+    if (next === hover) return
+    setHover(next)
+    if (next !== null && event.pointerType !== 'mouse') haptic('select')
   }
 
   const nowX = firstForecast > 0 ? Math.round(margin.left + firstForecast * slot) + 0.5 : null

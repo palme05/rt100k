@@ -19,6 +19,7 @@ import { PasswordSettings } from './PasswordSettings'
 import { SessionList } from './SessionList'
 import { SettingsGroup, SettingsGroups } from './SettingsGroup'
 import styles from './security.module.css'
+import { HapticsSetting } from './HapticsSetting'
 import { ThemeSettings } from './ThemeSettings'
 import { TwoFactorSettings } from './TwoFactorSettings'
 import { setThemeAction } from './actions'
@@ -58,8 +59,9 @@ export default async function SecurityPage({ searchParams }: { searchParams: Pro
       ) : null}
 
       <SettingsGroups>
-        <SettingsGroup id="darstellung" title="Darstellung" meta="nur dieses Gerät" intro="„Wie das Gerät“ folgt der Einstellung von iPhone, Android, macOS oder Windows – auch automatisch am Abend.">
+        <SettingsGroup id="darstellung" title="Darstellung" meta="nur dieses Gerät" intro="„Wie das Gerät“ folgt der Einstellung von iPhone, Android, macOS oder Windows – auch automatisch am Abend. Haptik vibriert kurz beim Antippen und Wischen.">
           <ThemeSettings theme={theme} save={setThemeAction} />
+          <HapticsSetting />
         </SettingsGroup>
         <SettingsGroup id="passkeys" title="Passkeys" meta="empfohlen" intro="Passkeys ersetzen das Passwort durch Fingerabdruck, Gesicht oder PIN deines Geräts. Sie sind fälschungssicher und funktionieren nur auf dieser Website.">
           <PasskeySettings passkeys={passkeys} />
