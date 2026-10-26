@@ -23,7 +23,7 @@ test('Analyse: Rendite je Zeitraum, Vergleichswert, Erträge, Aufteilung', async
   await expect(page.getByText(/1 Buchung übernommen/)).toBeVisible()
 
   await page.goto('/app/analyse')
-  await expect(page.getByRole('heading', { name: 'Rendite' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Rendite', exact: true })).toBeVisible()
   await expect(page.getByText('Rendite (zeitgewichtet)')).toBeVisible()
   await expect(page.getByText('Geldgewichtet (IZF)', { exact: true })).toBeVisible()
   await expect(page.getByRole('group', { name: 'Zeitraum' }).getByRole('button', { name: 'Max' })).toBeVisible()
@@ -47,7 +47,7 @@ test('Analyse: Rendite je Zeitraum, Vergleichswert, Erträge, Aufteilung', async
 
   // Ungültiger Vergleich wird ignoriert, keine Fehlerseite
   await page.goto('/app/analyse?vergleich=kaputt')
-  await expect(page.getByRole('heading', { name: 'Rendite' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Rendite', exact: true })).toBeVisible()
   expect(problems).toEqual([])
 })
 

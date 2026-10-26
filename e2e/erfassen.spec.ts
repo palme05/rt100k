@@ -227,7 +227,9 @@ test('Kurs statt Kurswert: unter „Offene Punkte“ gemeldet und mit einem Klic
   await expect(page.getByRole('region', { name: 'Buchungen' })).toContainText('1.926,75')
 
   await page.goto('/app')
-  await expect(page.getByRole('region', { name: 'Offene Punkte' })).not.toContainText('Kurs statt Kurswert')
+  // ohne weitere offene Punkte fehlt der Abschnitt ganz (das Absichern steht unter „Erste Schritte“)
+  await expect(page.getByRole('region', { name: 'Gesamtvermögen' })).toBeVisible()
+  await expect(page.getByText(/Kurs statt Kurswert/)).toHaveCount(0)
   expect(problems).toEqual([])
 })
 
