@@ -114,12 +114,22 @@ export function AmountSplit({ value, centsClassName, roll = false }: { value: nu
   if (hidden) return <span data-private>{`${MASK}\u00a0€`}</span>
   const text = eur(value)
   const comma = text.lastIndexOf(',')
-  // `roll`: Ziffern laufen wie ein Zählwerk ein (großer Betrag oben auf der Seite)
-  const part = (t: string) => (roll ? <Odometer text={t} /> : t)
+  if (roll) {
+    // Ziffern laufen wie ein Zählwerk ein; vorgelesen (und kopiert) wird der ganze Betrag am Stück
+    return (
+      <span>
+        <span className="sr-only">{text}</span>
+        <Odometer text={text.slice(0, comma)} label={false} />
+        <span className={centsClassName}>
+          <Odometer text={text.slice(comma)} label={false} />
+        </span>
+      </span>
+    )
+  }
   return (
     <span>
-      {part(text.slice(0, comma))}
-      <span className={centsClassName}>{part(text.slice(comma))}</span>
+      {text.slice(0, comma)}
+      <span className={centsClassName}>{text.slice(comma)}</span>
     </span>
   )
 }
