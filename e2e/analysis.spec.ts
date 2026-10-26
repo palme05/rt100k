@@ -144,3 +144,38 @@ test('ETF-Durchschau: Bestandsliste ablegen, Länder/Branchen/Titel sehen, entfe
   await expect(section.getByText('Further holdings')).toBeVisible()
   await expect(section.getByText('Japan', { exact: true })).toBeVisible()
 })
+
+test('ETF-Durchschau: ganze Liste der Einzeltitel und Länder aufklappen', async ({ page }) => {
+  await register(page)
+  await createPortfolio(page, 'Trade Republic')
+  await page.goto('/app/import')
+  await page.locator('input[type=file]').setInputFiles({ name: 'kauf.pdf', mimeType: 'application/pdf', buffer: Buffer.from(makePdf(TR_KAUF_AT)) })
+  await page.getByRole('button', { name: '1 Buchung übernehmen' }).click()
+  await expect(page.getByText(/1 Buchung übernommen/)).toBeVisible()
+
+  // synthetische Bestandsliste: 15 Titel aus 12 Ländern, zusammen 100 %
+  const lands = ['USA', 'Japan', 'Kanada', 'Frankreich', 'Deutschland', 'Schweiz', 'Australien', 'Niederlande', 'Schweden', 'Dänemark', 'Spanien', 'Italien']
+  const rows = Array.from({ length: 15 }, (_, i) => `"Titel ${String(i + 1).padStart(2, '0')}","${i < 10 ? '7,00' : '6,00'}","${lands[i % lands.length]}","IT"`)
+  const csv = ['Name,Gewichtung (%),Standort,Sektor', ...rows].join('\n')
+  await page.goto('/app/analyse')
+  const section = page.getByRole('region', { name: 'ETF-Durchschau' })
+  await section.locator('input[type=file]').setInputFiles({ name: 'positionen.csv', mimeType: 'text/csv', buffer: Buffer.from(csv) })
+  await expect(section.getByText(/übernommen: 15 Positionen/)).toBeVisible()
+
+  const titles = section.getByRole('list', { name: 'Größte Einzeltitel' })
+  await expect(titles.getByRole('listitem')).toHaveCount(10)
+  const more = section.getByRole('button', { name: 'Alle 15 anzeigen' })
+  await expect(more).toHaveAttribute('aria-expanded', 'false')
+  await more.click()
+  await expect(titles.getByRole('listitem')).toHaveCount(15)
+  await expect(titles).toContainText('Titel 15')
+  await section.getByRole('button', { name: 'Weniger anzeigen' }).first().click()
+  await expect(titles.getByRole('listitem')).toHaveCount(10)
+
+  const countries = section.getByRole('list', { name: 'Durchschau nach Land' })
+  await section.getByRole('button', { name: 'Alle 12 anzeigen' }).click()
+  await expect(countries.getByRole('listitem')).toHaveCount(12)
+  await expect(countries).toContainText('Italien')
+  await expectNoOverflow(page)
+})
+

@@ -110,7 +110,7 @@ test('Buchung löschen fragt nach – am Handy auch wischen (links löschen, rec
   expect(problems).toEqual([])
 })
 
-test('Offene Punkte: fehlende Kaufkosten beheben, Aufgabe aus dem Import abhaken', async ({ page }) => {
+test('Offene Punkte: fehlende Kaufkosten beheben; Nacharbeiten aus dem Import abhaken und verwerfen', async ({ page }) => {
   const problems = collectProblems(page)
   await register(page)
   await createPortfolio(page, 'Trade Republic')
@@ -136,16 +136,31 @@ test('Offene Punkte: fehlende Kaufkosten beheben, Aufgabe aus dem Import abhaken
   await page.goto('/app/import')
   await page.locator('input[type=file]').setInputFiles({ name: 'export.csv', mimeType: 'text/csv', buffer: Buffer.from(csv) })
   await page.getByRole('button', { name: /Buchung(en)? übernehmen$/ }).click()
-  await expect(page.getByText(/unter „Offene Punkte“/)).toBeVisible()
+  await expect(page.getByText(/unten unter „Von Hand zu buchen“/)).toBeVisible()
+
+  // Nacharbeiten stehen auf der Import-Seite, nicht einzeln in der Übersicht
+  const manual = page.getByRole('region', { name: 'Von Hand zu buchen' })
+  await expect(manual).toContainText(/DELISTING · Testaktie/)
+  await expect(manual).toContainText('Kauf Muster Holding (DE000TEST009) vom 04.05.2026: Wertpapier nicht zugeordnet')
+  await manual.getByRole('button', { name: /^Erledigt: .*DELISTING/ }).click()
+  await expect(manual).not.toContainText('DELISTING')
+  await expectNoOverflow(page)
 
   await page.goto('/app')
   const tasks = page.getByRole('region', { name: 'Offene Punkte' })
   await expect(tasks).toContainText('Kaufkosten fehlen: Vanguard')
-  await expect(tasks).toContainText(/DELISTING · Testaktie/)
-  await expect(tasks).toContainText('Kauf Muster Holding (DE000TEST009) vom 04.05.2026: Wertpapier nicht zugeordnet')
-  await tasks.getByRole('button', { name: /^Erledigt: .*DELISTING/ }).click()
-  await expect(tasks).not.toContainText('DELISTING')
-  await expectNoOverflow(page)
+  await expect(tasks).toContainText('Aus einem Import von Hand zu buchen: 1 Punkt')
+  await expect(tasks).not.toContainText('Muster Holding')
+  // die Glocke zählt Nacharbeiten nicht mit
+  await expect(page.getByRole('link', { name: /Hinweise, \d+ ungelesen/ })).toHaveCount(0)
+  await tasks.getByRole('link', { name: /^Ansehen: Aus einem Import/ }).click()
+  await expect(page).toHaveURL(/\/app\/import#von-hand$/)
+  await manual.getByRole('button', { name: 'Alle verwerfen' }).click()
+  await manual.getByRole('button', { name: 'Ja, den Punkt verwerfen' }).click()
+  await expect(page.getByRole('region', { name: 'Von Hand zu buchen' })).toHaveCount(0)
+
+  await page.goto('/app')
+  await expect(tasks).not.toContainText('von Hand zu buchen')
 
   await tasks.getByRole('link', { name: /^Beheben: Kaufkosten fehlen/ }).click()
   await expect(page.getByRole('heading', { name: 'Buchung bearbeiten', level: 1 })).toBeVisible()
@@ -155,8 +170,9 @@ test('Offene Punkte: fehlende Kaufkosten beheben, Aufgabe aus dem Import abhaken
   await page.getByRole('button', { name: 'Änderung speichern' }).click()
   await expect(page.getByText('Änderung gespeichert.')).toBeVisible()
   await page.goto('/app')
-  // ohne Zwei-Faktor bleibt „Offene Punkte“ sichtbar – der behobene Punkt ist weg
-  await expect(page.getByRole('region', { name: 'Offene Punkte' })).not.toContainText('Kaufkosten fehlen')
+  // behoben und verworfen: nichts mehr offen (die Zwei-Faktor-Erinnerung steht unter „Erste Schritte“)
+  await expect(page.getByText(/Kaufkosten fehlen/)).toHaveCount(0)
+  await expect(page.getByRole('region', { name: 'Offene Punkte' })).toHaveCount(0)
   expect(problems).toEqual([])
 })
 

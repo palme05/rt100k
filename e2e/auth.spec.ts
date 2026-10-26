@@ -108,3 +108,26 @@ test('Admin erstellt einen Einladungslink, ein Mitglied darf die Admin-Seite nic
   await page.reload()
   await expect(page.locator('section', { has: page.getByRole('heading', { name: 'Einladungen' }) })).toContainText('verwendet von Anna')
 })
+
+test('Neue Anmeldung von einem anderen Gerät: Hinweis erscheint und lässt sich wegklicken – fürs ganze Konto', async ({ browser, page }) => {
+  const { email } = await register(page)
+  // zweites Gerät: anderer Browser, anderes System
+  const other = await browser.newContext({ userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:140.0) Gecko/20100101 Firefox/140.0' })
+  await other.setExtraHTTPHeaders({ 'x-forwarded-for': `10.${Math.floor(Math.random() * 250)}.${Math.floor(Math.random() * 250)}.7` })
+  const second = await other.newPage()
+  await second.goto('/anmelden')
+  await second.getByLabel('E-Mail').fill(email)
+  await second.getByLabel('Passwort').fill(PASSWORD)
+  await second.getByRole('button', { name: 'Anmelden', exact: true }).click()
+  await second.waitForURL(/\/app/)
+  await other.close()
+
+  await page.goto('/app/sicherheit')
+  const notice = page.getByText(/Neue Anmeldung von Firefox · Windows/)
+  await expect(notice).toBeVisible()
+  await page.getByRole('button', { name: 'Hinweis schließen – das war ich' }).click()
+  await expect(notice).toHaveCount(0)
+  await page.reload()
+  await expect(page.getByText(/Neue Anmeldung von Firefox · Windows/)).toHaveCount(0)
+  await expect(page.locator('section', { has: page.getByRole('heading', { name: 'Aktivität' }) })).toContainText('Neue Anmeldung als eigene bestätigt')
+})
