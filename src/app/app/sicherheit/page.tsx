@@ -1,4 +1,5 @@
 import { cookies } from 'next/headers'
+import { DismissibleMessage } from '@/components/ui/DismissibleMessage'
 import { Message } from '@/components/ui/forms'
 import { PageHead } from '@/components/ui/layout'
 import { Row, Rows } from '@/components/ui/Rows'
@@ -21,6 +22,7 @@ import styles from './security.module.css'
 import { ThemeSettings } from './ThemeSettings'
 import { TwoFactorSettings } from './TwoFactorSettings'
 import { setThemeAction } from './actions'
+import { confirmNewDeviceAction } from '../(start)/actions'
 
 export const metadata = { title: 'Konto und Sicherheit' }
 
@@ -50,9 +52,9 @@ export default async function SecurityPage({ searchParams }: { searchParams: Pro
       ) : null}
       {mustSetup2fa ? <Message tone="info">Als Admin musst du die Zwei-Faktor-Anmeldung einrichten, bevor du die App nutzen kannst.</Message> : null}
       {recentNewDevice ? (
-        <Message tone="info">
+        <DismissibleMessage label="Hinweis schließen – das war ich" dismiss={confirmNewDeviceAction.bind(null, recentNewDevice.id)}>
           Neue Anmeldung von {recentNewDevice.userAgent ?? 'einem unbekannten Gerät'} am {when(recentNewDevice.createdAt)}. Warst du das nicht? Dann „Überall abmelden“ und das Passwort ändern.
-        </Message>
+        </DismissibleMessage>
       ) : null}
 
       <SettingsGroups>

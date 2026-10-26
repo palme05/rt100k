@@ -13,6 +13,7 @@ import { DismissStart } from '@/components/tasks/DismissStart'
 import { StartGuide } from '@/components/tasks/StartGuide'
 import { TaskList, type TaskItem } from '@/components/tasks/TaskList'
 import { DataTable, NameCell, Td, Th } from '@/components/ui/DataTable'
+import { DismissibleMessage } from '@/components/ui/DismissibleMessage'
 import { Message } from '@/components/ui/forms'
 import { Grid, MoreLink, Note, PageHead, Section, TextLink } from '@/components/ui/layout'
 import { Row, Rows } from '@/components/ui/Rows'
@@ -38,7 +39,7 @@ import { loadOpenTasks } from '@/server/tasks'
 import { loadTax } from '@/server/tax'
 import { loadDayMoves } from '@/server/today'
 import { completeTaskAction } from '../hinweise/actions'
-import { dismissStartAction } from './actions'
+import { confirmNewDeviceAction, dismissStartAction } from './actions'
 
 export const metadata = { title: 'Übersicht' }
 
@@ -124,10 +125,10 @@ export default async function OverviewPage() {
   return (
     <>
       {newDevice ? (
-        <Message tone="info">
+        <DismissibleMessage label="Hinweis schließen – das war ich" dismiss={confirmNewDeviceAction.bind(null, newDevice.id)}>
           Neue Anmeldung von {newDevice.userAgent ?? 'einem unbekannten Gerät'} am {formatDate(new Date(newDevice.createdAt))}, {formatTime(new Date(newDevice.createdAt))} Uhr. Warst du das nicht?{' '}
           <TextLink href="/app/sicherheit">Geräte prüfen</TextLink>
-        </Message>
+        </DismissibleMessage>
       ) : null}
 
       <SaveOfflineSnapshot
