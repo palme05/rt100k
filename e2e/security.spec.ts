@@ -29,7 +29,7 @@ test('lädt ohne CSP-Verletzungen', async ({ page }) => {
 })
 
 test('geschützte Seiten leiten ohne Anmeldung zur Anmeldung', async ({ page, request }) => {
-  for (const path of ['/app', '/app/depots', '/app/road', '/app/admin', '/app/sicherheit', '/app/analyse']) {
+  for (const path of ['/app', '/app/depots', '/app/road', '/app/admin', '/app/sicherheit', '/app/analyse', '/app/watchlist', '/app/datenstand']) {
     await page.goto(path)
     await expect(page).toHaveURL(/\/anmelden$/)
   }

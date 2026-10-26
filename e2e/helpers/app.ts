@@ -145,7 +145,10 @@ export function daysAgo(n: number): string {
 export function collectProblems(page: Page): string[] {
   const problems: string[] = []
   page.on('console', (msg) => {
-    if (msg.type() === 'error') problems.push(msg.text())
+    if (msg.type() !== 'error') return
+    // „Failed to load resource“ nennt die Adresse nur in der Quelle – für die Fehlersuche anhängen
+    const where = msg.text().startsWith('Failed to load resource') ? msg.location().url : ''
+    problems.push(where ? `${msg.text()} – ${where}` : msg.text())
   })
   page.on('pageerror', (err) => problems.push(err.message))
   return problems

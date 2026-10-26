@@ -67,7 +67,11 @@ test('Road to 100k: Annahmen speichern', async ({ page }) => {
   await page.getByRole('button', { name: 'Buchung speichern' }).click()
   await expect(page.getByText('Buchung gespeichert.')).toBeVisible()
   await page.goto('/app/road')
-  await page.getByLabel('Sparrate pro Monat').fill('1500')
+  // erst nach der Hydrierung zählt die Eingabe – bis dahin erneut versuchen
+  await expect(async () => {
+    await page.getByLabel('Sparrate pro Monat').fill('1500')
+    await expect(page.locator('output').filter({ hasText: /^1\.500\s€$/ })).toBeVisible({ timeout: 1_000 })
+  }).toPass({ timeout: 15_000 })
   await page.getByRole('button', { name: 'Als Standard speichern' }).click()
   await expect(page.getByRole('status').filter({ hasText: 'Gespeichert' })).toBeVisible()
   await page.reload()
@@ -79,7 +83,7 @@ test('alle App-Seiten laden ohne Fehler, CSP-Verletzungen und seitliches Scrolle
   await register(page)
   const id = await createPortfolio(page, 'Depot')
   await buyEtf(page, '2', '250')
-  for (const path of ['/app', '/app/depots', `/app/depots/${id}`, '/app/depots/neu', '/app/road', '/app/sicherheit']) {
+  for (const path of ['/app', '/app/depots', `/app/depots/${id}`, '/app/depots/neu', '/app/road', '/app/sicherheit', '/app/watchlist', '/app/datenstand', '/app/methodik']) {
     await page.goto(path)
     await expect(page.getByRole('heading', { level: 1 }).first()).toBeVisible()
     await page.waitForLoadState('networkidle')
