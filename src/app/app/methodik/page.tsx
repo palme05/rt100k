@@ -98,6 +98,10 @@ export default async function MethodPage() {
                 <strong>Monte-Carlo:</strong> 600 zufällige Verläufe mit der eingestellten Schwankung; das Band zeigt die 10-, 50- und 90-%-Grenze, das Ankunftsdatum ist der mittlere Wert.
               </li>
             </ul>
+            <p>
+              <strong>In heutiger Kaufkraft</strong> (Schalter im Planer): jeder Prognosewert wird durch (1 + Inflation)<sup>Jahre</sup> geteilt, die Sparrate bleibt nominal gleich. Vorschlag ist
+              der Durchschnitt der letzten zehn vollen Jahre der Inflation in Österreich (HVPI, Eurostat), ohne erreichbare Quelle das Inflationsziel der EZB von 2 %.
+            </p>
             <p>Eigene Ziele zählen alle oder ausgewählte Depots. Mit Zieldatum zeigt rt100k die nötige Sparrate (gleichmäßige Rechnung), sonst das voraussichtliche Datum.</p>
           </Prose>
         </Section>

@@ -446,6 +446,20 @@ Unabhängiges Review (eigener Prüfdurchlauf, nur lesend) aller Route-Handler, S
 | Meilenstein-Hinweis im Privatsphäre-Modus ohne Betrag (Anteil der Strecke) | ✅ |
 | China-Korrektur ändert nur die Länderzuordnung beim Einlesen im Browser; gespeichert wird zusätzlich die Zahl der Korrekturen – keine neuen externen Abrufe | ✅ |
 
+## Nachtrag: Überschneidung, Road in heutiger Kaufkraft, Dividenden-Ausblick und -Gehalt, Rückblick-Tab (26.10.2026)
+
+| Prüfung | Ergebnis |
+|---|---|
+| Überschneidung: liest nur eigene Bewertung und eigene Bestandslisten (`valuePortfolios`, `listEtfBreakdowns` – beide in `withUser` mit `owner_id`-Filter); keine neue Abfrage, keine neue Tabelle, keine externen Abrufe. Namen aus den Listen nur als Text ausgegeben (React escaped) | ✅ (Unit-Tests `overlap.test.ts`, E2E `analysis.spec.ts`) |
+| Neue Spalte `road_settings.inflation_bp` (Migration 0025): Check-Constraint `null oder 0–1000`, zod in DAL und Backup (`int`, 0–1000, nullable, fehlt → null); Rechte der bestehenden Tabelle gelten (Tabellenrechte, keine Spaltenrechte); RLS unverändert | ✅ (Negativ-Tests `road.db.test.ts`: −1, 1001, 2,5, Text; fremde Einstellungen unberührt) |
+| Server Action „Als Standard speichern“: weiterhin `requireUser` → Rate-Limit → DAL; Inflation aus dem Formular wird in der DAL geprüft, nicht vertraut | ✅ |
+| Eurostat-Abruf: nur serverseitig über `providerFetch` (Zeitlimit 4 s, höchstens 1 MB, eine Woche Data Cache), feste URL ohne Nutzerdaten; Antwort mit zod geprüft (JSON-stat, genau eine Reihe, Raten −20 … +50 %), Zahlen als Text in Basispunkte (kein Float-Parsing von Text). Ohne Quelle: EZB-Ziel 2 %, Fehlergrund nur im Server-Log | ✅ (Unit-Tests `inflation.test.ts`) |
+| `/api/status` meldet zusätzlich `eurostat` (nur ja/nein, 10 Minuten gecacht) – keine Nutzerdaten | ✅ |
+| Dividenden-Ausblick: im RLS-Kontext des Nutzers aus seiner eigenen Bewertung; Link `/app/analyse` (Check-Constraint `^/app…` lehnt Fragmente ab – ein erster Entwurf mit `#kalender` scheiterte daran im DB-Test); je Monat höchstens ein Hinweis (Dedupe) | ✅ (`notifications.db.test.ts`: genau ein Ausblick, Bob sieht ihn nicht, zweiter Lauf erzeugt nichts) |
+| Dividenden-Gehalt: Stundenlohn nur in `localStorage` (`rt100k:stundenlohn`, nur gültige Beträge gespeichert), nie an den Server, nicht im Backup; Beträge über `Amount`, Arbeitszeit im Privatsphäre-Modus verdeckt | ✅ (E2E: bleibt nach Neuladen, ungültige Eingabe mit Fehlertext) |
+| Navigation: Rückblick-Tab ist ein normaler Link auf eine bestehende Seite; keine neuen Routen außer `/app/analyse/durchschau/ueberschneidung` (hinter `requireUser`) | ✅ |
+| Keine Inline-Styles in den neuen Komponenten (Balken über `WeightCell`/SVG, Layout über Klassen) | ✅ (keine CSP-Meldungen im Produktions-Build, `collectProblems` in E2E) |
+
 ## Notfallplan
 
 **Bei Verdacht auf Secret-Leak** (Commit, Log, Screenshot):
