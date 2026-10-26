@@ -8,10 +8,12 @@ import type { Actor } from './dal/actor'
 import { listBookings, type BookingDto } from './dal/bookings'
 import { NotFoundError } from './dal/errors'
 import { parseId } from './dal/ids'
-import type { InstrumentDto } from './dal/instruments'
+import { getInstrument, type InstrumentDto } from './dal/instruments'
+import { isWatched } from './dal/watchlist'
 import { valuePortfolios } from './overview'
 import { getPriceHistory } from './quotes/history'
-import { quoteInEur } from './quotes/service'
+import { getQuotes, quoteInEur } from './quotes/service'
+import type { Quote } from './quotes/types'
 
 const MAX_POINTS = 800
 
@@ -39,6 +41,10 @@ export interface InstrumentDetail {
   priceEur: number | null
   quoteAsOf: Date | null
   delayed: boolean
+  /** Kurs mit Quelle, für „Datenstand“ (null = kein Kurs) */
+  quote: Pick<Quote, 'source' | 'asOf' | 'delayed'> | null
+  /** auf der Watchlist */
+  watched: boolean
   points: { day: string; price: number }[]
   events: { day: string; kind: 'buy' | 'sell'; label: string }[]
   dividends: DividendStats
@@ -49,14 +55,19 @@ export interface InstrumentDetail {
 
 /**
  * Detailseite eines Wertpapiers: nur für Instrumente, die der Nutzer sehen
- * darf und für die er eigene Buchungen hat – sonst `NotFoundError`.
+ * darf und für die er eigene Buchungen hat oder die auf seiner Watchlist
+ * stehen – sonst `NotFoundError`.
  */
 export async function loadInstrumentDetail(actor: Actor, id: unknown): Promise<InstrumentDetail> {
   const instrumentId = parseId(id)
-  const valuation = await valuePortfolios(actor)
+  const [valuation, watched] = await Promise.all([valuePortfolios(actor), isWatched(actor, instrumentId)])
   const ledgerBookings = valuation.bookings.filter((b) => b.instrumentId === instrumentId)
-  const instrument = valuation.instruments.get(instrumentId)
-  if (!instrument || ledgerBookings.length === 0) throw new NotFoundError('Wertpapier nicht gefunden.')
+  let instrument = ledgerBookings.length > 0 ? valuation.instruments.get(instrumentId) : undefined
+  if (!instrument) {
+    // Nur beobachtet: Stammdaten erneut gegen die Sichtbarkeit prüfen
+    if (!watched) throw new NotFoundError('Wertpapier nicht gefunden.')
+    instrument = await getInstrument(actor, instrumentId)
+  }
 
   const holdings: InstrumentHolding[] = []
   let realizedCents = 0
@@ -84,7 +95,7 @@ export async function loadInstrumentDetail(actor: Actor, id: unknown): Promise<I
   const quantity = holdings.reduce((s, h) => s + h.quantity, 0n)
   const costCents = holdings.reduce((s, h) => s + h.costCents, 0)
   const valueCents = holdings.reduce((s, h) => s + h.valueCents, 0)
-  const quote = valuation.quotes.get(instrumentId)
+  const quote = valuation.quotes.get(instrumentId) ?? (await getQuotes([instrument])).get(instrumentId) ?? null
   const eur = quote ? quoteInEur(quote, valuation.fx) : null
   const today = viennaDay()
   const first = ledgerBookings.reduce((m, b) => (b.occurredOn < m ? b.occurredOn : m), today)
@@ -92,7 +103,8 @@ export async function loadInstrumentDetail(actor: Actor, id: unknown): Promise<I
   const yearAgo = addDays(minusYears(today, 1), 1)
   const from = first < yearAgo ? first : yearAgo
 
-  const history = await getPriceHistory({ instruments: [instrument], from, today, quotes: valuation.quotes, fx: valuation.fx, firstUse: new Map([[instrumentId, from]]) })
+  const quotes = quote ? new Map([...valuation.quotes, [instrumentId, quote]]) : valuation.quotes
+  const history = await getPriceHistory({ instruments: [instrument], from, today, quotes, fx: valuation.fx, firstUse: new Map([[instrumentId, from]]) })
   const all = history.get(instrumentId) ?? []
   const step = Math.max(1, Math.ceil(all.length / MAX_POINTS))
   const points = all.filter((_, i) => i % step === 0 || i === all.length - 1).map((p) => ({ day: p.day, price: Number(p.eurMicros) / 1_000_000 }))
@@ -128,6 +140,8 @@ export async function loadInstrumentDetail(actor: Actor, id: unknown): Promise<I
     priceEur: eur === null ? null : Number(eur) / 1_000_000,
     quoteAsOf: quote?.asOf ?? null,
     delayed: quote?.delayed ?? false,
+    quote: quote ? { source: quote.source, asOf: quote.asOf, delayed: quote.delayed } : null,
+    watched,
     points,
     events,
     dividends: dividendStats(ledgerBookings, instrumentId, quantity, costCents, today),

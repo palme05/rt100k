@@ -11,9 +11,10 @@ import { viennaDay } from '@/lib/format'
 import { PRICE_ONE } from '@/lib/quantity'
 import { requireUser } from '@/server/auth/session'
 import { listNotifications, listPriceAlerts, unreadCount, type NotificationDto } from '@/server/dal/notifications'
+import { listWatchlistInstruments } from '@/server/dal/watchlist'
 import { valuePortfolios } from '@/server/overview'
 import { vapidKeys } from '@/server/push'
-import { quoteInEur } from '@/server/quotes/service'
+import { getQuotes, quoteInEur } from '@/server/quotes/service'
 import { createPriceAlertAction, deletePriceAlertAction, deletePushSubscriptionAction, markAllReadAction, savePushSubscriptionAction } from './actions'
 
 export const metadata = { title: 'Hinweise' }
@@ -22,13 +23,15 @@ const KIND_LABEL: Record<NotificationDto['kind'], string> = { price_alert: 'Kurs
 
 export default async function NotificationsPage() {
   const user = await requireUser()
-  const [notifications, unread, alerts, valuation] = await Promise.all([listNotifications(user), unreadCount(user), listPriceAlerts(user), valuePortfolios(user)])
+  const [notifications, unread, alerts, valuation, watched] = await Promise.all([listNotifications(user), unreadCount(user), listPriceAlerts(user), valuePortfolios(user), listWatchlistInstruments(user)])
+  const extra = watched.filter((i) => !valuation.instruments.has(i.id))
+  const extraQuotes = extra.length > 0 ? await getQuotes(extra) : new Map()
 
-  // Kursalarme nur für gehaltene Werte mit laufendem Kurs
-  const instruments = [...valuation.instruments.values()]
+  // Kursalarme für gehaltene und beobachtete Werte mit laufendem Kurs
+  const instruments = [...valuation.instruments.values(), ...extra]
     .filter((i) => i.symbol || i.coingeckoId || i.metal)
     .map((i) => {
-      const q = valuation.quotes.get(i.id)
+      const q = valuation.quotes.get(i.id) ?? extraQuotes.get(i.id)
       const eur = q ? quoteInEur(q, valuation.fx) : null
       return { id: i.id, name: i.name, price: eur === null ? null : Number(eur) / Number(PRICE_ONE) }
     })

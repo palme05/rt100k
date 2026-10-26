@@ -205,6 +205,7 @@ export default async function OverviewPage() {
           </DataTable>
           {valuation.missingPrices > 0 ? <Note>Für {valuation.missingPrices} Position(en) fehlt gerade ein Kurs – bewertet mit dem Einstand.</Note> : null}
           {hasCrypto ? <Note>Kryptokurse: Data provided by CoinGecko.</Note> : null}
+          <MoreLink href="/app/datenstand">Datenstand und Quellen</MoreLink>
         </Section>
 
         <Section id="buchungen" title="Letzte Buchungen" span="third">

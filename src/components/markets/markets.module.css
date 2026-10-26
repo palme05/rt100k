@@ -37,3 +37,36 @@
   color: var(--ink);
   font-weight: var(--weight-medium);
 }
+
+/* ── Datenstand eines Kurses: Zeichen + Wort, Erklärung darunter ──────── */
+.fresh {
+  display: inline-grid;
+  gap: var(--space-hair);
+  justify-items: start;
+  text-align: left;
+}
+
+.freshAttention {
+  composes: fresh;
+}
+
+.freshLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-weight: var(--weight-medium);
+  color: var(--ink-2);
+}
+
+.freshAttention .freshLabel {
+  color: var(--ink);
+}
+
+.freshAttention .freshLabel svg {
+  color: var(--neg);
+}
+
+.freshDetail {
+  font-size: var(--text-sm);
+  color: var(--ink-3);
+}

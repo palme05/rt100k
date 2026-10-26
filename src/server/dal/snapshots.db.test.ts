@@ -3,7 +3,7 @@ import { createUser } from '@/test/fixtures'
 import type { Actor } from './actor'
 import { NotFoundError } from './errors'
 import { createPortfolio } from './portfolios'
-import { listPortfolioHistory, writeSnapshots } from './snapshots'
+import { lastSnapshotDay, listPortfolioHistory, writeSnapshots } from './snapshots'
 
 /**
  * Wertverlauf je Depot: nur eigene Depots, nur das angefragte Depot,
@@ -48,5 +48,13 @@ describe('listPortfolioHistory', () => {
     await expect(listPortfolioHistory(alice, "1' OR '1'='1")).rejects.toBeInstanceOf(NotFoundError)
     await expect(listPortfolioHistory(alice, '00000000-0000-0000-0000-000000000000')).rejects.toBeInstanceOf(NotFoundError)
     await expect(listPortfolioHistory(alice, null)).rejects.toBeInstanceOf(NotFoundError)
+  })
+})
+
+describe('lastSnapshotDay', () => {
+  it('nur die eigenen Tageswerte zählen', async () => {
+    expect(await lastSnapshotDay(alice)).toBe('2026-10-19')
+    expect(await lastSnapshotDay(bob)).toBe('2026-10-18')
+    expect(await lastSnapshotDay(await createUser('Clara'))).toBeNull()
   })
 })
