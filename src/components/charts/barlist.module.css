@@ -173,3 +173,48 @@
     }
   }
 }
+
+/* ── Aufklappbare Liste ──────────────────────────────────────────────── */
+.expandable {
+  display: grid;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.toggle {
+  justify-self: start;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: var(--text-sm);
+  color: var(--ink-2);
+  cursor: pointer;
+}
+
+.toggle:hover {
+  color: var(--ink);
+}
+
+.toggle svg {
+  transition: rotate 160ms ease;
+}
+
+.toggleOpen {
+  rotate: 180deg;
+}
+
+@media (pointer: coarse) {
+  .toggle {
+    min-height: var(--hit);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .toggle svg {
+    transition: none;
+  }
+}

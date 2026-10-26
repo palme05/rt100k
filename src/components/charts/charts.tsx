@@ -8,6 +8,7 @@
  */
 
 export { BarList, type BarListItem, type BarListProps } from './BarList'
+export { ExpandableBarList } from './ExpandableBarList'
 export { ColumnChart, type ColumnChartProps } from './ColumnChart'
 export { DeltaBars, type DeltaItem } from './DeltaBars'
 export { type Tone, type ValueKind } from './kit'

@@ -1,7 +1,7 @@
 import 'server-only'
 import { and, eq } from 'drizzle-orm'
 import { z } from 'zod'
-import { MAX_ENTRIES, MAX_LABEL, type Breakdown, type WeightEntry } from '@/lib/lookthrough'
+import { MAX_ENTRIES, MAX_LABEL, MAX_TOP, type Breakdown, type WeightEntry } from '@/lib/lookthrough'
 import { withUser } from '../db/client'
 import { etfBreakdown } from '../db/schema'
 import type { Actor } from './actor'
@@ -35,7 +35,7 @@ export const breakdownData = z.object({
   rows: z.number().int().min(1).max(20_000),
   countries: list.refine((l) => total(l) >= 5_000 && total(l) <= 15_000, 'Die Ländergewichte müssen etwa 100 % ergeben.'),
   sectors: list.refine((l) => total(l) >= 5_000 && total(l) <= 15_000, 'Die Branchengewichte müssen etwa 100 % ergeben.'),
-  top: z.array(entry).max(10),
+  top: z.array(entry).max(MAX_TOP),
 })
 
 const input = breakdownData.extend({ instrumentId: z.unknown() })
@@ -55,7 +55,7 @@ export async function saveEtfBreakdown(actor: Actor, value: unknown): Promise<vo
   })
 }
 
-const stored = z.object({ countries: list, sectors: list, top: z.array(entry).max(10) })
+const stored = z.object({ countries: list, sectors: list, top: z.array(entry).max(MAX_TOP) })
 
 export async function listEtfBreakdowns(actor: Actor): Promise<Map<string, EtfBreakdownDto>> {
   const rows = await withUser(actor.id, (tx) => tx.select().from(etfBreakdown).where(eq(etfBreakdown.ownerId, actor.id)))
