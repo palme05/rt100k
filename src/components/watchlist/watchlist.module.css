@@ -25,3 +25,16 @@
   color: var(--ink-3);
   white-space: nowrap;
 }
+
+/* Aktionen einer Tabellenzeile: nebeneinander, am Handy untereinander (Platz für den Namen) */
+.rowActions {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+@media (max-width: 720px) {
+  .rowActions {
+    flex-direction: column;
+  }
+}
