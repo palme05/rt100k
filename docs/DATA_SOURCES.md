@@ -99,6 +99,14 @@ Freigabe durch den Betreiber mit Paket 3 („Mach alle Pakete“, nachdem der Pu
 - **Sparsam:** nur wenn Yahoo die ISIN nicht findet; je ISIN höchstens ein Abruf pro Stunde und Server-Instanz, Antwort 30 Tage im Data Cache. Ohne Schlüssel sind die Limits niedrig (Quellen nennen 5–25 Anfragen/Minute); ein kostenloser Schlüssel lässt sich als `OPENFIGI_API_KEY` hinterlegen.
 - **Umsetzung:** `figiSymbols`/`figiFallback` in `src/server/quotes/service.ts`, Parser `yahooSymbolsFromFigi` (Börsenkürzel → Yahoo-Suffix, beste Börse für EUR-Anleger zuerst) mit Tests nach der öffentlichen API-Beschreibung.
 
+## Eurostat: Inflation Österreich für die Road in heutiger Kaufkraft (26.10.2026)
+
+- **Daten:** HVPI Österreich, jährliche Durchschnittsrate (`unit=RCH_A_AVG`), Gesamtindex. Seit 2026 in `prc_hicp_ainr` (COICOP 2018, `coicop18=TOTAL`); die frühere `prc_hicp_aind` (`coicop=CP00`) ist eingefroren und reicht bis 2025 – sie dient als Rückfall. Abruf über die Statistics API (JSON-stat 2.0), `src/server/inflation.ts`.
+- **Bedingungen:** Eurostat-Daten dürfen kostenlos für kommerzielle und nicht kommerzielle Zwecke weiterverwendet werden, mit Quellenangabe (Beschluss 2011/833/EU, Eurostat-Copyright-Hinweis). Quelle steht im Planer („HVPI, Eurostat“) und im Datenstand.
+- **Sparsam:** eine Anfrage je Reihe, eine Woche im Data Cache; ohne Antwort merkt sich jede Instanz den Ersatzwert (EZB-Ziel 2 %) eine Stunde.
+- **Prüfung:** Aus der Entwicklungsumgebung nicht erreichbar (DNS) – gebaut nach dem dokumentierten JSON-stat-Format mit synthetischen Tests; live zu prüfen über `/api/status` (`quellen.eurostat`) der Preview. Die Parameter der neuen Reihe stammen aus der Eurostat-Datenbrowser-Beschreibung von `tec00118` (Basis `prc_hicp_ainr`, `RCH_A_AVG`, `TOTAL`).
+- **Warum nicht Statistik Austria (VPI):** Die offene VPI-2025-Reihe beginnt erst 2026 – für einen Zehnjahresschnitt zu kurz.
+
 ## Import-Formate (Phase 3)
 
 Entscheidung des Betreibers (20.10.2026): Parser nach öffentlichen Formatreferenzen bauen statt auf eigene Beispieldokumente zu warten; geprüft wird mit echten Dokumenten lokal in der App (nichts wird hochgeladen).
@@ -129,6 +137,7 @@ Echte Abrechnungen kommen nie ins Repo; die Testdokumente in `src/lib/import/fix
 - [OpenFIGI API](https://www.openfigi.com/api), [OpenFIGI Terms of Service](https://www.openfigi.com/docs/terms-of-service), [OpenFIGI FAQ](https://www.openfigi.com/about/faq), [Bloomberg: FIGI unter MIT-Lizenz](https://www.bloomberg.com/company/press/bloomberg-launches-online-request-utility-and-new-mapping-tools-for-the-financial-instrument-global-identifier-figi), [Bloomberg Rate Limits (apis.io)](https://apis.io/rate-limits/bloomberg-lp/bloomberg-lp-rate-limits/), [openfigi_ruby (Limits)](https://www.rubydoc.info/github/phongsi/openfigi_ruby)
 - [OeKB Steuerdaten](https://www.oekb.at/kapitalmarkt-services/unser-datenangebot/fonds/steuerdaten.html), [OeKB Nutzungsregeln Steuerdaten v3.1](https://www.oekb.at/dam/jcr:3e3c80e1-f95d-440b-b254-ab17d4ad321d/OeKB%20Steuerdaten%20Nutzungsregeln%20DE%20Vers%203.1_20231116.pdf), [OeKB Ertragsteuerliche Behandlung (CSV-Formate)](https://www.oekb.at/dam/jcr:0ac4175d-b596-4738-b7bb-3532607300cd/OeKB-Steuerdaten-Ertragsteuerliche-Behandlung-2016-12.pdf)
 - Yahoo: [yfinance Rate-Limiting-Issue](https://github.com/ranaroussi/yfinance/issues/2128), [Scrapfly Guide 2026](https://scrapfly.io/blog/posts/guide-to-yahoo-finance-api)
+- Inflation: [Eurostat prc_hicp_aind (eingefroren, ersetzt durch prc_hicp_ainr)](https://ec.europa.eu/eurostat/databrowser/view/prc_hicp_aind/default/table?lang=en), [Eurostat tec00118 (HVPI-Inflationsrate, Basis prc_hicp_ainr)](https://ec.europa.eu/eurostat/databrowser/product/view/tec00118), [Eurostat Copyright und Weiterverwendung](https://ec.europa.eu/eurostat/about-us/policies/copyright)
 - Import: [Portfolio Performance (GitHub, EPL)](https://github.com/portfolio-performance/portfolio), [BittyTax Bitpanda-Konverter](https://github.com/BittyTax/BittyTax)
 
 ### Länder nach Börsenplatz (Vanguard) und China (26.10.2026)

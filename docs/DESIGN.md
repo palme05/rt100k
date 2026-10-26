@@ -76,7 +76,7 @@ Regeln: Die letzte Zeile einer Liste endet bündig. Zurück-Links gehören in de
 
 - **Raster:** am Handy eine Spalte; ab 820 px 12 Spalten (Abschnitte halb), ab 1120 px Drittel/zwei Drittel. `Section span="twoThirds" | "third" | "half" | "full"`.
 - Jeder Abschnitt: Haarlinie oben, Titel links (`--text-title`, 600), Meta rechts (`--ink-3`), optional Werkzeuge (Segment-Umschalter) – alles mittig im Kopf fester Mindesthöhe.
-- **Kopfzeile:** eine Zeile in fester Höhe (`--head-h`), klebt oben, leicht durchscheinend mit Haarlinie, bricht ab 721 px nie um. Links Logo (`BrandMark`) und Navigation (aktive Seite mit Akzent-Strich auf der Haarlinie, auch für Unterseiten über `activePrefixes`) mit „Mehr“ (Import, Monatsrückblick). Rechts: Suche (ab 1280 px als Feld mit ⌘K bzw. Strg K, darunter Symbol), „+ Buchung“ als einzige gefüllte Schaltfläche, dann ruhige Symbole: Beträge ausblenden (Auge, `aria-pressed`), Hinweise (Glocke, Zahl über dem Symbol – ändert die Breite nie), Konto-Menü (Initialen: Name, E-Mail, Konto und Sicherheit, Admin, Abmelden). 721–1023 px: Kurzformen, „+“ ohne Wort.
+- **Kopfzeile:** eine Zeile in fester Höhe (`--head-h`), klebt oben, leicht durchscheinend mit Haarlinie, bricht ab 721 px nie um. Links Logo (`BrandMark`) und Navigation (aktive Seite mit Akzent-Strich auf der Haarlinie, auch für Unterseiten über `activePrefixes`) mit „Mehr“ (Import, Watchlist; Rückblick ab 1200 px als eigener Tab, darunter im Menü). Rechts: Suche (ab 1280 px als Feld mit ⌘K bzw. Strg K, darunter Symbol), „+ Buchung“ als einzige gefüllte Schaltfläche, dann ruhige Symbole: Beträge ausblenden (Auge, `aria-pressed`), Hinweise (Glocke, Zahl über dem Symbol – ändert die Breite nie), Konto-Menü (Initialen: Name, E-Mail, Konto und Sicherheit, Admin, Abmelden). 721–1023 px: Kurzformen, „+“ ohne Wort.
 - **Handy (≤ 720 px):** oben Logo und Symbole (44 px), unten Leiste mit Pille hinter dem aktiven Symbol, „Mehr“ und Konto als Blatt von unten; „+“ schwebt rechts über der Leiste, nicht auf Formularseiten. Sprunglink „Zum Inhalt springen“ als erstes Element.
 - **Führende Zahl:** Jede Auswertungsseite beginnt mit genau einer großen Zahl und höchstens drei bis vier Kennzahlen daneben – Übersicht: Gesamtvermögen, Depot: Wert, Steuer: ≈ Steuer des Jahres, Road: Ankunftsmonat, Rückblick: Veränderung im Monat. Bei ungerader Zahl nimmt am Handy die letzte Kennzahl die ganze Zeile.
 - **Depot-Seite:** Kopf → Wertverlauf (2/3) + Aufteilung (1/3, Ring bis 8 Positionen, sonst Balkenliste) → Positionen (Anteil, Ø Einstand, Kurs mit Tagesveränderung) → Buchungen (2/3) mit „Neue Buchung“ und Sparplänen rechts (am Handy davor) → Verwaltung (Freigaben, Einstellungen, Löschen).
@@ -127,7 +127,7 @@ Alle unter `src/components/`. Seiten setzen sich nur daraus zusammen, eigene CSS
 | `Segmented` | `ui/Segmented.tsx` | Zeitraum-/Ansichtsumschalter (`aria-pressed`) |
 | `LineChart`, `ColumnChart`, `Sparkline`, `Legend` | `charts/charts.tsx` | Diagramm-Grundbausteine; `Sparkline` als kleine Verlaufslinie je Depot in der Übersicht (nur mit ≥ 2 Tageswerten) |
 | `HistoryChart`, `IncomeChart` | `charts/` | Vermögensverlauf mit Zeitraum, Erträge je Monat |
-| `RouteLine`, `RouteSummary`, `RoadPlanner` | `road/` | Road to 100k: Linienplan, Ankunftssatz, Planer |
+| `RouteLine`, `RouteSummary`, `RoadPlanner` | `road/` | Road to 100k: Linienplan, Ankunftssatz, Planer (Schalter „In heutiger Kaufkraft“ mit Inflations-Regler und Vorschlag aus Eurostat) |
 | `Markets` | `markets/` | Börsen offen/geschlossen (Punkt + Text) |
 | Schaltflächen-Stil | `ui/button.module.css` | Pill-Button (Werkzeuge, Zurücksetzen) |
 | `Form`, `Field`, `Input`, `Select`, `Textarea`, `Checkbox`, `Button`, `Actions`, `Message` | `ui/forms.tsx` | Formulare: sichtbare Labels, Hinweis und Fehler am Feld (aria-describedby), Meldungen mit Titelwort |
@@ -154,6 +154,8 @@ Alle unter `src/components/`. Seiten setzen sich nur daraus zusammen, eigene CSS
 | `DiscardTasks` | `tasks/` | „Alle verwerfen“ für die Nacharbeiten aus Importen, zweistufig („Ja, alle N verwerfen“ / „Abbrechen“) |
 | `StartGuide`, `DismissStart` | `tasks/` | Erste Schritte: nummerierte Schritte, erledigte mit Haken, der nächste offene hervorgehoben mit Knopf, Fortschritt in Segmenten, „Ausblenden“ |
 | `WatchToggle`, `UnwatchButton` | `watchlist/WatchControls.tsx` | Beobachten als gedrückter Pill-Knopf (`aria-pressed`), Entfernen als Symbol-Knopf |
+| `PairList`, `ConcentrationList`, `ClusterList` | `analysis/Overlap.tsx` | Überschneidung: ETF-Paare (beide Kurznamen, umbrechend statt gekürzt) mit Balken, Anteil der größten Titel, Titel aus mehreren Quellen in zwei Spalten am PC mit Aufschlüsselung je Quelle („Aktie direkt“) |
+| `DividendSalary` | `analysis/DividendSalary.tsx` | Dividenden-Gehalt: Betrag je Monat groß, darunter Tag/Stunde; optionaler Stundenlohn (nur Gerät) → Arbeitszeit in Minuten bzw. Stunden; im Privatsphäre-Modus verdeckt |
 | `Prose`, `Formula` | `ui/Prose.tsx` | Erklärender Fließtext (Methodik) in `--measure`, Formeln abgesetzt in Zahlen-Schrift |
 
 Reine Logik liegt in `src/lib/` (Prognose, Kennzahlen, Monate, Road, Import-Parser) und ist unit-getestet.
