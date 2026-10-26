@@ -162,6 +162,20 @@
       "when": 1793009293115,
       "tag": "0022_ziel_freigaben_grants",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1793031731163,
+      "tag": "0023_durchschau_zuordnung",
+      "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1793031740191,
+      "tag": "0024_durchschau_zuordnung_grants",
+      "breakpoints": true
     }
   ]
 }

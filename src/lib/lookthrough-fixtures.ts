@@ -59,3 +59,25 @@ export const HOLDINGS_XLSX_DE: (string | number | { n: string } | null)[][] = [
   ['AAA', 'Alpha Computer Inc.', 0.6, 'Technologie', 'Vereinigte Staaten', 6_000_000, 1],
   ['ZZZ', 'Zeta Mining Ltd.', 0.4, 'Rohstoffe', 'Australien', 4_000_000, 1],
 ]
+
+/**
+ * Börsenplatz-Liste („Region“ wie bei Vanguard): chinesische Unternehmen
+ * stehen unter Hongkong und USA, echte Hongkonger Werte bleiben dort.
+ * Namen synthetisch bis auf bekannte Großunternehmen (öffentlich in jedem
+ * Weltindex), Gewichte frei erfunden.
+ */
+export const HOLDINGS_MARKET = [
+  ['Ticker', 'Holding name', '% of market value', 'Sector', 'Region'],
+  ['AAA', 'Alpha Computer Inc.', '60', 'Technology', 'United States'],
+  ['700', 'Tencent Holdings Ltd.', '1.2', 'Communication', 'Hong Kong'],
+  ['9988', 'Alibaba Group Holding Ltd.', '0.8', 'Consumer Discretionary', 'Hong Kong'],
+  ['939', 'China Construction Bank Corp. Class H', '0.3', 'Financials', 'Hong Kong'],
+  ['PDD', 'PDD Holdings Inc. ADR', '0.4', 'Consumer Discretionary', 'United States'],
+  ['1299', 'AIA Group Ltd.', '0.5', 'Financials', 'Hong Kong'],
+  ['3', 'Hong Kong & China Gas Co. Ltd.', '0.1', 'Utilities', 'Hong Kong'],
+  ['1928', 'Sands China Ltd.', '0.1', 'Consumer Discretionary', 'Hong Kong'],
+  ['600519', 'Kweichow Moutai Co. Ltd. Class A', '0.2', 'Consumer Staples', 'China'],
+  ['2330', 'Taiwan Semiconductor Manufacturing Co. Ltd.', '1.4', 'Technology', 'Taiwan'],
+  ['2002', 'China Steel Corp.', '0.1', 'Materials', 'Taiwan'],
+  ['REST', 'Further holdings', '34.9', 'Industrials', 'United States'],
+].map((r) => r.join(';')).join('\n')

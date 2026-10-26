@@ -507,12 +507,20 @@ export const etfBreakdown = pgTable(
     countries: jsonb('countries').notNull(),
     sectors: jsonb('sectors').notNull(),
     top: jsonb('top').notNull(),
+    /** Alle Titel als [Name, ppm] – nur für die komplette Liste geladen; fehlt bei älteren Listen */
+    holdings: jsonb('holdings'),
+    /** 'herkunft' oder 'boerse' (Vanguard „Region“ = Börsenplatz) */
+    countryBasis: text('country_basis'),
+    /** so viele Titel bei einer Börsenplatz-Liste China zugeordnet */
+    chinaFixes: integer('china_fixes').notNull().default(0),
     updatedAt: updatedAt(),
   },
   (t) => [
     primaryKey({ columns: [t.ownerId, t.instrumentId] }),
     check('etf_breakdown_rows_check', sql`${t.rows} between 1 and 20000`),
     check('etf_breakdown_name_check', sql`${t.fundName} is null or char_length(${t.fundName}) <= 120`),
+    check('etf_breakdown_basis_check', sql`${t.countryBasis} is null or ${t.countryBasis} in ('herkunft', 'boerse')`),
+    check('etf_breakdown_fixes_check', sql`${t.chinaFixes} between 0 and 20000`),
     pgPolicy('etf_breakdown_owner', { for: 'all', to: appRole, using: ownRows, withCheck: ownRows }),
   ],
 ).enableRLS()
@@ -701,6 +709,33 @@ export const bookingUndo = pgTable(
     index('booking_undo_owner_idx').on(t.ownerId, t.createdAt),
     check('booking_undo_action_check', sql`${t.action} in ('delete', 'update') and (${t.action} = 'delete') = (${t.changedAt} is null)`),
     pgPolicy('booking_undo_owner', { for: 'all', to: appRole, using: ownRows, withCheck: ownRows }),
+  ],
+).enableRLS()
+
+/**
+ * Eigene Zuordnung eines Werts zu Land und Branche – für Einzelaktien und
+ * Fonds ohne Bestandsliste, die sonst unter „ohne Zuordnung“ stehen.
+ */
+export const instrumentClass = pgTable(
+  'instrument_class',
+  {
+    ownerId: text('owner_id')
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    instrumentId: uuid('instrument_id')
+      .notNull()
+      .references(() => instrument.id, { onDelete: 'cascade' }),
+    country: text('country'),
+    sector: text('sector'),
+    updatedAt: updatedAt(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.ownerId, t.instrumentId] }),
+    index('instrument_class_instrument_idx').on(t.instrumentId),
+    check('instrument_class_country_check', sql`${t.country} is null or char_length(${t.country}) between 1 and 60`),
+    check('instrument_class_sector_check', sql`${t.sector} is null or char_length(${t.sector}) between 1 and 60`),
+    check('instrument_class_any_check', sql`${t.country} is not null or ${t.sector} is not null`),
+    pgPolicy('instrument_class_owner', { for: 'all', to: appRole, using: ownRows, withCheck: ownRows }),
   ],
 ).enableRLS()
 

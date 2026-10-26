@@ -35,6 +35,26 @@ describe('ETF-Bestandslisten', () => {
     expect((await listEtfBreakdowns(alice)).get(etf)!.asOf).toBe('2026-10-18')
   })
 
+  it('komplette Titelliste nur auf Wunsch laden; Länderbasis und China-Korrekturen bleiben', async () => {
+    await saveEtfBreakdown(alice, { instrumentId: etf, ...breakdown, countryBasis: 'boerse', chinaFixes: 2 })
+    const slim = (await listEtfBreakdowns(alice)).get(etf)!
+    expect(slim.holdings).toEqual([])
+    expect(slim).toMatchObject({ countryBasis: 'boerse', chinaFixes: 2 })
+    const full = (await listEtfBreakdowns(alice, { holdings: true })).get(etf)!
+    expect(full.holdings).toEqual(breakdown.holdings)
+    // ohne Cash-Zeile, größte zuerst
+    expect(full.holdings.length).toBe(breakdown.rows - 1)
+    expect(full.holdings[0]![1]).toBeGreaterThanOrEqual(full.holdings.at(-1)![1])
+  })
+
+  it('prüft die Titelliste: Gewicht, Länge, Steuerzeichen', async () => {
+    await expect(saveEtfBreakdown(alice, { instrumentId: etf, ...breakdown, holdings: [['Apple', 0]] })).rejects.toBeInstanceOf(ValidationError)
+    await expect(saveEtfBreakdown(alice, { instrumentId: etf, ...breakdown, holdings: [['Apple', 2_000_000]] })).rejects.toBeInstanceOf(ValidationError)
+    await expect(saveEtfBreakdown(alice, { instrumentId: etf, ...breakdown, holdings: [['A\u0007pple', 100]] })).rejects.toBeInstanceOf(ValidationError)
+    await expect(saveEtfBreakdown(alice, { instrumentId: etf, ...breakdown, holdings: Array.from({ length: 12_001 }, (_, i) => [`T${i}`, 1]) })).rejects.toBeInstanceOf(ValidationError)
+    await expect(saveEtfBreakdown(alice, { instrumentId: etf, ...breakdown, countryBasis: 'irgendwas' })).rejects.toBeInstanceOf(ValidationError)
+  })
+
   it('nur für ETFs und Fonds, Gewichte etwa 100 %, keine Steuerzeichen', async () => {
     await expect(saveEtfBreakdown(alice, { instrumentId: stock, ...breakdown })).rejects.toBeInstanceOf(ValidationError)
     await expect(saveEtfBreakdown(alice, { instrumentId: etf, ...breakdown, countries: [{ label: 'USA', bp: 1_000 }] })).rejects.toThrow('etwa 100 %')

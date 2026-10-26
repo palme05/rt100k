@@ -18,6 +18,7 @@ import {
   goalPortfolio,
   importFile,
   instrument,
+  instrumentClass,
   INSTRUMENT_KINDS,
   portfolio,
   PORTFOLIO_KINDS,
@@ -29,6 +30,7 @@ import {
 import type { Actor } from './actor'
 import { normalizeBooking } from './bookings'
 import { NotFoundError, ValidationError } from './errors'
+import { classLabel, MAX_CLASSES } from './classes'
 import { breakdownData } from './etf'
 
 /**
@@ -147,6 +149,12 @@ const backupSchema = z.object({
     .max(100)
     .optional()
     .default([]),
+  /** Eigene Zuordnungen zu Land/Branche (ältere Backups ohne Feld: keine) */
+  instrumentClasses: z
+    .array(z.object({ instrumentId: z.uuid(), country: classLabel.nullable(), sector: classLabel.nullable() }).refine((c) => c.country !== null || c.sector !== null))
+    .max(MAX_CLASSES)
+    .optional()
+    .default([]),
 })
 
 export type Backup = z.infer<typeof backupSchema> & {
@@ -173,8 +181,13 @@ export async function exportBackup(actor: Actor): Promise<Backup> {
     const goals = await tx.select().from(goal).where(eq(goal.ownerId, actor.id)).orderBy(goal.createdAt)
     const goalLinks = await tx.select().from(goalPortfolio).where(eq(goalPortfolio.ownerId, actor.id))
     const watched = await tx.select().from(watchlistItem).where(eq(watchlistItem.ownerId, actor.id))
+    const classes = await tx.select().from(instrumentClass).where(eq(instrumentClass.ownerId, actor.id))
 
-    const ids = [...new Set([...bookings.map((b) => b.instrumentId), ...breakdowns.map((b) => b.instrumentId), ...watched.map((w) => w.instrumentId)].filter((id): id is string => Boolean(id)))]
+    const ids = [
+      ...new Set(
+        [...bookings.map((b) => b.instrumentId), ...breakdowns.map((b) => b.instrumentId), ...watched.map((w) => w.instrumentId), ...classes.map((c) => c.instrumentId)].filter((id): id is string => Boolean(id)),
+      ),
+    ]
     const instruments = ids.length
       ? await tx
           .select()
@@ -215,6 +228,9 @@ export async function exportBackup(actor: Actor): Promise<Backup> {
         countries: b.countries as never,
         sectors: b.sectors as never,
         top: b.top as never,
+        countryBasis: b.countryBasis as never,
+        chinaFixes: b.chinaFixes,
+        holdings: (b.holdings ?? []) as never,
       })),
       goals: goals.map((g) => ({
         name: g.name,
@@ -227,6 +243,7 @@ export async function exportBackup(actor: Actor): Promise<Backup> {
       })),
       // nur sichtbare Instrumente (mit dem Export oben gleich)
       watchlist: watched.filter((w) => instruments.some((i) => i.id === w.instrumentId)).map((w) => ({ instrumentId: w.instrumentId, note: w.note })),
+      instrumentClasses: classes.filter((c) => instruments.some((i) => i.id === c.instrumentId)).map((c) => ({ instrumentId: c.instrumentId, country: c.country, sector: c.sector })),
       csvMappings: mappings.map((m) => ({ name: m.name, mapping: m.mapping })),
       auditEvents: events.map((e) => ({ type: e.type, createdAt: e.createdAt.toISOString(), ip: e.ip, userAgent: e.userAgent })),
     }
@@ -432,7 +449,19 @@ export async function restoreBackup(actor: Actor, value: unknown): Promise<Resto
       if (!instrumentId || (kind !== 'etf' && kind !== 'fund')) continue
       await tx
         .insert(etfBreakdown)
-        .values({ ownerId: actor.id, instrumentId, fundName: b.fundName, asOf: b.asOf, rows: b.rows, countries: b.countries, sectors: b.sectors, top: b.top })
+        .values({
+          ownerId: actor.id,
+          instrumentId,
+          fundName: b.fundName,
+          asOf: b.asOf,
+          rows: b.rows,
+          countries: b.countries,
+          sectors: b.sectors,
+          top: b.top,
+          countryBasis: b.countryBasis,
+          chinaFixes: b.chinaFixes,
+          holdings: b.holdings.length > 0 ? b.holdings : null,
+        })
         .onConflictDoNothing()
     }
 
@@ -446,6 +475,8 @@ export async function restoreBackup(actor: Actor, value: unknown): Promise<Resto
     }
     const watch = [...new Map(data.watchlist.filter((w) => instrumentMap.has(w.instrumentId)).map((w) => [instrumentMap.get(w.instrumentId)!, w])).entries()]
     if (watch.length > 0) await tx.insert(watchlistItem).values(watch.map(([instrumentId, w]) => ({ ownerId: actor.id, instrumentId, note: w.note }))).onConflictDoNothing()
+    const own = [...new Map(data.instrumentClasses.filter((c) => instrumentMap.has(c.instrumentId)).map((c) => [instrumentMap.get(c.instrumentId)!, c])).entries()]
+    if (own.length > 0) await tx.insert(instrumentClass).values(own.map(([instrumentId, c]) => ({ ownerId: actor.id, instrumentId, country: c.country, sector: c.sector }))).onConflictDoNothing()
 
     return { portfolios: portfolioMap.size, bookings: normalized.length, instruments: createdInstruments, snapshots: uniqueSnapshots.length }
   })
