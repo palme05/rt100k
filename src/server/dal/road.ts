@@ -46,6 +46,12 @@ export async function getRoadSettings(actor: Actor): Promise<RoadSettingsDto> {
   return row ?? DEFAULT_ROAD_SETTINGS
 }
 
+/** Hat der Nutzer eigene Annahmen gespeichert (sonst gelten die Standardwerte)? */
+export async function roadSettingsSaved(actor: Actor): Promise<boolean> {
+  const [row] = await withUser(actor.id, (tx) => tx.select({ id: roadSettings.ownerId }).from(roadSettings).where(eq(roadSettings.ownerId, actor.id)).limit(1))
+  return Boolean(row)
+}
+
 export async function saveRoadSettings(actor: Actor, value: unknown): Promise<RoadSettingsDto> {
   const parsed = input.safeParse(value)
   if (!parsed.success) throw new ValidationError('Ungültige Annahmen.')
