@@ -15,7 +15,7 @@ import { ASSET_KIND_LABEL } from '@/lib/valuation'
 import { requireUser } from '@/server/auth/session'
 import { NotFoundError } from '@/server/dal/errors'
 import { loadInstrumentDetail } from '@/server/instrument'
-import { deleteBookingAction } from '../../depots/actions'
+import { deleteBookingAction, undoBookingAction } from '../../depots/actions'
 import styles from '../../depots/depots.module.css'
 
 export const metadata = { title: 'Wertpapier' }
@@ -175,6 +175,7 @@ export default async function InstrumentPage({ params }: { params: Promise<{ id:
             <Section id="buchungen" title="Buchungen" meta={d.bookings.length === 1 ? '1 insgesamt' : `${d.bookings.length} insgesamt`}>
               <BookingList
                 remove={deleteBookingAction}
+                undo={undoBookingAction}
                 linkInstruments={false}
                 context="instrument"
                 groupBy="year"

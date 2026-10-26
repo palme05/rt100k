@@ -222,7 +222,8 @@ test('Kurs statt Kurswert: unter „Offene Punkte“ gemeldet und mit einem Klic
   await expect(page.getByLabel(/Kurs je Stück/)).toHaveValue('128,45')
   await expect(page.getByText(/=\s1\.926,75\s€\sKurswert/)).toBeVisible()
   await page.getByRole('button', { name: 'Änderung speichern' }).click()
-  await expect(page).toHaveURL(new RegExp(`/app/depots/${id}\\?geaendert=1`))
+  await expect(page).toHaveURL(new RegExp(`/app/depots/${id}`))
+  await expect(page.getByText('Änderung gespeichert.')).toBeVisible()
   await expect(page.getByRole('region', { name: 'Buchungen' })).toContainText('1.926,75')
 
   await page.goto('/app')

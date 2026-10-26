@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { requireUser } from '@/server/auth/session'
+import { undoBookingChange } from '@/server/dal/booking-undo'
 import { createBooking, deleteBooking, reconcileCashBalance, updateBooking } from '@/server/dal/bookings'
 import { ConfirmationRequired, NotFoundError, ValidationError } from '@/server/dal/errors'
 import { deleteImportedBookings } from '@/server/dal/imports'
@@ -22,6 +23,8 @@ export interface ActionResult {
   confirmKind?: 'price' | 'duplicate'
   /** ID der neu angelegten Buchung (für „Bearbeiten“ in der Bestätigung) */
   id?: string
+  /** Löschen/Ändern: ID für „Rückgängig“ */
+  undoId?: string
 }
 
 const ok: ActionResult = { ok: true, error: null, field: null }
@@ -136,6 +139,7 @@ export async function updateBookingAction(bookingId: string, _prev: ActionResult
     return typeof v === 'string' ? v : null
   }
   let portfolioId: string
+  let undoId: string
   try {
     await consumeRateLimit(user, 'write')
     const updated = await updateBooking(user, bookingId, {
@@ -153,11 +157,12 @@ export async function updateBookingAction(bookingId: string, _prev: ActionResult
       note: field('note'),
     })
     portfolioId = updated.portfolioId
+    undoId = updated.undoId
   } catch (error) {
     return fail(error)
   }
   revalidatePath('/app', 'layout')
-  redirect(`/app/depots/${portfolioId}?geaendert=1#buchungen`)
+  redirect(`/app/depots/${portfolioId}?geaendert=${undoId}#buchungen`)
 }
 
 export interface ReconcileResult extends ActionResult {
@@ -180,9 +185,23 @@ export async function reconcileCashAction(portfolioId: string, _prev: ReconcileR
 
 export async function deleteBookingAction(id: string): Promise<ActionResult> {
   const user = await requireUser()
+  let undoId: string
   try {
     await consumeRateLimit(user, 'write')
-    await deleteBooking(user, id)
+    undoId = (await deleteBooking(user, id)).undoId
+  } catch (error) {
+    return fail(error)
+  }
+  revalidatePath('/app', 'layout')
+  return { ...ok, undoId }
+}
+
+/** Löschen oder Ändern einer Buchung zurücknehmen (nur eigener, noch gültiger Eintrag). */
+export async function undoBookingAction(undoId: string): Promise<ActionResult> {
+  const user = await requireUser()
+  try {
+    await consumeRateLimit(user, 'write')
+    await undoBookingChange(user, undoId)
   } catch (error) {
     return fail(error)
   }

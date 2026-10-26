@@ -370,3 +370,35 @@
   opacity: var(--opacity-muted);
   cursor: default;
 }
+
+/* ── Rückgängig: Hinweis mit Knopf nach Löschen oder Ändern ─────────── */
+.undo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  margin: 0;
+  padding: var(--space-2) var(--space-2) var(--space-2) var(--space-4);
+  border: 1px solid var(--rule);
+  border-left: 3px solid var(--pos);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  font-size: var(--text-md);
+  line-height: var(--leading-snug);
+}
+
+.undoIcon {
+  flex: none;
+  color: var(--pos);
+}
+
+.undoText {
+  flex: 1 1 12rem;
+  min-width: 0;
+}
+
+.undoError {
+  flex-basis: 100%;
+  color: var(--neg);
+  font-size: var(--text-sm);
+}

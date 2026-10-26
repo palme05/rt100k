@@ -13,6 +13,7 @@ import button from '../ui/button.module.css'
 import { Input, Select } from '../ui/forms'
 import { Note } from '../ui/layout'
 import { PriceText } from './PriceText'
+import { UndoNotice, type UndoAction } from './UndoNotice'
 import styles from './bookings.module.css'
 
 /** Buchung für die Liste – auf dem Server fertig aufbereitet. */
@@ -61,13 +62,16 @@ const PAGE = 25
 export function BookingList({
   items,
   remove,
+  undo,
   linkInstruments = true,
   context = 'portfolio',
   groupBy = 'month',
   pageSize = PAGE,
 }: {
   items: readonly BookingListItem[]
-  remove: (id: string) => Promise<{ ok: boolean; error: string | null }>
+  remove: (id: string) => Promise<{ ok: boolean; error: string | null; undoId?: string }>
+  /** Löschen zurücknehmen (Hinweis mit „Rückgängig“ nach dem Löschen) */
+  undo?: UndoAction
   linkInstruments?: boolean
   context?: 'portfolio' | 'instrument'
   /** Gruppen nach Monat (Standard) oder Jahr – Jahr für wenige Buchungen je Monat (Sparplan) */
@@ -84,6 +88,7 @@ export function BookingList({
   const [pending, start] = useTransition()
   const [error, setError] = useState<string | null>(null)
   const [confirming, setConfirming] = useState<string | null>(null)
+  const [removed, setRemoved] = useState<{ undoId: string; text: string } | null>(null)
   const router = useRouter()
   const byId = useMemo(() => new Map(items.map((b) => [b.id, b])), [items])
   const swipe = useSwipe((direction, key) => {
@@ -131,15 +136,28 @@ export function BookingList({
   const onRemove = (b: BookingListItem) =>
     start(async () => {
       setError(null)
+      setRemoved(null)
       const result = await remove(b.id)
       setConfirming(null)
-      if (result.ok) haptic('success')
-      else setError(result.error)
+      if (result.ok) {
+        haptic('success')
+        if (result.undoId) setRemoved({ undoId: result.undoId, text: `${b.typeLabel} vom ${dayLabel(b.occurredOn)} gelöscht.` })
+      } else setError(result.error)
     })
 
-  if (items.length === 0) return <Note>Noch keine Buchungen.</Note>
+  const notice = removed && undo ? <UndoNotice key={removed.undoId} text={removed.text} undoId={removed.undoId} undo={undo} /> : null
+  if (items.length === 0)
+    return notice ? (
+      <div className={styles.list}>
+        {notice}
+        <Note>Noch keine Buchungen.</Note>
+      </div>
+    ) : (
+      <Note>Noch keine Buchungen.</Note>
+    )
   return (
     <div className={styles.list}>
+      {notice}
       <div className={styles.filters} role="search" aria-label="Buchungen filtern">
         <label className={styles.search}>
           <span className="sr-only">Suchen</span>

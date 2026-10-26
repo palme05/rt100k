@@ -6,8 +6,11 @@ import { Button, Message } from '@/components/ui/forms'
 import { deleteBookingAction } from '../../../actions'
 import styles from './edit.module.css'
 
-/** Löschen in zwei Schritten: erst „Buchung löschen“, dann ausdrücklich bestätigen (Esc bricht ab). */
-export function DeleteBooking({ id, label, redirectTo }: { id: string; label: string; redirectTo: string }) {
+/**
+ * Löschen in zwei Schritten: erst „Buchung löschen“, dann ausdrücklich
+ * bestätigen (Esc bricht ab). Danach zurück zum Depot, dort mit „Rückgängig“.
+ */
+export function DeleteBooking({ id, label, portfolioId }: { id: string; label: string; portfolioId: string }) {
   const router = useRouter()
   const [confirming, setConfirming] = useState(false)
   const [pending, start] = useTransition()
@@ -21,7 +24,7 @@ export function DeleteBooking({ id, label, redirectTo }: { id: string; label: st
         setConfirming(false)
         return
       }
-      router.push(redirectTo)
+      router.push(`/app/depots/${portfolioId}${result.undoId ? `?geloescht=${result.undoId}` : ''}#buchungen`)
     })
 
   return (
