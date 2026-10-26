@@ -431,6 +431,21 @@ Unabhängiges Review (eigener Prüfdurchlauf, nur lesend) aller Route-Handler, S
 | Krypto-Zuordnung im Import: nur noch **eine** CoinGecko-Anfrage je Coin (vorher zwei, dazu zwei Yahoo-Anfragen); der Treffer stammt aus der eigenen Serveranfrage, die ID wird zusätzlich gegen `^[a-z0-9-]{1,80}$` geprüft. Aus dem Browser kommt weiterhin nur das Symbol (zod `^[A-Z0-9]{2,10}$`) | ✅ |
 | Keine Inline-Styles: Pfeil dreht über eine Klasse, Balken weiterhin über SVG-Attribute | ✅ |
 
+## Nachtrag: Bewegung, Haptik, Durchschau mit allen Titeln und eigener Zuordnung (26.10.2026)
+
+| Prüfung | Ergebnis |
+|---|---|
+| Neue Tabelle `instrument_class` (Migration 0023): `owner_id` + RLS-Policy `owner_id = app_user_id()`, Rechte für `rt100k_app` in eigener Migration 0024; DAL nur über `withUser` **und** `owner_id`-Filter, Instrument muss sichtbar sein (allgemein oder eigen), sonst `NotFoundError`; Krypto/Edelmetall abgelehnt | ✅ (Negativ-Tests `classes.db.test.ts`: fremdes privates Instrument, unbekannte und ungültige ID, direktes `INSERT` mit fremder `owner_id`, RLS je Nutzer) |
+| Freitext für Land/Branche: zod, 1–60 Zeichen, Leerraum zusammengezogen, keine Steuerzeichen und keine spitzen Klammern; Ausgabe nur als Text (React escaped) | ✅ (DB-Test) |
+| Komplette Titelliste (`etf_breakdown.holdings`): je Eintrag Name (≤ 60, ohne Steuerzeichen) und Gewicht 1–1.000.000 ppm, höchstens 12.000 Einträge, zod beim Speichern **und** beim Lesen; Länderbasis nur `herkunft`/`boerse` (Check-Constraint und zod) | ✅ (DB-Tests: 0 und 2.000.000 ppm, Steuerzeichen, 12.001 Einträge, falsche Basis) |
+| Server-Action-Body bis 3 MB (vorher 1 MB) für ganze Titellisten: jede Action prüft weiterhin `requireUser` → Rate-Limit → DAL; Größe der Liste in der DAL begrenzt. „Bestandsliste entfernen“ hat jetzt ebenfalls das Rate-Limit | ✅ |
+| Backup enthält Titelliste und Zuordnungen; Wiederherstellen prüft dieselben Schemata, Zuordnungen nur für mit­wiederhergestellte Instrumente | ✅ (`backup.db.test.ts`) |
+| Bewegung: keine Inline-Styles (Klassen, SVG-Attribute, CSS-Scroll-Timeline); Konfetti zeichnet in ein Canvas mit Klasse, Farben aus den Tokens, `pointer-events: none`, entfernt sich selbst; Einblenden ohne Skript (kein Eingriff ins DOM vor der Hydrierung) | ✅ (keine CSP-Meldungen im Produktions-Build) |
+| Haptik: Vibrations-API braucht keine Berechtigung; `HapticsBridge` liest Klicks und neu eingefügte Meldungen nur (MutationObserver, keine DOM-Änderung). iOS-Rückfall fügt kurz ein unsichtbares Schalter-Element ein und entfernt es | ✅ |
+| Gerätespeicher (localStorage): nur `rt100k:haptik` (an/aus) und `rt100k:meilensteine` (Zahlen der gefeierten Schwellen, beim Lesen auf Zahlen gefiltert, höchstens 50) – keine Beträge, keine Kennungen | ✅ (Unit-Tests `celebrate.test.ts`, `haptics.test.ts`) |
+| Meilenstein-Hinweis im Privatsphäre-Modus ohne Betrag (Anteil der Strecke) | ✅ |
+| China-Korrektur ändert nur die Länderzuordnung beim Einlesen im Browser; gespeichert wird zusätzlich die Zahl der Korrekturen – keine neuen externen Abrufe | ✅ |
+
 ## Notfallplan
 
 **Bei Verdacht auf Secret-Leak** (Commit, Log, Screenshot):
