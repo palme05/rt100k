@@ -25,6 +25,7 @@ describe('aktive Seite in der Navigation', () => {
   it('Unterseiten von Steuer, Road, Import und Rückblick', () => {
     expect(activeLabels('/app/steuer/export')).toEqual(['Steuer'])
     expect(activeLabels('/app/road')).toEqual(['Road to 100k'])
+    expect(activeLabels('/app/road/freigabe/token')).toEqual(['Road to 100k'])
     expect(activeLabels('/app/import')).toEqual(['Import'])
     expect(activeLabels('/app/rueckblick/2026-09')).toEqual(['Monatsrückblick'])
   })

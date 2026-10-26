@@ -3,7 +3,9 @@
 import { revalidatePath } from 'next/cache'
 import type { RoadSettings } from '@/components/road/useRoadForecast'
 import { requireUser } from '@/server/auth/session'
+import { recordAudit } from '@/server/dal/audit'
 import { NotFoundError, ValidationError } from '@/server/dal/errors'
+import { updateSharedGoal } from '@/server/dal/goal-shares'
 import { createGoal, deleteGoal, updateGoal } from '@/server/dal/goals'
 import { consumeRateLimit } from '@/server/dal/rate-limit'
 import { saveRoadSettings } from '@/server/dal/road'
@@ -75,5 +77,24 @@ export async function deleteGoalAction(id: string): Promise<GoalResult> {
     return goalFail(error)
   }
   revalidatePath('/app', 'layout')
+  return { ok: true, error: null, field: null }
+}
+
+/**
+ * Geteiltes Ziel mitbearbeiten (Recht „edit“): nur die Planwerte. Freigabe
+ * und Recht prüft die DAL; das Audit-Log des Besitzers vermerkt die Änderung.
+ */
+export async function saveSharedGoalAction(id: string | null, _prev: GoalResult, formData: FormData): Promise<GoalResult> {
+  const user = await requireUser()
+  try {
+    if (id === null) throw new NotFoundError('Ziel nicht gefunden.')
+    await consumeRateLimit(user, 'write')
+    // Depot-Auswahl im Formular wird ignoriert – die DAL liest nur die Planwerte
+    const { ownerId } = await updateSharedGoal(user, id, goalForm(formData))
+    await recordAudit({ userId: ownerId, actorId: user.id, type: 'shared_goal_edited' })
+  } catch (error) {
+    return goalFail(error)
+  }
+  revalidatePath('/app/road')
   return { ok: true, error: null, field: null }
 }
