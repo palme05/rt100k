@@ -194,8 +194,8 @@ test('ETF-Durchschau: Börsenplatz-Liste ordnet chinesische Unternehmen China zu
   await page.goto('/app/analyse')
   const section = page.getByRole('region', { name: 'ETF-Durchschau' })
   await section.locator('input[type=file]').setInputFiles({ name: 'holdings.csv', mimeType: 'text/csv', buffer: Buffer.from(HOLDINGS_MARKET) })
-  await expect(section.getByText(/4 chinesische Titel mit Börsenplatz Hongkong\/USA China zugeordnet/)).toBeVisible()
-  await expect(section.getByText(/Länder nach Börsenplatz, 4 chinesische Titel China zugeordnet/)).toBeVisible()
+  await expect(section.getByText(/5 chinesische Titel mit Börsenplatz Hongkong\/USA China zugeordnet/)).toBeVisible()
+  await expect(section.getByText(/Länder nach Börsenplatz, 5 chinesische Titel China zugeordnet/)).toBeVisible()
   await expect(section.getByRole('list', { name: 'Durchschau nach Land' })).toContainText('China')
 })
 
