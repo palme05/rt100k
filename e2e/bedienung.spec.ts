@@ -59,9 +59,23 @@ test('Buchung bearbeiten, Liste filtern, Wertpapier-Seite mit Kursverlauf', asyn
   await expect(page.getByLabel(/Kurswert/)).toHaveValue(/^(1\.000|600),00$/)
   await page.getByLabel(/Kurswert/).fill('1.100,00')
   await page.getByRole('button', { name: 'Änderung speichern' }).click()
-  await expect(page).toHaveURL(new RegExp(`/app/depots/${id}\\?geaendert=1`))
   await expect(page.getByText('Änderung gespeichert.')).toBeVisible()
+  // die Rückgängig-ID steht nur kurz in der Adresse – Neu laden zeigt den Hinweis nicht noch einmal
+  await expect(page).toHaveURL(new RegExp(`/app/depots/${id}#buchungen$`))
   await expect(list).toContainText('1.100,00')
+
+  // Rückgängig: alte Werte zurück, Hinweis-Parameter verschwindet aus der Adresse
+  await list.getByRole('button', { name: 'Rückgängig' }).click()
+  await expect(list.getByText('Rückgängig gemacht.')).toBeVisible()
+  await expect(list).not.toContainText('1.100,00')
+
+  // Löschen in der Liste, dann zurückholen
+  await list.getByRole('button', { name: /Kauf vom .* löschen/ }).first().click()
+  await list.getByRole('button', { name: /^Ja, Kauf vom .* löschen/ }).click()
+  await expect(list).toContainText('1 Buchung')
+  await expect(list.getByText(/Kauf vom .* gelöscht\./)).toBeVisible()
+  await list.getByRole('button', { name: 'Rückgängig' }).click()
+  await expect(list).toContainText('2 Buchungen')
 
   // Suche ohne Treffer, dann zurücksetzen
   await list.getByPlaceholder('Suchen …').fill('gibt es nicht')

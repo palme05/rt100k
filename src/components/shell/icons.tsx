@@ -36,6 +36,11 @@ export type IconName =
   | 'alert'
   | 'upload'
   | 'download'
+  | 'undo'
+  | 'bookmark'
+  | 'target'
+  | 'book'
+  | 'clock'
 
 const PATHS: Record<IconName, string[]> = {
   home: ['M4 11.5 12 5l8 6.5', 'M6.5 10v9h11v-9'],
@@ -72,6 +77,11 @@ const PATHS: Record<IconName, string[]> = {
   alert: ['M12 4.5 21 19.5H3z', 'M12 10v4', 'M12 16.8v.01'],
   upload: ['M12 16V4.5', 'M7.5 9 12 4.5 16.5 9', 'M5 15v4.5h14V15'],
   download: ['M12 4.5V16', 'M7.5 11.5 12 16l4.5-4.5', 'M5 15v4.5h14V15'],
+  undo: ['M9 14 4.5 9.5 9 5', 'M4.5 9.5H14a5.5 5.5 0 0 1 0 11h-3'],
+  bookmark: ['M7 4.5h10v15l-5-3.5-5 3.5z'],
+  target: ['M12 20a8 8 0 1 0 0-16 8 8 0 0 0 0 16z', 'M12 16a4 4 0 1 0 0-8 4 4 0 0 0 0 8z', 'M12 12h.01'],
+  book: ['M5 18.5V6a2 2 0 0 1 2-2h12v13H7a2 2 0 0 0-2 2 2 2 0 0 0 2 2h12', 'M9 8h6'],
+  clock: ['M12 20a8 8 0 1 0 0-16 8 8 0 0 0 0 16z', 'M12 8v4.5l3 2'],
 }
 
 export function Icon({ name, size = 22, className }: { name: IconName; size?: number; className?: string | undefined }) {

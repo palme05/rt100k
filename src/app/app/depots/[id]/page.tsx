@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { BookingList } from '@/components/bookings/BookingList'
 import { PriceText } from '@/components/bookings/PriceText'
+import { UndoFromUrl } from '@/components/bookings/UndoNotice'
 import { BarList } from '@/components/charts/BarList'
 import { DonutChart } from '@/components/charts/DonutChart'
 import { HistoryChart } from '@/components/charts/HistoryChart'
@@ -29,7 +30,7 @@ import { loadDepotInsights } from '@/server/depot'
 import { valuePortfolios } from '@/server/overview'
 import { quoteInEur } from '@/server/quotes/service'
 import type { QuoteSource } from '@/server/quotes/types'
-import { deleteBookingAction, updatePortfolioAction } from '../actions'
+import { deleteBookingAction, undoBookingAction, updatePortfolioAction } from '../actions'
 import { PortfolioForm } from '../PortfolioForm'
 import { BookingForm } from './BookingForm'
 import { DeleteImportsForm } from './DeleteImportsForm'
@@ -52,10 +53,9 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   }
 }
 
-export default async function PortfolioPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<Record<string, string | string[] | undefined>> }) {
+export default async function PortfolioPage({ params }: { params: Promise<{ id: string }> }) {
   const user = await requireUser()
   const { id } = await params
-  const geaendert = (await searchParams).geaendert === '1'
   let portfolio
   try {
     portfolio = await getPortfolio(user, id)
@@ -290,9 +290,12 @@ export default async function PortfolioPage({ params, searchParams }: { params: 
 
           <div className={styles.splitMain}>
             <Section id="buchungen" title="Buchungen" meta={bookings.length === 1 ? '1 insgesamt' : `${bookings.length} insgesamt`}>
-              {geaendert ? <Message tone="success">Änderung gespeichert.</Message> : null}
+              {/* nach Bearbeiten/Löschen auf der eigenen Seite (ID prüft der Server beim Klick) */}
+              <UndoFromUrl param="geaendert" text="Änderung gespeichert." undo={undoBookingAction} />
+              <UndoFromUrl param="geloescht" text="Buchung gelöscht." undo={undoBookingAction} />
               <BookingList
                 remove={deleteBookingAction}
+                undo={undoBookingAction}
                 pageSize={12}
                 items={bookings.map((b) => {
                   const metal = b.instrumentId ? valuation.instruments.get(b.instrumentId)?.kind === 'metal' : false

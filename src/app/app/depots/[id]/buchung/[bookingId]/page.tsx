@@ -99,9 +99,9 @@ export default async function EditBookingPage({ params }: { params: Promise<{ id
           />
         </Section>
         <Section id="entfernen" title="Buchung entfernen" span="third">
-          <p className={styles.text}>Löscht die Buchung endgültig. Bestand, Gewinn und Steuer werden danach neu berechnet.</p>
+          <p className={styles.text}>Löscht die Buchung. Bestand, Gewinn und Steuer werden danach neu berechnet; 30 Minuten lang lässt sich das rückgängig machen.</p>
           {booking.source === 'import' ? <Note>Aus einem Import. Eine Änderung bleibt, auch wenn dieselbe Datei noch einmal importiert wird.</Note> : null}
-          <DeleteBooking id={booking.id} label={`vom ${dayLabel(booking.occurredOn)}`} redirectTo={back} />
+          <DeleteBooking id={booking.id} label={`vom ${dayLabel(booking.occurredOn)}`} portfolioId={portfolio.id} />
         </Section>
       </Grid>
     </>

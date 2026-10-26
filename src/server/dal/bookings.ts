@@ -1,5 +1,5 @@
 import 'server-only'
-import { and, asc, between, count, desc, eq } from 'drizzle-orm'
+import { and, asc, between, count, desc, eq, lt, sql } from 'drizzle-orm'
 import { z } from 'zod'
 import { bookingTypeLabel } from '@/lib/booking-display'
 import { addDays } from '@/lib/days'
@@ -11,7 +11,7 @@ import { computeLedger, LedgerError, type LedgerBooking } from '@/lib/holdings'
 import { MAX_AMOUNT_CENTS, MoneyParseError, parseEuroToCents } from '@/lib/money'
 import { amountFromUnitPrice, displayUnitPrice, formatQuantity, parseQuantity, parseUnitPrice, quantityFromDb, quantityToDb } from '@/lib/quantity'
 import { withUser, type Tx } from '../db/client'
-import { booking, BOOKING_TYPES, instrument, portfolio, type BookingType } from '../db/schema'
+import { booking, BOOKING_TYPES, bookingUndo, instrument, portfolio, type BookingType } from '../db/schema'
 import { priceIssueFor } from '../plausibility'
 import type { Actor } from './actor'
 import { ConfirmationRequired, NotFoundError, ValidationError } from './errors'
@@ -356,6 +356,24 @@ export async function createBooking(actor: Actor, input: unknown): Promise<Booki
   })
 }
 
+/** So lange lässt sich Löschen oder Ändern einer Buchung rückgängig machen. */
+export const UNDO_MINUTES = 30
+
+/**
+ * Merkt den Stand einer Buchung vor dem Löschen oder Ändern (alle Spalten,
+ * src/server/dal/booking-undo.ts stellt ihn wieder her) und räumt dabei
+ * abgelaufene Einträge des Nutzers weg.
+ */
+async function recordUndo(tx: Tx, actor: Actor, action: 'delete' | 'update', before: typeof booking.$inferSelect, changedAt: Date | null): Promise<string> {
+  await tx.delete(bookingUndo).where(and(eq(bookingUndo.ownerId, actor.id), lt(bookingUndo.createdAt, sql`now() - make_interval(mins => ${UNDO_MINUTES})`)))
+  const [row] = await tx
+    .insert(bookingUndo)
+    .values({ ownerId: actor.id, portfolioId: before.portfolioId, bookingId: before.id, action, snapshot: before, changedAt })
+    .returning({ id: bookingUndo.id })
+  if (!row) throw new Error('Rückgängig konnte nicht vorbereitet werden.')
+  return row.id
+}
+
 /** Eine Buchung des Nutzers (zum Bearbeiten), sonst `NotFoundError`. */
 export async function getBooking(actor: Actor, id: unknown): Promise<BookingDto> {
   const bookingId = parseId(id)
@@ -377,20 +395,12 @@ export async function getBooking(actor: Actor, id: unknown): Promise<BookingDto>
  * Quelle und Import-Schlüssel bleiben; ein erneuter Import der Datei
  * überschreibt die Änderung daher nicht.
  */
-export async function updateBooking(actor: Actor, id: unknown, input: unknown): Promise<BookingDto> {
+export async function updateBooking(actor: Actor, id: unknown, input: unknown): Promise<BookingDto & { undoId: string }> {
   const bookingId = parseId(id)
   const { booking: data, amountMode, confirmPrice } = parseBooking({ ...(typeof input === 'object' && input ? input : {}), portfolioId: '' })
   return withUser(actor.id, async (tx) => {
     const [existing] = await tx
-      .select({
-        portfolioId: booking.portfolioId,
-        priceConfirmed: booking.priceConfirmed,
-        type: booking.type,
-        occurredOn: booking.occurredOn,
-        instrumentId: booking.instrumentId,
-        quantity: booking.quantity,
-        amountCents: booking.amountCents,
-      })
+      .select()
       .from(booking)
       .where(and(eq(booking.id, bookingId), eq(booking.ownerId, actor.id)))
       .limit(1)
@@ -410,21 +420,25 @@ export async function updateBooking(actor: Actor, id: unknown, input: unknown): 
       existing.amountCents === data.amountCents
     const confirmed = confirmPrice || unchanged
     if (!confirmed) await assertPlausiblePrice(tx, data, instrumentDto, amountMode)
+    // Zeitpunkt der Änderung fest setzen: Rückgängig gilt nur, solange die Buchung so bleibt
+    const changedAt = new Date()
     const [row] = await tx
       .update(booking)
-      .set({ ...data, priceConfirmed: confirmed })
+      .set({ ...data, priceConfirmed: confirmed, updatedAt: changedAt })
       .where(and(eq(booking.id, bookingId), eq(booking.ownerId, actor.id)))
       .returning(dtoColumns)
     if (!row) throw new NotFoundError('Buchung nicht gefunden.')
-    return { ...row, instrumentName: instrumentDto?.name ?? null }
+    const undoId = await recordUndo(tx, actor, 'update', existing, changedAt)
+    return { ...row, instrumentName: instrumentDto?.name ?? null, undoId }
   })
 }
 
-export async function deleteBooking(actor: Actor, id: unknown): Promise<void> {
+/** Löscht eine Buchung; die Antwort enthält die ID für „Rückgängig“ (UNDO_MINUTES). */
+export async function deleteBooking(actor: Actor, id: unknown): Promise<{ undoId: string; portfolioId: string }> {
   const bookingId = parseId(id)
-  await withUser(actor.id, async (tx) => {
+  return withUser(actor.id, async (tx) => {
     const [row] = await tx
-      .select({ portfolioId: booking.portfolioId })
+      .select()
       .from(booking)
       .where(and(eq(booking.id, bookingId), eq(booking.ownerId, actor.id)))
       .limit(1)
@@ -433,6 +447,7 @@ export async function deleteBooking(actor: Actor, id: unknown): Promise<void> {
     const remaining = (await ledgerBookings(tx, actor, row.portfolioId)).filter((b) => b.id !== bookingId)
     assertConsistent(remaining)
     await tx.delete(booking).where(and(eq(booking.id, bookingId), eq(booking.ownerId, actor.id)))
+    return { undoId: await recordUndo(tx, actor, 'delete', row, null), portfolioId: row.portfolioId }
   })
 }
 
