@@ -27,11 +27,15 @@ export interface OpenTask {
   href: string | null
   /** gespeicherte Aufgabe – lässt sich abhaken */
   taskId: string | null
+  /** Beschriftung des Links (Standard „Beheben“) */
+  actionLabel?: string
 }
 
 /**
- * Offene Punkte: aus den Daten abgeleitet (verschwinden von selbst, sobald
- * erledigt) und gespeicherte Aufgaben aus Importen (werden abgehakt).
+ * Offene Punkte: aus den Daten abgeleitet – sie zeigen falsche oder fehlende
+ * Zahlen und verschwinden von selbst, sobald alles stimmt. Nacharbeiten aus
+ * Importen (von Hand zu buchen) stehen gesammelt auf der Import-Seite; hier
+ * nur eine Zeile dazu.
  */
 export async function loadOpenTasks(actor: Actor, valuation?: PortfolioValuation): Promise<OpenTask[]> {
   const [v, stored] = await Promise.all([valuation ? Promise.resolve(valuation) : valuePortfolios(actor), listTasks(actor)])
@@ -67,6 +71,15 @@ export async function loadOpenTasks(actor: Actor, valuation?: PortfolioValuation
     tasks.push({ key: `sparplan-${plan.portfolioId}-${plan.instrumentId}`, title: `Sparplan fehlt: ${name(plan.instrumentId)}`, body: `Erwartet um den ${dayLabel(plan.nextOn)} – buchen oder importieren`, href: `/app/buchen?${prefill}`, taskId: null })
   }
 
-  for (const t of stored) tasks.push({ key: `aufgabe-${t.id}`, title: t.title, body: t.body, href: null, taskId: t.id })
+  if (stored.length > 0) {
+    tasks.push({
+      key: 'von-hand',
+      title: stored.length === 1 ? 'Aus einem Import von Hand zu buchen: 1 Punkt' : `Aus Importen von Hand zu buchen: ${stored.length} Punkte`,
+      body: 'Kapitalmaßnahmen und Buchungen ohne zugeordneten Wert – zuordnen, buchen oder verwerfen',
+      href: '/app/import#von-hand',
+      taskId: null,
+      actionLabel: 'Ansehen',
+    })
+  }
   return tasks
 }

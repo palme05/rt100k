@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { requireUser } from '@/server/auth/session'
 import { NotFoundError, ValidationError } from '@/server/dal/errors'
 import { deleteCsvMapping, findSimilarImports, ImportConflictError, importBookings, saveCsvMapping, type CsvMappingDto, type SimilarBooking } from '@/server/dal/imports'
-import { addTasks } from '@/server/dal/notifications'
+import { addTasks, discardAllTasks } from '@/server/dal/notifications'
 import { prepareImport, type PreparedImport } from '@/server/imports'
 import { consumeRateLimit } from '@/server/dal/rate-limit'
 
@@ -62,6 +62,19 @@ export async function saveImportTasksAction(texts: unknown): Promise<Result<{ cr
   } catch (error) {
     return fail(error)
   }
+}
+
+/** Alle Nacharbeiten aus Importen verwerfen (die Buchungen bleiben unberührt). */
+export async function discardTasksAction(): Promise<{ ok: boolean; error: string | null }> {
+  const user = await requireUser()
+  try {
+    await consumeRateLimit(user, 'write')
+    await discardAllTasks(user)
+  } catch (error) {
+    return { ok: false, error: fail(error).error }
+  }
+  revalidatePath('/app', 'layout')
+  return { ok: true, error: null }
 }
 
 export async function saveMappingAction(name: unknown, mapping: unknown): Promise<Result<{ mapping: CsvMappingDto }>> {
