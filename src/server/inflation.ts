@@ -24,9 +24,9 @@ const FIXTURE: InflationInfo = { bp: 240, source: 'eurostat', from: 2016, to: 20
 const FALLBACK_TTL_MS = 3_600_000
 let fallbackUntil = 0
 
-async function fetchRates(url: string): Promise<Map<number, number> | null> {
+async function fetchRates(url: string, revalidate: number): Promise<Map<number, number> | null> {
   try {
-    const rates = parseHicpJsonStat(await providerFetch('Eurostat', url, { revalidate: TTL }))
+    const rates = parseHicpJsonStat(await providerFetch('Eurostat', url, { revalidate }))
     if (!rates) console.warn('Eurostat: Antwort im unerwarteten Format')
     return rates
   } catch (error) {
@@ -35,13 +35,22 @@ async function fetchRates(url: string): Promise<Map<number, number> | null> {
   }
 }
 
-/** Durchschnitt der letzten zehn vollen Jahre; beide Reihen parallel, die aktuelle hat Vorrang. */
+/**
+ * Jahresraten beider Reihen parallel (die aktuelle zuerst). Eurostat lehnt
+ * unbekannte Parameter mit HTTP 400 ab – deshalb nutzt auch die
+ * Statusprüfung genau diese Adressen (nur mit kürzerem Cache).
+ */
+export function fetchHicpRates(revalidate = TTL): Promise<(Map<number, number> | null)[]> {
+  return Promise.all(HICP_SOURCES.map((url) => fetchRates(url, revalidate)))
+}
+
+/** Durchschnitt der letzten zehn vollen Jahre; die aktuelle Reihe hat Vorrang. */
 export async function loadInflation(now = new Date()): Promise<InflationInfo> {
   if (fixtureMode()) return FIXTURE
   const fallback: InflationInfo = { bp: FALLBACK_INFLATION_BP, source: 'ziel' }
   if (Date.now() < fallbackUntil) return fallback
   const year = now.getUTCFullYear()
-  for (const rates of await Promise.all(HICP_SOURCES.map(fetchRates))) {
+  for (const rates of await fetchHicpRates()) {
     const avg = rates ? averageInflation(rates, year) : null
     if (avg) return { bp: avg.bp, source: 'eurostat', from: avg.from, to: avg.to }
   }
