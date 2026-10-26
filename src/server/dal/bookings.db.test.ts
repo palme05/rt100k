@@ -6,6 +6,7 @@ import { booking, priceDaily } from '../db/schema'
 import { getDb, withUser } from '../db/client'
 import { createBooking, deleteBooking, getBooking, listAllLedgerBookings, listBookings, MAX_BOOKINGS_PER_USER, RECONCILE_NOTE, reconcileCashBalance, updateBooking } from './bookings'
 import { ConfirmationRequired, NotFoundError, ValidationError } from './errors'
+import { importBookings } from './imports'
 import { ensureGlobalInstrument } from './instruments'
 import { createPortfolio, MAX_PORTFOLIOS_PER_USER } from './portfolios'
 
@@ -250,10 +251,10 @@ describe('Kurs je Stück', () => {
   })
 
   it('Rundlauf: vorbelegter Kurs speichert genau den alten Betrag', async () => {
-    const b = await createBooking(owner, { portfolioId: d, type: 'buy', occurredOn: '2026-03-02', instrumentId: etf, quantity: '15,399543', amount: '1.500,00' })
+    const b = await createBooking(owner, { portfolioId: d, type: 'buy', occurredOn: '2026-03-20', instrumentId: etf, quantity: '15,399543', amount: '1.500,00' })
     const price = unitPriceInput(b.amountCents, quantityFromDb(b.quantity!))
     expect(price).toBe('97,4055')
-    const updated = await updateBooking(owner, b.id, { type: 'buy', occurredOn: '2026-03-02', instrumentId: etf, quantity: '15,399543', amountMode: 'unit', price })
+    const updated = await updateBooking(owner, b.id, { type: 'buy', occurredOn: '2026-03-20', instrumentId: etf, quantity: '15,399543', amountMode: 'unit', price })
     expect(updated.amountCents).toBe(150_000)
   })
 })
@@ -321,5 +322,63 @@ describe('Kursprüfung beim Speichern', () => {
     await expect(updateBooking(other, b.id, { type: 'buy', occurredOn: DAY, instrumentId: fund, quantity: '10', amount: '97,00', confirmPrice: 'on' })).rejects.toBeInstanceOf(NotFoundError)
     await expect(createBooking(other, { portfolioId: d, type: 'buy', occurredOn: DAY, instrumentId: fund, quantity: '10', amount: '97,00', confirmPrice: 'on' })).rejects.toBeInstanceOf(NotFoundError)
     expect(await getBooking(owner, b.id)).toMatchObject({ amountCents: 97_000, priceConfirmed: false })
+  })
+})
+
+describe('Doppelbuchungen', () => {
+  let owner: Actor
+  let d: string
+  let other: string
+  beforeAll(async () => {
+    owner = await createUser('Dora')
+    d = (await createPortfolio(owner, { name: 'Flatex', kind: 'depot' })).id
+    other = (await createPortfolio(owner, { name: 'Zweitdepot', kind: 'depot' })).id
+  })
+
+  const buy = { type: 'buy', occurredOn: '2026-02-10', quantity: '4', amountMode: 'unit', price: '120,00' }
+
+  it('fast gleiche Buchung im selben Depot: erst nach Bestätigung gespeichert', async () => {
+    await createBooking(owner, { portfolioId: d, instrumentId: etf, ...buy })
+    const error = await createBooking(owner, { portfolioId: d, instrumentId: etf, ...buy, occurredOn: '2026-02-12', price: '120,05' }).catch((e: unknown) => e)
+    expect(error).toBeInstanceOf(ConfirmationRequired)
+    expect((error as ConfirmationRequired).kind).toBe('duplicate')
+    expect((error as Error).message).toMatch(/Kauf am 10\.02\.2026, 4 Stück\. Doppelt erfasst\?/)
+    expect(await listBookings(owner, d)).toHaveLength(1)
+
+    const saved = await createBooking(owner, { portfolioId: d, instrumentId: etf, ...buy, occurredOn: '2026-02-12', price: '120,05', confirmDuplicate: 'on' })
+    expect(saved.amountCents).toBe(48_020)
+    expect(await listBookings(owner, d)).toHaveLength(2)
+  })
+
+  it('mehr als drei Tage, anderer Betrag oder anderes Depot: keine Rückfrage', async () => {
+    await expect(createBooking(owner, { portfolioId: d, instrumentId: etf, ...buy, occurredOn: '2026-02-16' })).resolves.toMatchObject({ amountCents: 48_000 })
+    await expect(createBooking(owner, { portfolioId: d, instrumentId: etf, ...buy, price: '125,00' })).resolves.toMatchObject({ amountCents: 50_000 })
+    await expect(createBooking(owner, { portfolioId: other, instrumentId: etf, ...buy })).resolves.toMatchObject({ portfolioId: other })
+  })
+
+  it('nennt importierte Buchungen als solche', async () => {
+    await importBookings(owner, {
+      portfolioId: other,
+      files: [],
+      items: [{ importKey: 'd'.repeat(64), type: 'dividend', occurredOn: '2026-03-20', instrumentId: etf, quantity: null, amountCents: 1_234, feeCents: 0, taxCents: 0, note: null }],
+    })
+    const error = await createBooking(owner, { portfolioId: other, type: 'dividend', occurredOn: '2026-03-19', instrumentId: etf, amount: '12,34' }).catch((e: unknown) => e)
+    expect(error).toBeInstanceOf(ConfirmationRequired)
+    expect((error as Error).message).toMatch(/Dividende am 20\.03\.2026 \(importiert\)/)
+  })
+
+  it('Buchungen anderer Nutzer zählen nie', async () => {
+    const stranger = await createUser('Emil')
+    const theirs = (await createPortfolio(stranger, { name: 'Flatex', kind: 'depot' })).id
+    await expect(createBooking(stranger, { portfolioId: theirs, instrumentId: etf, ...buy })).resolves.toMatchObject({ portfolioId: theirs })
+    // und umgekehrt: fremdes Depot bleibt unsichtbar, auch mit Häkchen
+    await expect(createBooking(stranger, { portfolioId: d, instrumentId: etf, ...buy, confirmDuplicate: 'on' })).rejects.toBeInstanceOf(NotFoundError)
+  })
+
+  it('ungültige Bestätigung ist ein Eingabefehler', async () => {
+    const error = await createBooking(owner, { portfolioId: d, instrumentId: etf, ...buy, confirmDuplicate: 'ja' }).catch((e: unknown) => e)
+    expect(error).toBeInstanceOf(ValidationError)
+    expect(error).not.toBeInstanceOf(ConfirmationRequired)
+    expect((error as ValidationError).field).toBe('confirmDuplicate')
   })
 })

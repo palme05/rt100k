@@ -191,6 +191,8 @@ export function BookingForm({
   const fixedMode = Boolean(edit) || Boolean(prefill?.amountCents)
   const [chosenMode, setChosenMode] = useState<AmountMode | null>(edit ? (edit.amountMode ?? 'total') : prefill?.amountCents ? 'total' : null)
   const [confirmed, setConfirmed] = useState(false)
+  // „Keine Doppelbuchung“: bleibt angekreuzt, falls danach noch die Kursprüfung nachfragt
+  const [confirmedDuplicate, setConfirmedDuplicate] = useState(false)
   const [fixApplied, setFixApplied] = useState(false)
   const [saved, setSaved] = useState<Saved | null>(null)
   const submitted = useRef<Saved | null>(null)
@@ -212,6 +214,7 @@ export function BookingForm({
     const result = edit ? await updateBookingAction(edit.bookingId, previous, formData) : await createBookingAction(previous, formData)
     setSaved(result.ok ? submitted.current : null)
     setConfirmed(false)
+    if (result.ok) setConfirmedDuplicate(false)
     // Nach erfolgreichem Speichern: Werte leeren, Art, Datum, Wertpapier und Eingabeart behalten (schnelles Erfassen)
     if (result.ok && !edit) setValues((v) => ({ ...v, quantity: '', factor: '', amount: '', price: '', fee: '', tax: '', note: '' }))
     return result
@@ -226,15 +229,17 @@ export function BookingForm({
   const showAmount = !NO_AMOUNT.has(type)
   const unit = isMetal ? 'g' : 'Stück'
 
-  // Rückmeldung des Servers: unplausibler Kurs → Bestätigung statt Fehlerzeile
+  // Rückmeldung des Servers: unplausibler Kurs oder Doppelbuchung → Bestätigung statt Fehlerzeile
   const confirmNeeded = !pending && !state.ok && Boolean(state.confirm)
+  const duplicateNeeded = confirmNeeded && state.confirmKind === 'duplicate'
+  const priceNeeded = confirmNeeded && !duplicateNeeded
   const err = (field: string) => (!confirmNeeded && state.field === field ? state.error : null)
   const generalError = !confirmNeeded && state.error && (!state.field || !INLINE_ERRORS.has(state.field)) ? state.error : null
 
   useEffect(() => {
     if (pending || state.ok) return
     if (state.confirm) {
-      document.getElementById(`${id}-confirmPrice`)?.focus()
+      document.getElementById(`${id}-${state.confirmKind === 'duplicate' ? 'confirmDuplicate' : 'confirmPrice'}`)?.focus()
       return
     }
     // Erstes fehlerhaftes Feld fokussieren (Tastatur und Screenreader landen beim Fehler)
@@ -288,7 +293,10 @@ export function BookingForm({
     const value = event.target.value
     setValues((v) => ({ ...v, [key]: value }))
     // Eine Bestätigung gilt nur für die Werte, zu denen die Warnung kam
-    if (!UNCONFIRMING.has(key)) setConfirmed(false)
+    if (!UNCONFIRMING.has(key)) {
+      setConfirmed(false)
+      setConfirmedDuplicate(false)
+    }
   }
 
   /** Umschalten rechnet den eingegebenen Wert um, damit nichts verloren geht. */
@@ -357,6 +365,7 @@ export function BookingForm({
             <Select id={fieldId('type')} name="type" value={type} onChange={(e) => {
                 setType(e.target.value)
                 setConfirmed(false)
+                setConfirmedDuplicate(false)
               }}>
               {types.map((t) => (
                 <option key={t} value={t}>
@@ -378,6 +387,7 @@ export function BookingForm({
             onChange={(next) => {
               setInstrument(next)
               setConfirmed(false)
+              setConfirmedDuplicate(false)
             }}
             required={NEEDS_INSTRUMENT.has(type)}
             cryptoOnly={kind === 'krypto'}
@@ -441,7 +451,7 @@ export function BookingForm({
             {WITH_TAX.has(type) && showQuantity ? taxField : null}
           </div>
 
-          {confirmNeeded ? (
+          {priceNeeded ? (
             <div className={styles.confirm}>
               <Message tone="info">{state.error}</Message>
               <Checkbox id={fieldId('confirmPrice')} name="confirmPrice" label="Kurs stimmt – trotzdem speichern" checked={confirmed} onChange={(e) => setConfirmed(e.target.checked)} />
@@ -467,6 +477,14 @@ export function BookingForm({
           </p>
         ) : null}
         {generalError ? <Message tone="error">{generalError}</Message> : null}
+        {duplicateNeeded ? (
+          <div className={styles.confirm}>
+            <Message tone="info">{state.error}</Message>
+            <Checkbox id={fieldId('confirmDuplicate')} name="confirmDuplicate" label="Keine Doppelbuchung – trotzdem speichern" checked={confirmedDuplicate} onChange={(e) => setConfirmedDuplicate(e.target.checked)} />
+          </div>
+        ) : confirmedDuplicate ? (
+          <input type="hidden" name="confirmDuplicate" value="on" />
+        ) : null}
         <Actions>
           <Button type="submit" disabled={pending} aria-busy={pending || undefined}>
             {pending ? 'Speichern …' : edit ? 'Änderung speichern' : 'Buchung speichern'}

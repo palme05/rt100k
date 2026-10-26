@@ -11,7 +11,7 @@ import { assetRefOf, assetKey, PREPARE_MAX_ASSETS, PREPARE_MAX_KEYS, type AssetR
 import { applyMapping, type CsvMapping } from '@/lib/import/generic'
 import { unassignedTask } from '@/lib/import/tasks'
 import { IMPORT_SOURCE_LABEL } from '@/lib/import/types'
-import { commitImportAction, prepareImportAction, saveImportTasksAction } from './actions'
+import { commitImportAction, prepareImportAction, saveImportTasksAction, similarImportAction } from './actions'
 import styles from './import.module.css'
 import { MappingEditor } from './MappingEditor'
 import { defaultSelected, guessPortfolio, NEEDS_INSTRUMENT, rowsFrom, validate, type FileEntry, type PortfolioOption, type ReviewRow, type SavedMapping, type ValidRow } from './model'
@@ -83,6 +83,55 @@ export function ImportFlow({ portfolios, mappings: initialMappings }: { portfoli
     })
   }
 
+  /**
+   * Fast gleiche Buchungen im Zieldepot suchen (z. B. vorher von Hand erfasst):
+   * neu gefundene Zeilen abwählen, nicht mehr gefundene wieder wie üblich vorauswählen.
+   */
+  async function markSimilar(candidates: readonly ReviewRow[], fileList: readonly FileEntry[]): Promise<ReviewRow[]> {
+    const byPortfolio = new Map<string, ValidRow[]>()
+    for (const r of candidates) {
+      const portfolioId = fileList.find((f) => f.id === r.fileId)?.portfolioId
+      const item = r.duplicate || !portfolioId ? null : validate(r)
+      if (portfolioId && item && typeof item !== 'string') byPortfolio.set(portfolioId, [...(byPortfolio.get(portfolioId) ?? []), item])
+    }
+    const found = new Map<string, NonNullable<ReviewRow['similar']>>()
+    for (const [portfolioId, items] of byPortfolio) {
+      for (let i = 0; i < items.length; i += CHUNK * 5) {
+        const result = await similarImportAction({
+          portfolioId,
+          items: items.slice(i, i + CHUNK * 5).map((v) => ({ key: v.importKey, type: v.type, occurredOn: v.occurredOn, instrumentId: v.instrumentId, quantity: v.quantity, amountCents: v.amountCents })),
+        })
+        // Prüfung ist ein Komfort: schlägt sie fehl, bleibt die Auswahl wie sie ist
+        if (result.ok) for (const hit of result.similar) found.set(hit.key, { occurredOn: hit.occurredOn, source: hit.source })
+      }
+    }
+    return candidates.map((r) => {
+      const similar = found.get(r.key) ?? null
+      const next = { ...r, similar }
+      if (similar && !r.similar) return { ...next, selected: false }
+      if (!similar && r.similar) return { ...next, selected: defaultSelected(next) }
+      return next
+    })
+  }
+
+  /** Nur Ähnlichkeit und Auswahl übernehmen – Bearbeitungen in der Zwischenzeit bleiben. */
+  const applySimilar = (checked: readonly ReviewRow[]) => {
+    const byKey = new Map(checked.map((r) => [r.key, r]))
+    setRows((rs) =>
+      rs.map((r) => {
+        const c = byKey.get(r.key)
+        return c ? { ...r, similar: c.similar, selected: c.selected } : r
+      }),
+    )
+  }
+
+  async function changeTarget(fileId: string, portfolioId: string) {
+    const nextFiles = files.map((x) => (x.id === fileId ? { ...x, portfolioId } : x))
+    setFiles(nextFiles)
+    const own = rows.filter((r) => r.fileId === fileId)
+    if (own.length > 0) applySimilar(await markSimilar(own, nextFiles))
+  }
+
   async function addFiles(list: File[]) {
     setNotice(null)
     const take = list.slice(0, Math.max(0, MAX_FILES - files.length))
@@ -117,7 +166,8 @@ export function ImportFlow({ portfolios, mappings: initialMappings }: { portfoli
       setFiles((fs) => fs.map((f) => (f.id === entry.id ? done : f)))
     }
     const prepared = added.length > 0 || entries.some((e) => e.hash) ? await prepare(added, entries) : added
-    setRows((rs) => [...rs, ...prepared])
+    const checked = prepared.length > 0 ? await markSimilar(prepared, entries) : prepared
+    setRows((rs) => [...rs, ...checked])
     setProgress(null)
     setReading(false)
   }
@@ -127,7 +177,7 @@ export function ImportFlow({ portfolios, mappings: initialMappings }: { portfoli
     const result = applyMapping(dataRows, mapping)
     const others = new Set(rows.filter((r) => r.fileId !== entry.id).map((r) => r.key))
     const fresh = (await rowsFrom(entry.id, result)).filter((r) => !others.has(r.key))
-    const prepared = await prepare(fresh, [entry])
+    const prepared = await markSimilar(await prepare(fresh, [entry]), [entry])
     setRows((rs) => [...rs.filter((r) => r.fileId !== entry.id), ...prepared])
     setFiles((fs) => fs.map((f) => (f.id === entry.id ? { ...f, status: 'fertig', document: 'CSV mit eigener Zuordnung', notices: result.notices } : f)))
   }
@@ -271,7 +321,7 @@ export function ImportFlow({ portfolios, mappings: initialMappings }: { portfoli
                   {f.status === 'fertig' || f.status === 'zuordnen' ? (
                     <div className={styles.target}>
                       <Field id={`ziel-${f.id}`} label="Zieldepot">
-                        <Select id={`ziel-${f.id}`} value={f.portfolioId} onChange={(e) => setFiles((fs) => fs.map((x) => (x.id === f.id ? { ...x, portfolioId: e.target.value } : x)))}>
+                        <Select id={`ziel-${f.id}`} value={f.portfolioId} disabled={busy} onChange={(e) => void changeTarget(f.id, e.target.value)}>
                           {portfolios.map((p) => (
                             <option key={p.id} value={p.id}>
                               {p.name}
@@ -323,16 +373,20 @@ export function ImportFlow({ portfolios, mappings: initialMappings }: { portfoli
       {rows.length > 0 ? (
         <Section id="pruefen" title="Prüfen und übernehmen" meta={`${selectedCount} von ${rows.length} ausgewählt`}>
           <div className={styles.stack}>
-            <Note>Vorausgewählt sind sicher erkannte Buchungen. Mit „Bearbeiten“ lassen sich Datum, Stückzahl, Beträge und das Wertpapier korrigieren. Nichts wird gespeichert, bevor du übernimmst.</Note>
+            <Note>Vorausgewählt sind sicher erkannte Buchungen; was schon importiert ist oder fast gleich schon im Depot steht, ist abgewählt. Mit „Bearbeiten“ lassen sich Datum, Stückzahl, Beträge und das Wertpapier korrigieren. Nichts wird gespeichert, bevor du übernimmst.</Note>
             <ReviewTable
               rows={rows}
               errors={errors}
               onToggle={(key, selected) => update(key, (r) => ({ ...r, selected }))}
               onEdit={(key, editing) => update(key, (r) => ({ ...r, editing }))}
               onDraft={(key, draft) => update(key, (r) => ({ ...r, draft }))}
-              onInstrument={(row, instrument) =>
-                setRows((rs) => rs.map((r) => (r.key === row.key || (row.assetKey && r.assetKey === row.assetKey) ? { ...r, instrument, selected: r.duplicate ? r.selected : true } : r)))
-              }
+              onInstrument={(row, instrument) => {
+                const touched = (r: ReviewRow) => r.key === row.key || (row.assetKey !== null && r.assetKey === row.assetKey)
+                const assigned = rows.filter(touched).map((r) => ({ ...r, instrument, selected: r.duplicate ? r.selected : true }))
+                setRows((rs) => rs.map((r) => (touched(r) ? { ...r, instrument, selected: r.duplicate ? r.selected : true } : r)))
+                // Erst mit Wertpapier lässt sich vergleichen, ob es die Buchung schon gibt
+                void markSimilar(assigned, files).then(applySimilar)
+              }}
             />
             {progress ? <Progress {...progress} /> : null}
             {notice && !saving ? <NoticeMessage notice={notice} /> : null}

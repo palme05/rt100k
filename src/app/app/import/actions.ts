@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { requireUser } from '@/server/auth/session'
 import { NotFoundError, ValidationError } from '@/server/dal/errors'
-import { deleteCsvMapping, ImportConflictError, importBookings, saveCsvMapping, type CsvMappingDto } from '@/server/dal/imports'
+import { deleteCsvMapping, findSimilarImports, ImportConflictError, importBookings, saveCsvMapping, type CsvMappingDto, type SimilarBooking } from '@/server/dal/imports'
 import { addTasks } from '@/server/dal/notifications'
 import { prepareImport, type PreparedImport } from '@/server/imports'
 import { consumeRateLimit } from '@/server/dal/rate-limit'
@@ -23,6 +23,17 @@ export async function prepareImportAction(input: unknown): Promise<Result<Prepar
   try {
     await consumeRateLimit(user, 'import')
     return { ok: true, ...(await prepareImport(user, input)) }
+  } catch (error) {
+    return fail(error)
+  }
+}
+
+/** Zeilen, die einer schon gespeicherten Buchung im Zieldepot fast gleichen (z. B. von Hand erfasst). */
+export async function similarImportAction(input: unknown): Promise<Result<{ similar: SimilarBooking[] }>> {
+  const user = await requireUser()
+  try {
+    await consumeRateLimit(user, 'import')
+    return { ok: true, similar: await findSimilarImports(user, input) }
   } catch (error) {
     return fail(error)
   }

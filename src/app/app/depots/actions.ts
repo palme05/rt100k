@@ -16,8 +16,10 @@ export interface ActionResult {
   ok: boolean
   error: string | null
   field: string | null
-  /** Eingabe wirkt unplausibel – erneut senden mit „Kurs stimmt – trotzdem speichern“ */
+  /** Eingabe wirkt unplausibel – erneut senden mit dem passenden Häkchen */
   confirm?: boolean
+  /** Welches Häkchen: Kurs („Kurs stimmt“) oder Doppelbuchung („Keine Doppelbuchung“) */
+  confirmKind?: 'price' | 'duplicate'
   /** ID der neu angelegten Buchung (für „Bearbeiten“ in der Bestätigung) */
   id?: string
 }
@@ -25,7 +27,7 @@ export interface ActionResult {
 const ok: ActionResult = { ok: true, error: null, field: null }
 
 function fail(error: unknown): ActionResult {
-  if (error instanceof ConfirmationRequired) return { ok: false, error: error.message, field: error.field ?? null, confirm: true }
+  if (error instanceof ConfirmationRequired) return { ok: false, error: error.message, field: error.field ?? null, confirm: true, confirmKind: error.kind }
   if (error instanceof ValidationError) return { ok: false, error: error.message, field: error.field ?? null }
   if (error instanceof NotFoundError) return { ok: false, error: error.message, field: null }
   throw error
@@ -113,6 +115,7 @@ export async function createBookingAction(_prev: ActionResult, formData: FormDat
       amountMode: field('amountMode'),
       price: field('price'),
       confirmPrice: field('confirmPrice'),
+      confirmDuplicate: field('confirmDuplicate'),
       fee: field('fee'),
       tax: field('tax'),
       note: field('note'),

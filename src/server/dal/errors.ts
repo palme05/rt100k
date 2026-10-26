@@ -26,11 +26,16 @@ export class ValidationError extends Error {
 }
 
 /**
- * Eingabe ist gültig, wirkt aber unplausibel (z. B. Kurs je Stück weit weg
- * vom Schlusskurs). Speichern erst nach ausdrücklicher Bestätigung.
+ * Eingabe ist gültig, wirkt aber unplausibel (Kurs je Stück weit weg vom
+ * Schlusskurs, wahrscheinlich doppelt gebucht). Speichern erst nach
+ * ausdrücklicher Bestätigung – je Art ein eigenes Häkchen.
  */
 export class ConfirmationRequired extends ValidationError {
-  constructor(message: string, field?: string) {
+  constructor(
+    message: string,
+    field?: string,
+    readonly kind: 'price' | 'duplicate' = 'price',
+  ) {
     super(message, field)
     this.name = 'ConfirmationRequired'
   }

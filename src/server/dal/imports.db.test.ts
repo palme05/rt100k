@@ -8,7 +8,7 @@ import type { Actor } from './actor'
 import { computeLedger } from '@/lib/holdings'
 import { createBooking, listAllLedgerBookings, listBookings } from './bookings'
 import { NotFoundError, ValidationError } from './errors'
-import { deleteCsvMapping, deleteImportedBookings, findImported, ImportConflictError, importBookings, listCsvMappings, saveCsvMapping } from './imports'
+import { deleteCsvMapping, deleteImportedBookings, findImported, findSimilarImports, ImportConflictError, importBookings, listCsvMappings, saveCsvMapping } from './imports'
 import { createPortfolio } from './portfolios'
 
 const key = (s: string) => createHash('sha256').update(s).digest('hex')
@@ -203,5 +203,42 @@ describe('Gespeicherte CSV-Zuordnungen', () => {
     expect(await listCsvMappings(bob)).toHaveLength(1)
     await deleteCsvMapping(bob, bobs!.id)
     expect(await listCsvMappings(bob)).toHaveLength(0)
+  })
+})
+
+describe('Ähnliche Buchungen im Zieldepot', () => {
+  let owner: Actor
+  let d: string
+  beforeAll(async () => {
+    owner = await createUser('Franzi')
+    d = (await createPortfolio(owner, { name: 'flatex', kind: 'depot' })).id
+    await createBooking(owner, { portfolioId: d, type: 'buy', occurredOn: '2026-05-04', instrumentId: etf, quantity: '3', amount: '360,00' })
+  })
+
+  const item = (k: string, extra: Record<string, unknown> = {}) => ({ key: key(k), type: 'buy', occurredOn: '2026-05-05', instrumentId: etf, quantity: '3', amountCents: 36_050, ...extra })
+
+  it('meldet von Hand erfasste Buchungen, die der Import noch einmal brächte', async () => {
+    const similar = await findSimilarImports(owner, { portfolioId: d, items: [item('s1'), item('s2', { quantity: '4' }), item('s3', { occurredOn: '2026-05-12' })] })
+    expect(similar).toEqual([{ key: key('s1'), occurredOn: '2026-05-04', source: 'manual' }])
+  })
+
+  it('der eigene Import-Schlüssel zählt nicht (das meldet „schon importiert“)', async () => {
+    await importBookings(owner, { portfolioId: d, files: [], items: [{ ...buy('s4'), occurredOn: '2026-06-01', quantity: '2', amountCents: 20_000 }] })
+    const similar = await findSimilarImports(owner, { portfolioId: d, items: [item('s4', { occurredOn: '2026-06-01', quantity: '2', amountCents: 20_000 })] })
+    expect(similar).toEqual([])
+    const other = await findSimilarImports(owner, { portfolioId: d, items: [item('s5', { occurredOn: '2026-06-02', quantity: '2', amountCents: 20_000 })] })
+    expect(other).toEqual([{ key: key('s5'), occurredOn: '2026-06-01', source: 'import' }])
+  })
+
+  it('fremde Depots: NotFoundError; ungültige Daten: ValidationError', async () => {
+    await expect(findSimilarImports(bob, { portfolioId: d, items: [item('s1')] })).rejects.toBeInstanceOf(NotFoundError)
+    await expect(findSimilarImports(owner, { portfolioId: d, items: [item('s1', { key: 'kaputt' })] })).rejects.toBeInstanceOf(ValidationError)
+    await expect(findSimilarImports(owner, { portfolioId: d, items: [item('s1', { quantity: '1e9' })] })).rejects.toBeInstanceOf(ValidationError)
+    expect(await findSimilarImports(owner, { portfolioId: d, items: [] })).toEqual([])
+  })
+
+  it('Buchungen anderer Nutzer bleiben unsichtbar', async () => {
+    await createBooking(bob, { portfolioId: bobDepot, type: 'buy', occurredOn: '2026-07-01', instrumentId: etf, quantity: '9', amount: '900,00' })
+    expect(await findSimilarImports(owner, { portfolioId: d, items: [item('s6', { occurredOn: '2026-07-01', quantity: '9', amountCents: 90_000 })] })).toEqual([])
   })
 })

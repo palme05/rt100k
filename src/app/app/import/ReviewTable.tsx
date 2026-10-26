@@ -75,6 +75,11 @@ export function ReviewTable({
             >
               <div className={styles.status}>
                 {row.duplicate ? <span className={styles.duplicate}>⟲ schon importiert</span> : null}
+                {row.similar ? (
+                  <span className={styles.duplicate}>
+                    ≈ fast gleich schon im Depot ({row.similar.source === 'manual' ? 'von Hand erfasst' : 'importiert'}, {dayLabel(row.similar.occurredOn)})
+                  </span>
+                ) : null}
                 <span className={c.cls}>
                   <span aria-hidden="true">{c.mark}</span> {c.text}
                 </span>
