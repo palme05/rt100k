@@ -11,6 +11,7 @@ import { Button, Checkbox } from '../ui/forms'
 import { Section } from '../ui/layout'
 import { KeyStats } from '../ui/Summary'
 import styles from './road.module.css'
+import { MilestoneCelebration } from './MilestoneCelebration'
 import { RouteLine } from './RouteLine'
 import { timeline, useRoadForecast, type RoadPlannerData, type RoadSettings } from './useRoadForecast'
 
@@ -105,6 +106,7 @@ export function RoadPlanner({
         </div>
 
         <RouteLine total={counted} milestones={milestones} />
+        <MilestoneCelebration total={counted} milestones={milestones} />
       </section>
 
       <div className={styles.planner}>

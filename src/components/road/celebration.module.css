@@ -1,0 +1,88 @@
+/* Meilenstein-Hinweis: schwebt unten mittig (am Handy über der Leiste) */
+.slot {
+  position: fixed;
+  left: 50%;
+  bottom: calc(var(--space-6) + env(safe-area-inset-bottom, 0px));
+  z-index: 90;
+  width: min(26rem, calc(100% - 2 * var(--gutter)));
+  translate: -50% 0;
+  pointer-events: none;
+}
+
+.toast {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-2) var(--space-2) var(--space-3);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: var(--shadow-pop);
+  pointer-events: auto;
+  animation: toast-in var(--dur-slow) var(--ease-spring) both;
+}
+
+/* Abzeichen im Akzent mit kurzem Glanz */
+.badge {
+  position: relative;
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: var(--radius-pill);
+  background: var(--accent);
+  color: var(--surface);
+  overflow: hidden;
+  animation: badge-pop 600ms var(--ease-spring) 120ms both;
+}
+
+.badge::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(110deg, transparent 30%, color-mix(in srgb, var(--surface) 70%, transparent) 50%, transparent 70%);
+  translate: -120% 0;
+  animation: badge-shine 1.2s var(--ease-out) 500ms both;
+}
+
+.text {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  font-size: var(--text-md);
+  line-height: var(--leading-snug);
+}
+
+.text span {
+  color: var(--ink-2);
+  font-size: var(--text-sm);
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    translate: 0 120%;
+    scale: 0.94;
+  }
+}
+
+@keyframes badge-pop {
+  from {
+    scale: 0.3;
+    rotate: -30deg;
+  }
+}
+
+@keyframes badge-shine {
+  to {
+    translate: 120% 0;
+  }
+}
+
+@media (max-width: 720px) {
+  .slot {
+    bottom: calc(var(--tabbar-h) + var(--space-4) + env(safe-area-inset-bottom, 0px));
+  }
+}
