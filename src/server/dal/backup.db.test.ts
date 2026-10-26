@@ -12,6 +12,8 @@ import { BACKUP_FORMAT, bookingsCsv, exportBackup, restoreBackup, type Backup } 
 import { createBooking, listAllLedgerBookings } from './bookings'
 import { ValidationError } from './errors'
 import { listEtfBreakdowns, saveEtfBreakdown } from './etf'
+import { createGoal, listGoals } from './goals'
+import { addToWatchlist, listWatchlist } from './watchlist'
 import { createPortfolio, deletePortfolio, listPortfolios } from './portfolios'
 import { getRoadSettings, saveRoadSettings } from './road'
 
@@ -46,6 +48,10 @@ beforeAll(async () => {
     { kind: 'metal', bp: 2_000 },
   ])
   await saveEtfBreakdown(alice, { instrumentId: etf, ...parseHoldingsCsv(HOLDINGS_DE) })
+  await createGoal(alice, { name: 'Gold-Ziel', target: '10.000', targetDate: '2035-01-01', monthly: '100', returnPct: '2', scope: 'selected', portfolioIds: [safe] })
+  await addToWatchlist(alice, etf, { note: 'nachkaufen' })
+  // Bob beobachtet sein privates Instrument – das darf nie bei Alice landen
+  await addToWatchlist(bob, bobsFund)
   backup = await exportBackup(alice)
 })
 
@@ -64,6 +70,8 @@ describe('Export', () => {
     expect(backup.snapshots).toHaveLength(1)
     expect(backup.etfBreakdowns).toHaveLength(1)
     expect(backup.importFiles).toEqual([{ fileHash: 'a'.repeat(64), source: 'flatex', bookings: 1 }])
+    expect(backup.goals).toEqual([{ name: 'Gold-Ziel', targetCents: 1_000_000, targetDate: '2035-01-01', monthlyCents: 10_000, returnBp: 200, scope: 'selected', portfolioIds: [expect.any(String)] }])
+    expect(backup.watchlist).toEqual([{ instrumentId: etf, note: 'nachkaufen' }])
     const json = JSON.stringify(backup)
     for (const secret of ['password', 'secret', 'token', 'backupCodes', 'publicKey']) expect(json).not.toContain(secret)
   })
@@ -72,7 +80,9 @@ describe('Export', () => {
     const bobs = await exportBackup(bob)
     expect(bobs.portfolios).toEqual([])
     expect(bobs.bookings).toEqual([])
+    expect(bobs.goals).toEqual([])
     expect(JSON.stringify(bobs)).not.toContain('Goldbarren')
+    expect(JSON.stringify(backup)).not.toContain('Bobs Fonds')
   })
 
   it('Buchungen als CSV mit Formel-Schutz', () => {
@@ -104,6 +114,9 @@ describe('Wiederherstellen', () => {
     expect(await getRoadSettings(carol)).toMatchObject({ monthlyContributionCents: 30_000, includeTangibles: false })
     expect((await listEtfBreakdowns(carol)).has(etf)).toBe(true)
     expect((await listPortfolios(carol)).map((p) => p.name).sort()).toEqual(['=HYPERLINK("x") Depot', 'Tresor'])
+    const tresor = (await listPortfolios(carol)).find((p) => p.name === 'Tresor')!
+    expect(await listGoals(carol)).toEqual([expect.objectContaining({ name: 'Gold-Ziel', returnBp: 200, portfolioIds: [tresor.id] })])
+    expect((await listWatchlist(carol)).map((w) => [w.instrument.id, w.note])).toEqual([[etf, 'nachkaufen']])
 
     // kein zweites Mal in dasselbe Konto
     await expect(restoreBackup(carol, backup)).rejects.toThrow('Konto ohne Depots')
