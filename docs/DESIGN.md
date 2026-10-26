@@ -110,6 +110,7 @@ Alle unter `src/components/`. Seiten setzen sich nur daraus zusammen, eigene CSS
 | `AppErrorState`, `NotFoundState` | `shell/` | Ruhige Fehler- und 404-Seiten mit „Erneut versuchen“ bzw. Weg zurück |
 | `MoreLink` | `ui/layout.tsx` | Weiter-Link am Ende eines Abschnitts („Steuer-Cockpit öffnen →“) |
 | `BarList`, `DeltaBars` | `charts/` | Verteilungen außer Anlageklassen als Balkenliste (Name, Prozent, Betrag); Veränderung im Monat als Beiträge (Kurse, Zu-/Abflüsse, Erträge) |
+| `ExpandableBarList` | `charts/` | `BarList`, die zuerst die größten Einträge zeigt (Rest in „Übrige“) und sich mit „Alle N anzeigen“ + Pfeil ganz aufklappen lässt (`aria-expanded`); ETF-Durchschau nach Land, Branche und Einzeltitel |
 | `LinkChips` | `ui/Chips.tsx` | Auswahl als Links (z. B. Depot beim Schnell-Erfassen), `aria-current`, 44 px hoch |
 | `RefreshButton`, `PullToRefresh` | `shell/refresh.tsx` | Daten neu laden per Knopf bzw. Ziehen (nur installierte App) |
 | `LastSnapshot` | `shell/LastSnapshot.tsx` | Ladeansicht der Übersicht mit dem letzten Stand dieses Geräts |
@@ -143,6 +144,8 @@ Alle unter `src/components/`. Seiten setzen sich nur daraus zusammen, eigene CSS
 | `ReturnHeatmap` | `analysis/ReturnHeatmap.tsx` | Rendite je Monat (Jahr × Monat) als Tabelle mit Vorzeichen in jeder Zelle, Farbe in drei Stufen je Richtung (`--heat-*`), Legende, am Handy waagrecht scrollbar mit stehender Jahresspalte |
 | `GoalList`, `SharedGoalList`, `GoalForm` | `road/Goals.tsx` | Eigene Ziele: Name mit Zielsymbol, Prozent groß, Balken über die Breite (SVG), Stand und „noch …“, Status mit Zeichen (✓ erreicht, ! zu spät); Formular mit Depot-Auswahl. Geteilte Ziele mit Zeile darüber („Von … geteilt · ansehen/mitbearbeiten“), Formular dann nur mit Planwerten (`planOnly`) |
 | `GoalShareSettings` | `road/GoalShare.tsx` | Ziel teilen: Recht als Auswahl („Nur ansehen“/„Ansehen und mitbearbeiten“), Einmal-Link, Freigaben mit Recht und Widerrufen – gleiche Anordnung wie das Teilen eines Depots |
+| `DismissibleMessage` | `ui/` | Hinweis wie `Message` (Ton „info“) mit X rechts; das Schließen speichert eine Server Action, bei Fehler bleibt der Hinweis mit Fehlertext stehen (Anmeldung von einem neuen Gerät) |
+| `DiscardTasks` | `tasks/` | „Alle verwerfen“ für die Nacharbeiten aus Importen, zweistufig („Ja, alle N verwerfen“ / „Abbrechen“) |
 | `StartGuide`, `DismissStart` | `tasks/` | Erste Schritte: nummerierte Schritte, erledigte mit Haken, der nächste offene hervorgehoben mit Knopf, Fortschritt in Segmenten, „Ausblenden“ |
 | `WatchToggle`, `UnwatchButton` | `watchlist/WatchControls.tsx` | Beobachten als gedrückter Pill-Knopf (`aria-pressed`), Entfernen als Symbol-Knopf |
 | `Prose`, `Formula` | `ui/Prose.tsx` | Erklärender Fließtext (Methodik) in `--measure`, Formeln abgesetzt in Zahlen-Schrift |

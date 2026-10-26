@@ -419,6 +419,18 @@ Unabhängiges Review (eigener Prüfdurchlauf, nur lesend) aller Route-Handler, S
 | Hinweis beim Teilen: bei „Alle Depots und Konten“ ist der geteilte Stand das Gesamtvermögen – steht vor dem Erstellen des Links | ✅ (E2E) |
 | Server Actions: `requireUser` → Rate-Limit (`share` für Links/Annehmen, `write` fürs Mitbearbeiten) → DAL; Ziel-, Freigabe- und Rollen-Werte aus dem Formular prüft die DAL (zod, `parseId`) | ✅ |
 
+## Nachtrag: Listen aufklappen, Anmelde-Hinweis schließen, Nacharbeiten aus Importen (26.10.2026)
+
+| Prüfung | Ergebnis |
+|---|---|
+| ETF-Durchschau speichert bis zu 300 Einzeltitel je ETF (vorher 10): weiterhin nur Name (≤ 60 Zeichen, ohne Steuerzeichen) und Gewicht, zod-geprüft beim Speichern **und** beim Lesen; Obergrenze in der DAL | ✅ (DB-Test: 300 ja, 301 nein) |
+| „Das war ich“: `confirmNewDeviceLogin` prüft, dass das Ereignis dem Nutzer gehört und eine Anmeldung von einem neuen Gerät ist (sonst `NotFoundError`), und hängt ein eigenes Ereignis an – das Audit-Log wird nie geändert; Server Action mit `requireUser` und Rate-Limit | ✅ (Negativ-Tests `audit.db.test.ts`: fremd, ungültig, anderer Typ) |
+| Eine spätere Anmeldung von einem neuen Gerät erscheint trotz früherer Bestätigung wieder (Vergleich der Zeitpunkte) | ✅ (DB-Test, E2E) |
+| „Alle verwerfen“ löscht nur eigene Aufgaben (`kind = 'task'` und `owner_id`), andere Hinweise und fremde Aufgaben bleiben; zweistufige Bestätigung | ✅ (DB-Test, E2E) |
+| Aufgaben zählen nicht mehr zur Glocke und stehen nicht in der Hinweis-Liste (eigene Abfrage-Bedingung, kein neues Recht) | ✅ (DB-Test) |
+| Krypto-Zuordnung im Import: nur noch **eine** CoinGecko-Anfrage je Coin (vorher zwei, dazu zwei Yahoo-Anfragen); der Treffer stammt aus der eigenen Serveranfrage, die ID wird zusätzlich gegen `^[a-z0-9-]{1,80}$` geprüft. Aus dem Browser kommt weiterhin nur das Symbol (zod `^[A-Z0-9]{2,10}$`) | ✅ |
+| Keine Inline-Styles: Pfeil dreht über eine Klasse, Balken weiterhin über SVG-Attribute | ✅ |
+
 ## Notfallplan
 
 **Bei Verdacht auf Secret-Leak** (Commit, Log, Screenshot):
