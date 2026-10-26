@@ -78,17 +78,25 @@ export function monteCarlo(input: ForecastInput, options: MonteCarloOptions): Mo
   const values = new Float64Array((months + 1) * paths)
   const firstHit = new Map<number, Int32Array>()
   for (const target of targets) firstHit.set(target, new Int32Array(paths).fill(-1))
+  // Ziele aufsteigend: wer ein höheres erreicht, hat alle niedrigeren auch erreicht –
+  // je Pfad genügt der Blick auf das nächste offene Ziel (statt aller Ziele je Monat)
+  const goals = [...firstHit.keys()].sort((a, b) => a - b)
+  const hitsOf = goals.map((g) => firstHit.get(g)!)
+  const contribution = input.monthlyContribution
 
   const start = input.startValue + (input.lumpSum ?? 0)
   for (let p = 0; p < paths; p++) {
     let value = start
+    let next = 0
     values[p] = value
-    for (const [target, hits] of firstHit) if (value >= target) hits[p] = 0
+    while (next < goals.length && value >= goals[next]!) hitsOf[next++]![p] = 0
+    let goal = next < goals.length ? goals[next]! : Number.POSITIVE_INFINITY
     for (let m = 1; m <= months; m++) {
-      value = value * Math.exp(mu + sigma * normal()) + input.monthlyContribution
+      value = value * Math.exp(mu + sigma * normal()) + contribution
       values[m * paths + p] = value
-      for (const [target, hits] of firstHit) {
-        if (hits[p] === -1 && value >= target) hits[p] = m
+      if (value >= goal) {
+        while (next < goals.length && value >= goals[next]!) hitsOf[next++]![p] = m
+        goal = next < goals.length ? goals[next]! : Number.POSITIVE_INFINITY
       }
     }
   }
