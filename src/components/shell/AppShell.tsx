@@ -1,4 +1,5 @@
 import type { Command } from '../command/CommandPalette'
+import { HapticsBridge } from '../hooks/HapticsBridge'
 import { AppHeader } from './AppHeader'
 import type { NavItem } from './nav'
 import { PullToRefresh } from './refresh'
@@ -34,6 +35,7 @@ export function AppShell({
       </main>
       <TabBar nav={header.nav} quickAdd={header.quickAdd} />
       <PullToRefresh />
+      <HapticsBridge />
     </div>
   )
 }
