@@ -17,6 +17,8 @@ export interface NavItem {
   activePrefixes?: readonly string[]
   /** Desktop: direkt in der Kopfzeile (sonst im Menü „Mehr“) */
   primary?: boolean
+  /** mit `primary`: erst ab 1200 px in der Kopfzeile, schmaler im Menü „Mehr“ */
+  wideOnly?: boolean
   /** Handy: in der Leiste unten (sonst im Blatt „Mehr“) */
   tab?: boolean
   /** Kurzform für die Leiste unten und schmale Kopfzeilen */

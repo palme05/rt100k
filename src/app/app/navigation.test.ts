@@ -27,7 +27,7 @@ describe('aktive Seite in der Navigation', () => {
     expect(activeLabels('/app/road')).toEqual(['Road to 100k'])
     expect(activeLabels('/app/road/freigabe/token')).toEqual(['Road to 100k'])
     expect(activeLabels('/app/import')).toEqual(['Import'])
-    expect(activeLabels('/app/rueckblick/2026-09')).toEqual(['Monatsrückblick'])
+    expect(activeLabels('/app/rueckblick/2026-09')).toEqual(['Rückblick'])
   })
 
   it('beachtet Segmentgrenzen', () => {
@@ -57,12 +57,12 @@ describe('aktive Seite in der Navigation', () => {
       appNav()
         .filter((i) => !i.primary)
         .map((i) => i.label),
-    ).toEqual(['Import', 'Watchlist', 'Monatsrückblick'])
+    ).toEqual(['Import', 'Watchlist'])
     expect(
       appNav()
         .filter((i) => !i.tab)
         .map((i) => i.label),
-    ).toEqual(['Steuer', 'Import', 'Watchlist', 'Monatsrückblick'])
+    ).toEqual(['Steuer', 'Rückblick', 'Import', 'Watchlist'])
   })
 })
 

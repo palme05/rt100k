@@ -3,7 +3,7 @@ import { TR_KAUF_AT } from '../src/lib/import/fixtures'
 import { makePdf } from '../src/test/pdf'
 import { collectProblems, createPortfolio, expectNoOverflow, register } from './helpers/app'
 
-test('Monatsrückblick: Ausgabe je Monat mit Highlights, Bewegungen und Archiv', async ({ page }) => {
+test('Monatsrückblick: Ausgabe je Monat mit Highlights, Bewegungen und Archiv', async ({ page, isMobile }) => {
   const problems = collectProblems(page)
   await register(page)
   await page.goto('/app/rueckblick')
@@ -15,9 +15,16 @@ test('Monatsrückblick: Ausgabe je Monat mit Highlights, Bewegungen und Archiv',
   await page.getByRole('button', { name: '1 Buchung übernehmen' }).click()
   await expect(page.getByText(/1 Buchung übernommen/)).toBeVisible()
 
-  // Von der Übersicht aus erreichbar
+  // Eigener Tab am Desktop, am Handy unter „Mehr“ – nicht mehr in der Übersicht
   await page.goto('/app')
-  await page.getByRole('link', { name: 'Monatsrückblick lesen' }).click()
+  await expect(page.getByRole('link', { name: 'Monatsrückblick lesen' })).toHaveCount(0)
+  const nav = page.getByRole('navigation', { name: 'Hauptnavigation' })
+  if (isMobile) {
+    await nav.getByRole('button', { name: 'Mehr' }).click()
+    await page.getByRole('dialog', { name: 'Weitere Seiten' }).getByRole('link', { name: 'Rückblick' }).click()
+  } else {
+    await nav.getByRole('link', { name: 'Rückblick' }).click()
+  }
   await expect(page).toHaveURL(/\/app\/rueckblick$/)
   await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
   await expect(page.getByText(/^Monatsrückblick · \D+ \d{4}/)).toBeVisible()

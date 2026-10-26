@@ -778,6 +778,21 @@ a.addButton:active {
   }
 }
 
+/* Eigener Tab erst ab 1200 px, schmaler im Menü „Mehr“ */
+.moreList > li.narrowOnly {
+  display: none;
+}
+
+@media (max-width: 1199px) {
+  .navList > li.wideOnly {
+    display: none;
+  }
+
+  .moreList > li.narrowOnly {
+    display: list-item;
+  }
+}
+
 @media (max-width: 1023px) {
   /* Platz für 44-px-Ziele auf Tablets: Werkzeuge ohne Lücke, keine Trennlinie */
   .headerInner {

@@ -72,7 +72,8 @@ function MoreMenu({ items, pathname }: { items: readonly NavItem[]; pathname: st
   }
 
   if (items.length === 0) return null
-  const active = items.some((i) => isActive(pathname, i))
+  // Seiten mit eigenem Tab (ab 1200 px) markieren „Mehr“ nicht
+  const active = items.some((i) => !i.wideOnly && isActive(pathname, i))
   return (
     <li className={styles.more} ref={root} onKeyDown={onKey}>
       <button
@@ -89,7 +90,7 @@ function MoreMenu({ items, pathname }: { items: readonly NavItem[]; pathname: st
       </button>
       <ul id={listId} className={styles.moreList} hidden={!open}>
         {items.map((item) => (
-          <li key={item.href}>
+          <li key={item.href} className={item.wideOnly ? styles.narrowOnly : undefined}>
             <Link href={item.href} className={styles.moreLink} aria-current={isActive(pathname, item) ? 'page' : undefined}>
               <Icon name={item.icon} size={18} />
               {item.label}
@@ -137,14 +138,14 @@ export function AppHeader({
             {nav
               .filter((item) => item.primary)
               .map((item) => (
-                <li key={item.href}>
+                <li key={item.href} className={item.wideOnly ? styles.wideOnly : undefined}>
                   <Link href={item.href} className={styles.navLink} aria-current={isActive(pathname, item) ? 'page' : undefined}>
                     <NavLabel item={item} />
                     <LinkPending />
                   </Link>
                 </li>
               ))}
-            <MoreMenu items={nav.filter((item) => !item.primary)} pathname={pathname} />
+            <MoreMenu items={nav.filter((item) => !item.primary || item.wideOnly)} pathname={pathname} />
           </ul>
         </nav>
         <div className={styles.tools}>
