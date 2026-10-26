@@ -62,6 +62,7 @@ export function LookthroughPanel({
   counts,
   unassigned,
   classified = 0,
+  overlap = false,
   covered,
   etfs,
   save,
@@ -73,6 +74,7 @@ export function LookthroughPanel({
   counts: { countries: number; sectors: number; titles: number }
   unassigned: number
   classified?: number
+  overlap?: boolean
   covered: number
   etfs: readonly EtfListInfo[]
   save: (breakdown: unknown) => Promise<Result>
@@ -160,6 +162,7 @@ export function LookthroughPanel({
               {counts.titles > 10 ? <MoreLink href={`${BASE}/titel`}>{`Alle ${plural(counts.titles, 'Titel', 'Titel')}`}</MoreLink> : null}
             </div>
           </div>
+          {overlap ? <MoreLink href={`${BASE}/ueberschneidung`}>Überschneidung der ETFs und Titel aus mehreren Quellen</MoreLink> : null}
         </>
       ) : null}
 

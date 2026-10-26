@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { TR_KAUF_AT } from '../src/lib/import/fixtures'
+import { TR_BUY_EN, TR_KAUF_AT, TR_SPARPLAN_2026 } from '../src/lib/import/fixtures'
 import { HOLDINGS_DE, HOLDINGS_MARKET, HOLDINGS_XLSX_EN } from '../src/lib/lookthrough-fixtures'
 import { makePdf } from '../src/test/pdf'
 import { makeXlsx } from '../src/test/xlsx'
@@ -231,3 +231,47 @@ test('Land und Branche selbst zuordnen – erscheint danach in der Durchschau', 
   await expect(page.getByText('Zuordnung entfernt.')).toBeVisible()
 })
 
+
+test('Überschneidung: ETFs untereinander, Klumpenrisiko und Titel aus mehreren Quellen', async ({ page }) => {
+  const problems = collectProblems(page)
+  await register(page)
+  await createPortfolio(page, 'Trade Republic')
+  // zwei ETFs (Vanguard All-World, iShares MSCI World) und Apple direkt
+  for (const doc of [TR_KAUF_AT, TR_SPARPLAN_2026, TR_BUY_EN]) {
+    await page.goto('/app/import')
+    await page.locator('input[type=file]').setInputFiles({ name: 'abrechnung.pdf', mimeType: 'application/pdf', buffer: Buffer.from(makePdf(doc)) })
+    await page.getByRole('button', { name: '1 Buchung übernehmen' }).click()
+    await expect(page.getByText(/1 Buchung übernommen/)).toBeVisible()
+  }
+
+  // synthetische Listen: gleiche Unternehmen in anderer Schreibweise, dazu eine Sammelzeile
+  const list = (rows: [string, string][]) => ['Name,Gewichtung (%),Standort,Sektor', ...rows.map(([n, w]) => `"${n}","${w}","USA","IT"`)].join('\n')
+  const world = list([['APPLE INC', '5,00'], ['MICROSOFT CORP', '4,00'], ['NESTLE SA', '1,00'], ['TOYOTA MOTOR CORP', '1,00'], ['Weitere Titel', '89,00']])
+  const allWorld = list([['Apple Inc.', '4,00'], ['Microsoft Corp.', '3,00'], ['Samsung Electronics', '2,00'], ['Weitere Titel', '91,00']])
+  await page.goto('/app/analyse')
+  const section = page.getByRole('region', { name: 'ETF-Durchschau' })
+  const select = section.getByLabel('Bestandsliste für')
+  for (const [pattern, data] of [[/MSCI World/, world], [/All-World/, allWorld]] as const) {
+    const value = await select.locator('option', { hasText: pattern }).getAttribute('value')
+    await select.selectOption(value!)
+    await section.locator('input[type=file]').setInputFiles({ name: 'positionen.csv', mimeType: 'text/csv', buffer: Buffer.from(data) })
+    await expect(section.getByText(/übernommen: \d+ Positionen/)).toBeVisible()
+  }
+  await section.getByRole('link', { name: /Überschneidung der ETFs/ }).click()
+  await expect(page).toHaveURL(/\/app\/analyse\/durchschau\/ueberschneidung$/)
+  await expect(page.getByRole('heading', { name: 'Überschneidung', level: 1 })).toBeVisible()
+
+  // Apple 4 % + Microsoft 3 % = 7 %, Sammelzeilen zählen nicht
+  const pairs = page.getByRole('region', { name: 'ETFs untereinander' })
+  await expect(pairs).toContainText('2 gemeinsame Titel · kaum überschneidend')
+  await expect(pairs).toContainText('7,0 %')
+  await expect(page.getByRole('region', { name: 'Klumpenrisiko' })).toContainText('Größter Einzeltitel')
+
+  const clusters = page.getByRole('list', { name: 'Titel aus mehreren Quellen' })
+  await expect(clusters.getByRole('listitem')).toHaveCount(2)
+  await expect(clusters.getByRole('listitem').first()).toContainText('3 Quellen')
+  await expect(clusters.getByRole('listitem').first()).toContainText('Aktie direkt')
+  await expect(clusters).not.toContainText('Weitere Titel')
+  await expectNoOverflow(page)
+  expect(problems).toEqual([])
+})

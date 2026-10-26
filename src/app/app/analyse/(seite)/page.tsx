@@ -184,6 +184,7 @@ export default async function AnalysisPage({ searchParams }: { searchParams: Pro
             counts={analysis.lookthrough.counts}
             unassigned={analysis.lookthrough.unassigned}
             classified={analysis.lookthrough.classified}
+            overlap={analysis.lookthrough.overlap}
             covered={analysis.lookthrough.covered}
             etfs={analysis.lookthrough.etfs}
             save={saveEtfBreakdownAction}

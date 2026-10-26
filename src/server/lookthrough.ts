@@ -1,5 +1,6 @@
 import 'server-only'
-import { CLASSIFIABLE, KIND_BUCKET, lookThrough, NO_FILE, type LookthroughPosition } from '@/lib/lookthrough'
+import { CLASSIFIABLE, KIND_BUCKET, lookThrough, NO_FILE, type Holding, type LookthroughPosition } from '@/lib/lookthrough'
+import { clusters, exposures, fundWeights, pairOverlap, topShare, type OverlapFund, type OverlapStock } from '@/lib/overlap'
 import type { Actor } from './dal/actor'
 import { listClasses } from './dal/classes'
 import { listEtfBreakdowns } from './dal/etf'
@@ -77,5 +78,88 @@ export async function loadLookthrough(actor: Actor, options: { holdings?: boolea
     items: [...byInstrument.values()].sort((a, b) => b.value - a.value),
     partialLists: [...breakdowns.values()].filter((b) => !b.hasHoldings).length,
     known: { countries: known('countries', 'country'), sectors: known('sectors', 'sector') },
+  }
+}
+
+export interface OverlapPair {
+  a: string
+  b: string
+  overlap: number
+  common: number
+}
+
+export interface OverlapCluster {
+  name: string
+  value: number
+  share: number
+  sources: { name: string; kind: 'fund' | 'stock'; value: number }[]
+}
+
+export interface OverlapView {
+  pairs: OverlapPair[]
+  clusters: OverlapCluster[]
+  /** Anteil der größten Titel am ganzen Vermögen (über Fonds mit Liste und direkte Aktien) */
+  concentration: { top: number; share: number }[]
+  /** größter Einzeltitel */
+  largest: { name: string; share: number } | null
+  /** gehaltene ETFs/Fonds: mit kompletter Liste, nur größten Titeln oder ohne Liste */
+  funds: { name: string; list: 'komplett' | 'teilweise' | 'keine' }[]
+  totalValue: number
+}
+
+/**
+ * Überschneidung der gehaltenen ETFs untereinander und Titel, die über
+ * mehrere Quellen im Vermögen stecken. Derselbe Wert in mehreren Depots
+ * zählt als eine Quelle. Ältere Listen ohne komplette Titelliste gehen mit
+ * ihren größten Titeln ein (Ergebnis dann eher zu niedrig).
+ */
+export async function loadOverlap(actor: Actor): Promise<OverlapView> {
+  const [valuation, breakdowns] = await Promise.all([valuePortfolios(actor), listEtfBreakdowns(actor, { holdings: true })])
+  const byInstrument = new Map<string, { name: string; kind: LookthroughPosition['kind']; valueCents: number }>()
+  for (const p of valuation.portfolios.flatMap((x) => x.value.positions)) {
+    if (p.valueCents <= 0) continue
+    const prev = byInstrument.get(p.instrumentId)
+    byInstrument.set(p.instrumentId, { name: p.name, kind: p.kind, valueCents: (prev?.valueCents ?? 0) + p.valueCents })
+  }
+  const funds: OverlapFund[] = []
+  const fundInfo: OverlapView['funds'] = []
+  const stocks: OverlapStock[] = []
+  for (const [id, p] of byInstrument) {
+    if (p.kind === 'stock') stocks.push({ id, name: p.name, valueCents: p.valueCents })
+    if (p.kind !== 'etf' && p.kind !== 'fund') continue
+    const b = breakdowns.get(id)
+    if (!b) {
+      fundInfo.push({ name: p.name, list: 'keine' })
+      continue
+    }
+    const holdings: Holding[] = b.holdings.length > 0 ? b.holdings : b.top.map((t): Holding => [t.label, t.bp * 100])
+    fundInfo.push({ name: p.name, list: b.holdings.length > 0 ? 'komplett' : 'teilweise' })
+    funds.push({ id, name: p.name, valueCents: p.valueCents, fund: fundWeights(holdings) })
+  }
+
+  const pairs: OverlapPair[] = []
+  for (let i = 0; i < funds.length; i++) {
+    for (let j = i + 1; j < funds.length; j++) {
+      const r = pairOverlap(funds[i]!.fund, funds[j]!.fund)
+      pairs.push({ a: funds[i]!.name, b: funds[j]!.name, ...r })
+    }
+  }
+  pairs.sort((x, y) => y.overlap - x.overlap)
+
+  const total = valuation.totalCents
+  const all = exposures(funds, stocks)
+  const first = all[0]
+  return {
+    pairs,
+    concentration: all.length > 0 ? [1, 5, 10, 25].filter((n) => n <= Math.max(all.length, 1)).map((n) => ({ top: n, share: topShare(all, n, total) })) : [],
+    largest: first && total > 0 ? { name: first.name, share: first.cents / total } : null,
+    clusters: clusters(all).map((c) => ({
+      name: c.name,
+      value: c.cents / 100,
+      share: total > 0 ? c.cents / total : 0,
+      sources: c.sources.map((s) => ({ name: s.name, kind: s.kind, value: s.cents / 100 })),
+    })),
+    funds: fundInfo.sort((x, y) => x.name.localeCompare(y.name, 'de')),
+    totalValue: total / 100,
   }
 }
