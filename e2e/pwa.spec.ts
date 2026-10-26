@@ -53,6 +53,13 @@ test('Offline: letzter Stand ohne Netz, beim Abmelden gelöscht', async ({ page,
   await expect(stand).toContainText('€')
   await expect(stand).toContainText('ETFs')
   await context.setOffline(false)
+  // Wieder online lädt sich die Offline-Seite selbst neu (public/offline.js) – erst danach weiter,
+  // sonst unterbricht dieses Neuladen die nächste Navigation. Falls das Ereignis ausbleibt, selbst neu laden.
+  const offline = page.getByRole('heading', { name: 'Offline', level: 1 })
+  await expect(async () => {
+    if (await offline.isVisible()) await page.reload()
+    await expect(offline).toBeHidden({ timeout: 2_000 })
+  }).toPass({ timeout: 15_000 })
 
   if (!isMobile) {
     // Abmelden löscht den gespeicherten Stand
