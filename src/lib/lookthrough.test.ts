@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { CASH_LABEL, HoldingsFileError, isChineseIssuer, KIND_BUCKET, lookThrough, MAX_TOP, parseHoldingsCsv, titleKey } from './lookthrough'
+import { CASH_LABEL, chineseByListing, HoldingsFileError, isChineseIssuer, KIND_BUCKET, lookThrough, MAX_TOP, parseHoldingsCsv, titleKey } from './lookthrough'
 import { HOLDINGS_DE, HOLDINGS_EN, HOLDINGS_MARKET } from './lookthrough-fixtures'
 
 describe('Bestandsliste lesen', () => {
@@ -110,15 +110,29 @@ describe('Länder nach Börsenplatz (China-Korrektur)', () => {
 
   it('erkennt die Börsenplatz-Spalte und ordnet chinesische Unternehmen China zu', () => {
     expect(b.countryBasis).toBe('boerse')
-    expect(b.chinaFixes).toBe(4)
-    // Moutai (schon China) + Tencent, Alibaba, CCB (Hongkong) + PDD (USA)
-    expect(bp('China')).toBe(20 + 120 + 80 + 30 + 40)
+    expect(b.chinaFixes).toBe(5)
+    // Moutai (schon China) + Tencent, Alibaba, CCB, Kingboard (Hongkong) + PDD (USA)
+    expect(bp('China')).toBe(20 + 120 + 80 + 30 + 5 + 40)
   })
 
-  it('lässt echte Hongkonger und taiwanische Werte, wo sie sind', () => {
-    expect(bp('Hongkong')).toBe(50 + 10 + 10)
+  it('lässt Hongkonger, ausländische und taiwanische Werte, wo sie sind', () => {
+    // AIA, Hong Kong & China Gas, Sands China, HSBC
+    expect(bp('Hongkong')).toBe(50 + 10 + 10 + 5)
     expect(bp('Taiwan')).toBe(140 + 10)
-    expect(bp('USA')).toBe(6_000 + 3_490)
+    expect(bp('USA')).toBe(6_000 + 3_480)
+  })
+
+  it.each([
+    ['Xiaomi Corp. Class B', 'Hongkong', true],
+    ['Kingboard Holdings Ltd.', 'Hongkong', true],
+    ['Techtronic Industries Co. Ltd.', 'Hongkong', false],
+    ['Galaxy Entertainment Group Ltd.', 'Hongkong', false],
+    ['Prudential plc', 'Hongkong', false],
+    ['Yum China Holdings Inc.', 'USA', true],
+    ['Apple Inc.', 'USA', false],
+    ['China Steel Corp.', 'Taiwan', false],
+  ])('%s (%s) → China: %s', (name, listing, expected) => {
+    expect(chineseByListing(name, listing)).toBe(expected)
   })
 
   it('Herkunfts-Listen (Spalte „Standort“/„Location“) bleiben unverändert', () => {
@@ -146,7 +160,7 @@ describe('Länder nach Börsenplatz (China-Korrektur)', () => {
   it('liefert alle Titel fein (ppm) und ohne Cash', () => {
     expect(b.holdings[0]).toEqual(['Alpha Computer Inc.', 600_000])
     expect(b.holdings).toContainEqual(['Sands China Ltd.', 1_000])
-    expect(b.holdings).toHaveLength(12)
+    expect(b.holdings).toHaveLength(14)
   })
 })
 
@@ -175,7 +189,7 @@ describe('Eigene Zuordnung und komplette Titelliste in der Durchschau', () => {
   it('nimmt für die Einzeltitel die komplette Liste, wenn vorhanden', () => {
     const b = parseHoldingsCsv(HOLDINGS_MARKET)
     const lt = lookThrough([{ instrumentId: 'e1', name: 'Welt-ETF', kind: 'etf', valueCents: 1_000_000 }], new Map([['e1', { ...b, top: b.top.slice(0, 2) }]]))
-    expect(lt.top.size).toBe(12)
+    expect(lt.top.size).toBe(14)
     expect(lt.top.get('Sands China Ltd.')).toBe(1_000)
   })
 })

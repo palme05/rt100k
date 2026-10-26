@@ -79,5 +79,7 @@ export const HOLDINGS_MARKET = [
   ['600519', 'Kweichow Moutai Co. Ltd. Class A', '0.2', 'Consumer Staples', 'China'],
   ['2330', 'Taiwan Semiconductor Manufacturing Co. Ltd.', '1.4', 'Technology', 'Taiwan'],
   ['2002', 'China Steel Corp.', '0.1', 'Materials', 'Taiwan'],
-  ['REST', 'Further holdings', '34.9', 'Industrials', 'United States'],
+  ['148', 'Kingboard Holdings Ltd.', '0.05', 'Information Technology', 'Hong Kong'],
+  ['5', 'HSBC Holdings plc', '0.05', 'Financials', 'Hong Kong'],
+  ['REST', 'Further holdings', '34.8', 'Industrials', 'United States'],
 ].map((r) => r.join(';')).join('\n')

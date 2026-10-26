@@ -195,27 +195,48 @@ function sorted(map: Map<string, number>): WeightEntry[] {
 }
 
 /**
- * Chinesische Unternehmen, die in Hongkong, den USA oder Singapur notieren –
- * bei Börsenplatz-Listen (Vanguard) sonst unter diesen Ländern gezählt,
- * obwohl Indexanbieter und Factsheets sie China zuordnen. Bewusst eine
- * kurze Liste großer Namen plus „China/Chinese“ im Namen; echte Hongkonger
- * Werte (AIA, HKEX, „Hong Kong & China Gas“, Sands China, BOC Hong Kong)
- * bleiben, wo sie sind.
+ * Chinesische Unternehmen mit Notiz in den USA oder Singapur – bei
+ * Börsenplatz-Listen (Vanguard) sonst unter diesen Ländern gezählt, obwohl
+ * Indexanbieter und Factsheets sie China zuordnen. Bewusst eine Liste großer
+ * Namen plus „China/Chinese“ im Namen.
  */
 const CHINA_ISSUER =
   /\b(CHINA|CHINESE|TENCENT|ALIBABA|MEITUAN|PDD|PINDUODUO|JD ?COM|BAIDU|NETEASE|XIAOMI|BYD|KUAISHOU|TRIP ?COM|KE HOLDINGS|LI AUTO|NIO|XPENG|ANTA SPORTS|GEELY|HAIER|MIDEA|CONTEMPORARY AMPEREX|WUXI|LI NING|SUNNY OPTICAL|SHENZHOU|ZIJIN|CNOOC|SINOPEC|PETROCHINA|PING AN|COSCO|VIPSHOP|ZTO|BEIGENE|BEONE|BILIBILI|LENOVO|ENN ENERGY|SINO BIOPHARM|SINOPHARM|HENGRUI|MINDRAY|FULL TRUCK|TAL EDUCATION|NEW ORIENTAL|H WORLD|KINGDEE|KINGSOFT|SMOORE|POP MART|NONGFU|CITIC|HAIDILAO|GREAT WALL MOTOR|FOSUN|TINGYI|WANT WANT|HUA HONG|SEMICONDUCTOR MANUFACTURING INTERNATIONAL|SMIC|ZHONGSHENG|LONGFOR|INNOVENT|HANSOH|AKESO|XINYI|WEICHAI|PICC|HUATAI|TRAVELSKY|ZOOMLION|SANY|AUTOHOME|WEIBO|IQIYI|GDS HOLDINGS|INDUSTRIAL AND COMMERCIAL BANK|AGRICULTURAL BANK|BANK OF COMMUNICATIONS|POSTAL SAVINGS|GUANGZHOU|SHENZHEN|SHANGHAI|BEIJING|ZHEJIANG|JIANGSU|SHANDONG|CHONGQING|TSINGTAO|HAITIAN|SHIMAO|COUNTRY GARDEN|YADEA|J&T GLOBAL|HORIZON ROBOTICS|ZHIPU|MINIMAX|BOSIDENG|CHOW TAI FOOK)\b/
 const NOT_CHINA = /\b(HONG KONG|SANDS CHINA|MTR|CLP)\b/
-const LISTED_ABROAD = new Set(['Hongkong', 'USA', 'Singapur'])
+/**
+ * In Hongkong notiert, aber kein chinesisches Unternehmen: Hongkonger Werte,
+ * Macau-Casinos (Indexanbieter: Hongkong) und ausländische Zweitnotizen. In
+ * Hongkong notierte Titel ohne Treffer hier zählen bei Börsenplatz-Listen zu
+ * China – das sind nach Gewicht fast alle (Tencent, Alibaba, Meituan, Banken,
+ * und viele kleinere ohne „China“ im Namen).
+ */
+const HONG_KONG_ISSUER =
+  /\b(HONG ?KONG|HKT|HK ELECTRIC|AIA|HKEX|TECHTRONIC|CK (HUTCHISON|ASSET|INFRASTRUCTURE)|POWER ASSETS|CLP|MTR|SUN HUNG KAI|LINK (REAL ESTATE|REIT)|HENDERSON LAND|NEW WORLD DEVELOPMENT|SINO LAND|WHARF|HANG SENG|HANG LUNG|SWIRE|GALAXY ENTERTAINMENT|SANDS CHINA|WYNN MACAU|MGM CHINA|SJM|MELCO|BANK OF EAST ASIA|HYSAN|KERRY PROPERTIES|PCCW|ASMPT|ASM PACIFIC|VTECH|JOHNSON ELECTRIC|WH GROUP|ESR|CATHAY PACIFIC|SHANGRI ?LA|HSBC|PRUDENTIAL|STANDARD CHARTERED|MANULIFE|SAMSONITE|BUDWEISER|PRADA|FIRST PACIFIC|JARDINE|DAIRY FARM|L OCCITANE|CHOW SANG SANG|PACIFIC BASIN|VITASOY|CAFE DE CORAL|DAH SING|FAR EAST CONSORTIUM)\b/
+const LISTED_ABROAD = new Set(['USA', 'Singapur'])
 
-/** Unternehmensname → China? (Groß, ohne Akzente und Satzzeichen verglichen) */
-export function isChineseIssuer(name: string): boolean {
-  const n = name
+/** Groß, ohne Akzente und Satzzeichen – für den Namensvergleich */
+const upper = (name: string) =>
+  name
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
     .toUpperCase()
     .replace(/[^A-Z0-9& ]/g, ' ')
     .replace(/\s+/g, ' ')
+
+/** Unternehmensname → China? (für Notizen in den USA und Singapur) */
+export function isChineseIssuer(name: string): boolean {
+  const n = upper(name)
   return CHINA_ISSUER.test(n) && !NOT_CHINA.test(n)
+}
+
+/**
+ * Börsenplatz-Liste: gehört der Titel zu China? Hongkong-Notiz → China,
+ * außer bei Hongkonger und ausländischen Unternehmen; USA/Singapur → nur
+ * bekannte chinesische Namen.
+ */
+export function chineseByListing(name: string, listing: string): boolean {
+  if (listing === 'Hongkong') return !HONG_KONG_ISSUER.test(upper(name))
+  return LISTED_ABROAD.has(listing) && isChineseIssuer(name)
 }
 
 export class HoldingsFileError extends Error {}
@@ -259,7 +280,7 @@ export function parseHoldingsRows(rows: readonly string[][]): Breakdown {
     const name = clean(r[iName] ?? '').slice(0, MAX_LABEL)
     let country = cash ? CASH_LABEL : iCountry >= 0 ? countryLabel(r[iCountry] ?? '') : 'Ohne Angabe'
     // Börsenplatz-Liste: chinesische Unternehmen mit Notiz im Ausland nach China
-    if (countryBasis === 'boerse' && LISTED_ABROAD.has(country) && isChineseIssuer(name)) {
+    if (countryBasis === 'boerse' && chineseByListing(name, country)) {
       country = 'China'
       chinaFixes++
     }
