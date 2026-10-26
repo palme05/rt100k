@@ -7,8 +7,10 @@ import { withStrictTls } from './tls'
 
 /**
  * Datenbankzugang der App: nur die App-Rolle (kein DDL), nur TLS mit
- * Zertifikatsprüfung (withStrictTls). Kleiner Pool mit kurzer Leerlaufzeit, damit offene
- * Verbindungen Neon nicht wach halten.
+ * Zertifikatsprüfung (withStrictTls). Der Pool läuft über den Neon-Pooler (Transaction-
+ * Pooling): genug Verbindungen, damit die parallelen Abfragen einer Seite nicht Schlange
+ * stehen, und eine Minute Leerlauf, damit der nächste Klick keine neue TLS-Verbindung samt
+ * Anmeldung braucht. Leerlaufende Verbindungen zum Pooler halten die Neon-Compute nicht wach.
  */
 
 export type Db = NodePgDatabase<typeof schema>
@@ -22,8 +24,8 @@ export function getDb(): Db {
   if (!url) throw new Error('DATABASE_URL fehlt.')
   const pool = new pg.Pool({
     connectionString: withStrictTls(url),
-    max: 3,
-    idleTimeoutMillis: 5_000,
+    max: 10,
+    idleTimeoutMillis: 60_000,
     connectionTimeoutMillis: 10_000,
     // Neon verlangt channel_binding=require; node-postgres unterstützt SCRAM-PLUS
     enableChannelBinding: url.includes('channel_binding=require'),

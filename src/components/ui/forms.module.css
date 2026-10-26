@@ -168,6 +168,30 @@ input[type='date'].control {
   cursor: progress;
 }
 
+/* Beschäftigt: kleiner Ladekreis vor dem Text – sofort sichtbar, dass etwas passiert */
+.button[aria-busy='true']::before {
+  content: '';
+  flex: none;
+  width: 1em;
+  height: 1em;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: var(--radius-pill);
+  opacity: 0.8;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .button[aria-busy='true']::before {
+    animation: button-spin 0.7s linear infinite;
+  }
+}
+
+@keyframes button-spin {
+  to {
+    rotate: 360deg;
+  }
+}
+
 /* Gedrückt: sichtbare Rückmeldung (iOS hat keine Vibration) */
 .button:active:not(:disabled) {
   translate: 0 1px;

@@ -17,7 +17,7 @@ import { listSharedWithMe } from '@/server/dal/shares'
 import { listPortfolioSeries } from '@/server/dal/snapshots'
 import { valuePortfolios } from '@/server/overview'
 import { loadDayMoves } from '@/server/today'
-import styles from './depots.module.css'
+import styles from '../depots.module.css'
 
 export const metadata = { title: 'Depots' }
 
