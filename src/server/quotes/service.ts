@@ -251,11 +251,13 @@ export async function searchInstruments(query: string): Promise<InstrumentCandid
   if (fixtureMode()) {
     const all: InstrumentCandidate[] = [
       { provider: 'yahoo', key: 'VWCE.DE', name: 'Vanguard FTSE All-World UCITS ETF USD Accumulation', kind: 'etf', detail: 'VWCE.DE · XETRA' },
+      { provider: 'yahoo', key: 'EUNL.DE', name: 'iShares Core MSCI World UCITS ETF USD (Acc)', kind: 'etf', detail: 'EUNL.DE · XETRA' },
       { provider: 'yahoo', key: 'AAPL', name: 'Apple Inc.', kind: 'stock', detail: 'AAPL · NASDAQ' },
       ...FIXTURE_COINS,
       ...METALS,
     ]
-    return all.filter((c) => `${c.name} ${c.key} ${c.detail}`.toLowerCase().includes(q.toLowerCase()) || (q === 'IE00BK5BQT80' && c.key === 'VWCE.DE'))
+    const byIsin: Record<string, string> = { IE00BK5BQT80: 'VWCE.DE', IE00B4L5Y983: 'EUNL.DE' }
+    return all.filter((c) => `${c.name} ${c.key} ${c.detail}`.toLowerCase().includes(q.toLowerCase()) || byIsin[q] === c.key)
   }
   const isin = ISIN.test(q)
   const [found, coins] = await Promise.all([yahooSearch(q), isin ? Promise.resolve([] as InstrumentCandidate[]) : searchCoins(q)])
