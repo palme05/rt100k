@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { CASH_LABEL, HoldingsFileError, lookThrough, parseHoldingsCsv, titleKey } from './lookthrough'
+import { CASH_LABEL, HoldingsFileError, lookThrough, MAX_TOP, parseHoldingsCsv, titleKey } from './lookthrough'
 import { HOLDINGS_DE, HOLDINGS_EN } from './lookthrough-fixtures'
 
 describe('Bestandsliste lesen', () => {
@@ -45,6 +45,14 @@ describe('Bestandsliste lesen', () => {
     expect(() => parseHoldingsCsv('Datum,Betrag\n01.01.2026,5')).toThrow(HoldingsFileError)
     expect(() => parseHoldingsCsv('Name,Gewichtung (%)\nA,10,00')).toThrow(/ergeben zusammen/)
     expect(() => parseHoldingsCsv('Name,Weight (%)\nA,abc')).toThrow(/Keine Positionen/)
+  })
+
+  it('behält bis zu 300 Einzeltitel für die aufgeklappte Liste', () => {
+    const rows = Array.from({ length: 400 }, (_, i) => `"Titel ${i + 1}","0,25"`).join('\n')
+    const b = parseHoldingsCsv(`Name,Gewichtung (%)\n${rows}`)
+    expect(b.rows).toBe(400)
+    expect(b.top).toHaveLength(MAX_TOP)
+    expect(b.top[0]).toEqual({ label: 'Titel 1', bp: 25 })
   })
 
   it('Steuerzeichen und überlange Namen werden entschärft', () => {

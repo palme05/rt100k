@@ -40,6 +40,11 @@ describe('ETF-Bestandslisten', () => {
     await expect(saveEtfBreakdown(alice, { instrumentId: etf, ...breakdown, countries: [{ label: 'USA', bp: 1_000 }] })).rejects.toThrow('etwa 100 %')
     await expect(saveEtfBreakdown(alice, { instrumentId: etf, ...breakdown, top: [{ label: 'A\u0000B', bp: 10 }] })).rejects.toBeInstanceOf(ValidationError)
     await expect(saveEtfBreakdown(alice, { instrumentId: etf, ...breakdown, rows: 0 })).rejects.toBeInstanceOf(ValidationError)
+    // bis zu 300 Einzeltitel für die aufgeklappte Liste, mehr nicht
+    const many = (n: number) => Array.from({ length: n }, (_, i) => ({ label: `Titel ${i + 1}`, bp: 1 }))
+    await saveEtfBreakdown(alice, { instrumentId: etf, ...breakdown, top: many(300) })
+    expect((await listEtfBreakdowns(alice)).get(etf)!.top).toHaveLength(300)
+    await expect(saveEtfBreakdown(alice, { instrumentId: etf, ...breakdown, top: many(301) })).rejects.toBeInstanceOf(ValidationError)
     await expect(saveEtfBreakdown(alice, 'liste')).rejects.toBeInstanceOf(ValidationError)
   })
 

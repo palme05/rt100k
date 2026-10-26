@@ -6,7 +6,7 @@ import { dayLabel, share } from '@/lib/display'
 import { decodeText, sniffFileKind } from '@/lib/import/pdf'
 import { HoldingsFileError, parseHoldingsCsv, parseHoldingsRows, type Breakdown } from '@/lib/lookthrough'
 import { readXlsxRows, XlsxError } from '@/lib/xlsx'
-import { BarList } from '../charts/charts'
+import { ExpandableBarList } from '../charts/charts'
 import type { AllocationItem } from '../ui/AllocationBars'
 import { FileDrop } from '../ui/FileDrop'
 import { Button, Message } from '../ui/forms'
@@ -24,7 +24,8 @@ type Result = { ok: true } | { ok: false; error: string }
 /**
  * ETF-Durchschau: Bestandsliste je ETF selbst beim Anbieter laden und hier
  * ablegen. Die Datei wird nur im Browser gelesen; an den Server gehen nur die
- * zusammengefassten Gewichte (Länder, Branchen, zehn größte Titel). Gelesen
+ * zusammengefassten Gewichte (Länder, Branchen, größte Titel); jede Liste
+ * zeigt zuerst die größten Einträge und lässt sich ganz aufklappen. Gelesen
  * werden CSV und XLSX (erstes Tabellenblatt).
  *
  * Ohne Bestandsliste gibt es keine Diagramme (sie würden nur die Anlageklassen
@@ -114,15 +115,15 @@ export function LookthroughPanel({
           <div className={styles.lookthrough}>
             <div>
               <SectionHead title="Nach Land" level={3} />
-              {countries.length > 0 ? <BarList title="Durchschau nach Land" items={withRest(countries)} /> : <p className={styles.empty}>Noch keine Werte.</p>}
+              {countries.length > 0 ? <ExpandableBarList title="Durchschau nach Land" items={withRest(countries)} /> : <p className={styles.empty}>Noch keine Werte.</p>}
             </div>
             <div>
               <SectionHead title="Nach Branche" level={3} />
-              {sectors.length > 0 ? <BarList title="Durchschau nach Branche" items={withRest(sectors)} /> : <p className={styles.empty}>Noch keine Werte.</p>}
+              {sectors.length > 0 ? <ExpandableBarList title="Durchschau nach Branche" items={withRest(sectors)} /> : <p className={styles.empty}>Noch keine Werte.</p>}
             </div>
             <div>
               <SectionHead title="Größte Einzeltitel" level={3} />
-              {top.length > 0 ? <BarList title="Größte Einzeltitel" items={top} limit={10} remainderLabel="Alle anderen Werte" /> : <p className={styles.empty}>Erscheinen mit der ersten Bestandsliste.</p>}
+              {top.length > 0 ? <ExpandableBarList title="Größte Einzeltitel" items={top} initial={10} remainderLabel="Alle anderen Werte" /> : <p className={styles.empty}>Erscheinen mit der ersten Bestandsliste.</p>}
             </div>
           </div>
         </>

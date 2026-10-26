@@ -15,7 +15,7 @@ import {
   type PeriodResult,
 } from '@/lib/performance'
 import { returnGrid, type ReturnYear } from '@/lib/heatmap'
-import { lookThrough } from '@/lib/lookthrough'
+import { lookThrough, MAX_ENTRIES } from '@/lib/lookthrough'
 import type { AllocationSlice } from '@/lib/valuation'
 import type { Actor } from './dal/actor'
 import { NotFoundError } from './dal/errors'
@@ -278,9 +278,10 @@ export async function loadAnalysis(actor: Actor, options: { benchmarkId: string 
     },
     allocation: { kind: valuation.allocation, currency: shares(currency), portfolio: shares(byPortfolio) },
     lookthrough: {
-      countries: topSlices(lt.countries, lt.totalCents, 10),
-      sectors: topSlices(lt.sectors, lt.totalCents, 12),
-      top: topSlices(lt.top, lt.totalCents, 10, false),
+      // alle Einträge – die Seite zeigt zuerst die größten und klappt den Rest auf
+      countries: topSlices(lt.countries, lt.totalCents, MAX_ENTRIES),
+      sectors: topSlices(lt.sectors, lt.totalCents, MAX_ENTRIES),
+      top: topSlices(lt.top, lt.totalCents, MAX_ENTRIES, false),
       covered: lt.totalCents > 0 ? lt.coveredCents / lt.totalCents : 0,
       etfs: heldFunds.map((p) => {
         const b = breakdowns.get(p.instrumentId)

@@ -9,7 +9,7 @@ import { parseScaled } from './quantity'
  * herunter (persönliche Nutzung laut deren Nutzungsbedingungen – rt100k ruft
  * diese Seiten nicht automatisch ab, siehe docs/DATA_SOURCES.md). Gelesen wird
  * die Datei im Browser; gespeichert werden nur die zusammengefassten Gewichte
- * je Land und Branche sowie die zehn größten Titel.
+ * je Land und Branche sowie die größten Titel (bis zu 300).
  *
  * Spalten werden über die Kopfzeile erkannt (deutsch und englisch, z. B.
  * iShares „Gewichtung (%)“/„Weight (%)“, „Standort“/„Location“).
@@ -32,7 +32,8 @@ export interface Breakdown {
 
 export const MAX_ENTRIES = 300
 export const MAX_LABEL = 60
-const TOP = 10
+/** So viele Einzeltitel je ETF werden gespeichert – genug für die aufgeklappte Liste */
+export const MAX_TOP = MAX_ENTRIES
 export const CASH_LABEL = 'Cash und Derivate'
 
 const COLUMN: Record<'weight' | 'name' | 'sector' | 'country' | 'region' | 'assetClass', RegExp> = {
@@ -233,7 +234,7 @@ export function parseHoldingsRows(rows: readonly string[][]): Breakdown {
   const top = holdings
     .filter((h) => h.sector !== CASH_LABEL)
     .sort((a, b) => b.bp - a.bp)
-    .slice(0, TOP)
+    .slice(0, MAX_TOP)
     .map((h) => ({ label: h.name, bp: h.bp }))
 
   const fundName = headerIndex > 0 ? (fundNameIn(rows.slice(0, headerIndex)) ?? null) : null
