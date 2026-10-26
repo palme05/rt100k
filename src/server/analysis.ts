@@ -14,6 +14,7 @@ import {
   type PeriodKey,
   type PeriodResult,
 } from '@/lib/performance'
+import { returnGrid, type ReturnYear } from '@/lib/heatmap'
 import { lookThrough } from '@/lib/lookthrough'
 import type { AllocationSlice } from '@/lib/valuation'
 import type { Actor } from './dal/actor'
@@ -65,6 +66,8 @@ export interface IncomeMonthDto {
 export interface AnalysisDto {
   today: string
   periods: PeriodDto[]
+  /** Monatsrenditen (TTWROR) je Jahr für die Heatmap, neuestes Jahr zuerst */
+  heatmap: ReturnYear[]
   /** Positionen, deren Kurshistorie erst nach dem Kauf beginnt */
   lateHistory: string[]
   /** Positionen ohne Kurse (zählen mit dem Einstand) */
@@ -197,6 +200,8 @@ export async function loadAnalysis(actor: Actor, options: { benchmarkId: string 
     periods.push(periodDto(key, result, bench))
   }
 
+  const heatmap = returnGrid(analyzePeriod(series.days, null, today)?.monthly ?? [])
+
   const nameOf = (id: string) => valuation.instruments.get(id)?.name ?? 'Unbekannt'
   const positions = valuation.portfolios.flatMap((p) => p.value.positions)
   const openCostCents = positions.reduce((s, p) => s + p.costCents, 0)
@@ -245,6 +250,7 @@ export async function loadAnalysis(actor: Actor, options: { benchmarkId: string 
   return {
     today,
     periods,
+    heatmap,
     lateHistory: [...series.lateHistory].map(nameOf),
     unpriced: positions.filter((p) => !history.has(p.instrumentId)).map((p) => p.name),
     benchmark: benchmark ? { id: benchmark.id, name: benchmark.name } : null,

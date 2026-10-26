@@ -4,13 +4,14 @@ import { IncomeCalendar } from '@/components/analysis/IncomeCalendar'
 import { LookthroughPanel } from '@/components/analysis/LookthroughPanel'
 import { PerformancePanel } from '@/components/analysis/PerformancePanel'
 import { RebalancePanel } from '@/components/analysis/RebalancePanel'
+import { ReturnHeatmap } from '@/components/analysis/ReturnHeatmap'
 import { BarList } from '@/components/charts/charts'
 import { ASSET_KIND_SLOT, DonutChart } from '@/components/charts/DonutChart'
 import { IncomeChart } from '@/components/charts/IncomeChart'
 import { Amount } from '@/components/privacy/privacy'
 import button from '@/components/ui/button.module.css'
 import { DataTable, NameCell, Td, Th } from '@/components/ui/DataTable'
-import { Grid, Muted, Note, PageHead, Section } from '@/components/ui/layout'
+import { Grid, Muted, Note, PageHead, Section, TextLink } from '@/components/ui/layout'
 import { Row, Rows } from '@/components/ui/Rows'
 import { KeyStats } from '@/components/ui/Summary'
 import { monthLabel, share } from '@/lib/display'
@@ -76,6 +77,15 @@ export default async function AnalysisPage({ searchParams }: { searchParams: Pro
           )}
           {analysis.unpriced.length > 0 ? <Note>Ohne Kurse, mit dem Einstand bewertet: {analysis.unpriced.join(', ')}.</Note> : null}
         </Section>
+
+        {analysis.heatmap.length > 0 ? (
+          <Section id="monate" title="Rendite je Monat" meta="zeitgewichtet, in %">
+            <ReturnHeatmap years={analysis.heatmap} />
+            <Note>
+              Ohne den Einfluss von Ein- und Auszahlungen (TTWROR). „Gesamt“ verkettet die Monate des Jahres; * = Jahr nicht vollständig. <TextLink href="/app/methodik#rendite">So wird gerechnet</TextLink>
+            </Note>
+          </Section>
+        ) : null}
 
         <Section id="ertraege" title="Dividenden und Zinsen" meta="24 Monate · Prognose 12 Monate" span="twoThirds">
           <KeyStats
