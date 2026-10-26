@@ -21,6 +21,7 @@ export const AUDIT_LABELS: Record<string, string> = {
   share_revoked: 'Freigabe widerrufen',
   share_accepted: 'Freigabe angenommen',
   share_left: 'Freigabe verlassen',
+  shared_goal_edited: 'Ziel über eine Freigabe geändert',
 }
 
 export function auditLabel(type: string): string {

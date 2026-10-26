@@ -148,6 +148,20 @@
       "when": 1792974796117,
       "tag": "0020_vertrauen_und_ziele_grants",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1793009292056,
+      "tag": "0021_ziel_freigaben",
+      "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1793009293115,
+      "tag": "0022_ziel_freigaben_grants",
+      "breakpoints": true
     }
   ]
 }
