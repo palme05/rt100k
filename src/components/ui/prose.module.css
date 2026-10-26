@@ -1,0 +1,48 @@
+/* Fließtext für Erklärseiten: Zeilenlänge --measure, Absätze im Block-Rhythmus. */
+
+.prose {
+  display: grid;
+  gap: var(--space-stack);
+  max-width: var(--measure);
+  min-width: 0;
+  color: var(--ink-2);
+  line-height: var(--leading-body);
+  text-wrap: pretty;
+}
+
+.prose p,
+.prose ul,
+.prose ol,
+.prose dl {
+  margin: 0;
+}
+
+.prose ul,
+.prose ol {
+  display: grid;
+  gap: var(--space-tight);
+  padding-left: var(--space-5);
+}
+
+.prose strong {
+  color: var(--ink);
+  font-weight: var(--weight-semibold);
+}
+
+.prose h3 {
+  margin: var(--space-2) 0 0;
+  font-size: var(--text-md);
+  font-weight: var(--weight-semibold);
+  color: var(--ink);
+}
+
+.formula {
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+  border-left: 3px solid var(--rule-strong);
+  border-radius: var(--radius-sm);
+  background: var(--wash);
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+  overflow-x: auto;
+}
