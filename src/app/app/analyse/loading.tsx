@@ -1,5 +1,5 @@
+import { PageLoading } from '@/components/shell/PageLoading'
 import { Note, PageHead } from '@/components/ui/layout'
-import { Progress } from '@/components/ui/Progress'
 
 /** Die Analyse lädt beim ersten Aufruf die Kurshistorie – bis dahin sofort sichtbar warten. */
 export default function Loading() {
@@ -8,8 +8,8 @@ export default function Loading() {
       <PageHead id="analyse-titel" title="Analyse">
         Rendite, Risiko, Erträge und Kosten über alle Depots.
       </PageHead>
-      <Progress label="Analyse wird berechnet …" />
-      <Note>Beim ersten Aufruf lädt die App die Kurshistorie aller Werte – das kann bis zu einer halben Minute dauern. Danach liegt sie in der Datenbank und die Analyse ist schnell.</Note>
+      <PageLoading label="Analyse wird berechnet …" />
+      <Note>Beim ersten Aufruf des Tages lädt die App die Kurshistorie – das dauert ein paar Sekunden. Danach ist die Analyse schnell.</Note>
     </>
   )
 }

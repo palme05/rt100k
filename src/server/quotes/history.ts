@@ -33,7 +33,7 @@ export const MAX_HISTORY_INSTRUMENTS = 80
  * Schlusskurse; was schon geladen ist, liegt im Cache – beim nächsten Aufruf
  * geht es dort weiter. Hält die Analyse sicher unter `maxDuration`.
  */
-export const HISTORY_BUDGET_MS = 15_000
+export const HISTORY_BUDGET_MS = 6_000
 
 /** Zeitraum-Stufen statt exakter Startdaten – gleiche URL für alle, gute Cache-Trefferquote. */
 function yahooRange(from: string, today: string): string {

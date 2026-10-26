@@ -3,7 +3,8 @@ import { parseJsonExact } from './json'
 import { ProviderError } from './types'
 
 const USER_AGENT = 'Mozilla/5.0 (compatible; rt100k/1.0; +https://github.com/palme05/rt100k)'
-const TIMEOUT_MS = 6_000
+/** Zeitlimit je Abruf – die Seite wartet darauf, danach greifen Cache und gespeicherte Kurse */
+const TIMEOUT_MS = 4_000
 const MAX_BYTES = 1_000_000
 
 /**
