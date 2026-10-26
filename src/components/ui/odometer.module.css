@@ -3,6 +3,11 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* Die Rollen sind Bild, kein Text: nicht markier- oder kopierbar */
+.digits {
+  user-select: none;
+}
+
 .col {
   position: relative;
   display: inline-block;

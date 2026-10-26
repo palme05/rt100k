@@ -12,12 +12,12 @@ const STRIP = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']
  * Screenreader lesen den Text einmal (`sr-only`), die Rollen sind
  * `aria-hidden`. Bei „Bewegung reduzieren“ steht die Zahl sofort.
  */
-export function Odometer({ text }: { text: string }) {
+export function Odometer({ text, label = true }: { text: string; /** false: der Aufrufer liest den ganzen Text selbst vor */ label?: boolean }) {
   const chars = [...text]
   return (
     <span className={styles.odometer}>
-      <span className="sr-only">{text}</span>
-      <span aria-hidden="true">
+      {label ? <span className="sr-only">{text}</span> : null}
+      <span aria-hidden="true" className={styles.digits}>
         {chars.map((c, i) => {
           // Schlüssel von rechts: kommt vorne eine Stelle dazu, bleiben die übrigen stehen
           const key = chars.length - i
