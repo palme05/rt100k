@@ -31,6 +31,10 @@ const nextConfig: NextConfig = {
   poweredByHeader: false,
   reactStrictMode: true,
   productionBrowserSourceMaps: false,
+  experimental: {
+    // Bestandslisten breiter Weltfonds (bis 12.000 Titel) gehen als ganze Liste an den Server
+    serverActions: { bodySizeLimit: '3mb' },
+  },
   async headers() {
     return [
       { source: '/:path*', headers: securityHeaders },
