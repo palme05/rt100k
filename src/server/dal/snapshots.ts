@@ -1,5 +1,5 @@
 import 'server-only'
-import { and, asc, eq, gte, sql } from 'drizzle-orm'
+import { and, asc, eq, gte, max, sql } from 'drizzle-orm'
 import { withUser } from '../db/client'
 import { portfolioSnapshot } from '../db/schema'
 import type { Actor } from './actor'
@@ -10,6 +10,12 @@ export interface DailyTotal {
   day: string
   valueCents: number
   investedCents: number
+}
+
+/** Letzter Tag mit gespeichertem Tageswert (täglicher Lauf) über alle eigenen Depots, sonst null. */
+export async function lastSnapshotDay(actor: Actor): Promise<string | null> {
+  const [row] = await withUser(actor.id, (tx) => tx.select({ day: max(portfolioSnapshot.day) }).from(portfolioSnapshot).where(eq(portfolioSnapshot.ownerId, actor.id)))
+  return row?.day ?? null
 }
 
 /** Tagessummen über alle Depots des Nutzers. */

@@ -44,10 +44,11 @@ describe('aktive Seite in der Navigation', () => {
   it('Glocke und Konto-Menü kennen ihre Seiten', () => {
     expect(isActive('/app/hinweise', NOTICES_LINK)).toBe(true)
     expect(isActive('/app', NOTICES_LINK)).toBe(false)
-    const [security, admin] = accountLinks(true)
-    expect(isActive('/app/konto/wiederherstellen', security!)).toBe(true)
-    expect(isActive('/app/admin', admin!)).toBe(true)
-    expect(accountLinks(false).map((l) => l.label)).toEqual(['Konto und Sicherheit'])
+    const links = accountLinks(true)
+    expect(isActive('/app/konto/wiederherstellen', links[0]!)).toBe(true)
+    expect(isActive('/app/admin', links.find((l) => l.href === '/app/admin')!)).toBe(true)
+    expect(isActive('/app/datenstand', links.find((l) => l.href === '/app/datenstand')!)).toBe(true)
+    expect(accountLinks(false).map((l) => l.label)).toEqual(['Konto und Sicherheit', 'Datenstand und Quellen', 'So wird gerechnet'])
   })
 
   it('Mehr enthält nur Seiten, die nicht schon oben bzw. in der Leiste stehen', () => {
@@ -55,12 +56,12 @@ describe('aktive Seite in der Navigation', () => {
       appNav()
         .filter((i) => !i.primary)
         .map((i) => i.label),
-    ).toEqual(['Import', 'Monatsrückblick'])
+    ).toEqual(['Import', 'Watchlist', 'Monatsrückblick'])
     expect(
       appNav()
         .filter((i) => !i.tab)
         .map((i) => i.label),
-    ).toEqual(['Steuer', 'Import', 'Monatsrückblick'])
+    ).toEqual(['Steuer', 'Import', 'Watchlist', 'Monatsrückblick'])
   })
 })
 

@@ -25,6 +25,7 @@ export function appNav(): NavItem[] {
     { href: `${APP_BASE}/steuer`, label: 'Steuer', icon: 'tax', activePrefixes: [`${APP_BASE}/steuer`], primary: true },
     { href: `${APP_BASE}/road`, label: 'Road to 100k', short: 'Road', icon: 'route', activePrefixes: [`${APP_BASE}/road`], primary: true, tab: true },
     { href: `${APP_BASE}/import`, label: 'Import', icon: 'import', activePrefixes: [`${APP_BASE}/import`] },
+    { href: `${APP_BASE}/watchlist`, label: 'Watchlist', icon: 'bookmark', activePrefixes: [`${APP_BASE}/watchlist`] },
     { href: `${APP_BASE}/rueckblick`, label: 'Monatsrückblick', icon: 'review', activePrefixes: [`${APP_BASE}/rueckblick`] },
   ]
 }
@@ -36,6 +37,8 @@ export const NOTICES_LINK = { href: `${APP_BASE}/hinweise`, activePrefixes: [`${
 export function accountLinks(isAdmin: boolean): NavItem[] {
   return [
     { href: `${APP_BASE}/sicherheit`, label: 'Konto und Sicherheit', icon: 'shield', activePrefixes: [`${APP_BASE}/sicherheit`, `${APP_BASE}/konto`] },
+    { href: `${APP_BASE}/datenstand`, label: 'Datenstand und Quellen', icon: 'clock', activePrefixes: [`${APP_BASE}/datenstand`] },
+    { href: `${APP_BASE}/methodik`, label: 'So wird gerechnet', icon: 'book', activePrefixes: [`${APP_BASE}/methodik`] },
     ...(isAdmin ? [{ href: `${APP_BASE}/admin`, label: 'Admin', icon: 'admin' as const, activePrefixes: [`${APP_BASE}/admin`] }] : []),
   ]
 }
@@ -51,6 +54,7 @@ export const APP_HOTKEYS: Readonly<Record<string, string>> = {
   m: `${APP_BASE}/rueckblick`,
   h: `${APP_BASE}/hinweise`,
   b: `${APP_BASE}/buchen`,
+  w: `${APP_BASE}/watchlist`,
 }
 
 /** Schnell erfassen: „+“ am Handy, „+ Buchung“ am Desktop */
@@ -64,7 +68,10 @@ export function appCommands(portfolios: readonly { id: string; name: string }[],
     { id: 'steuer', group: 'Ansicht', label: 'Steuer: KESt-Schätzung, Verlustausgleich, E 1kv', href: `${APP_BASE}/steuer`, hint: 'G T' },
     { id: 'hinweise', group: 'Ansicht', label: 'Hinweise und Kursalarme', href: `${APP_BASE}/hinweise`, hint: 'G H' },
     { id: 'rueckblick', group: 'Ansicht', label: 'Monatsrückblick', href: `${APP_BASE}/rueckblick`, hint: 'G M' },
-    { id: 'road', group: 'Ansicht', label: 'Road to 100k', href: `${APP_BASE}/road`, hint: 'G R' },
+    { id: 'road', group: 'Ansicht', label: 'Road to 100k und eigene Ziele', href: `${APP_BASE}/road`, hint: 'G R' },
+    { id: 'watchlist', group: 'Ansicht', label: 'Watchlist: beobachtete Werte', href: `${APP_BASE}/watchlist`, hint: 'G W' },
+    { id: 'datenstand', group: 'Ansicht', label: 'Datenstand und Quellen der Kurse', href: `${APP_BASE}/datenstand` },
+    { id: 'methodik', group: 'Ansicht', label: 'So wird gerechnet (Methodik)', href: `${APP_BASE}/methodik` },
     { id: 'new-booking', group: 'Aktion', label: 'Neue Buchung erfassen', href: `${APP_BASE}/buchen`, hint: 'G B' },
     { id: 'new-depot', group: 'Aktion', label: 'Neues Depot anlegen', href: `${APP_BASE}/depots/neu` },
     { id: 'import', group: 'Aktion', label: 'Abrechnungen importieren (PDF/CSV)', href: `${APP_BASE}/import`, hint: 'G I' },

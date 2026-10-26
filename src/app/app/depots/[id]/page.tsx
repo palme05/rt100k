@@ -11,12 +11,13 @@ import { RefreshButton } from '@/components/shell/refresh'
 import { slotsByShare, WeightCell } from '@/components/ui/AllocationBars'
 import { DataTable, NameCell, Td, Th } from '@/components/ui/DataTable'
 import { Message } from '@/components/ui/forms'
-import { Grid, Muted, Note, Section, SectionHead } from '@/components/ui/layout'
+import { Grid, Muted, Note, Section, SectionHead, TextLink } from '@/components/ui/layout'
 import { Row, Rows } from '@/components/ui/Rows'
 import { HeroSummary, type KeyStat } from '@/components/ui/Summary'
 import { Trend } from '@/components/ui/Trend'
 import { bookingTypeLabel, listAmount, unitPriceText } from '@/lib/booking-display'
 import { dayLabel, share } from '@/lib/display'
+import { SOURCE_LABEL } from '@/lib/freshness'
 import { formatDate, formatTime, viennaDay } from '@/lib/format'
 import { displayName } from '@/lib/names'
 import { displayUnitPrice, formatQuantity, quantityFromDb, unitPriceFromAmount } from '@/lib/quantity'
@@ -29,7 +30,6 @@ import { listShares } from '@/server/dal/shares'
 import { loadDepotInsights } from '@/server/depot'
 import { valuePortfolios } from '@/server/overview'
 import { quoteInEur } from '@/server/quotes/service'
-import type { QuoteSource } from '@/server/quotes/types'
 import { deleteBookingAction, undoBookingAction, updatePortfolioAction } from '../actions'
 import { PortfolioForm } from '../PortfolioForm'
 import { BookingForm } from './BookingForm'
@@ -40,7 +40,6 @@ import { ShareSettings } from './ShareSettings'
 import styles from '../depots.module.css'
 
 const KIND_LABEL = { depot: 'Wertpapierdepot', krypto: 'Krypto', cash: 'Cash-Konto', sachwert: 'Edelmetalle' } as const
-const SOURCE_LABEL: Record<QuoteSource, string> = { yahoo: 'Yahoo Finance', coingecko: 'CoinGecko', schlusskurs: 'Schlusskurs', testdaten: 'Testkurse' }
 /** Ring nur für wenige Positionen – mehr werden als Balkenliste lesbarer */
 const DONUT_MAX = 8
 
@@ -248,7 +247,12 @@ export default async function PortfolioPage({ params }: { params: Promise<{ id: 
               <Note>Noch keine Positionen. Erfasse unter „Neue Buchung“ den ersten Kauf.</Note>
             )}
             {value && value.missingPrices > 0 ? <Note>Für {value.missingPrices} Position(en) gibt es gerade keinen Kurs – bewertet mit dem Einstand.</Note> : null}
-            {sources ? <Note>{`Quelle: ${sources}${hasCrypto ? ' · Data provided by CoinGecko' : ''}`}</Note> : null}
+            {sources ? (
+              <Note>
+                {`Quelle: ${sources}${hasCrypto ? ' · Data provided by CoinGecko' : ''} · `}
+                <TextLink href="/app/datenstand">Datenstand</TextLink>
+              </Note>
+            ) : null}
           </Section>
         )}
 
