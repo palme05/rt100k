@@ -92,7 +92,8 @@ export function Message({ tone, children }: { tone: 'error' | 'success' | 'info'
   const cls = tone === 'error' ? styles.messageError : tone === 'success' ? styles.messageSuccess : styles.messageInfo
   const title = tone === 'error' ? 'Fehler:' : tone === 'success' ? 'Erledigt:' : 'Hinweis:'
   return (
-    <p className={cls} role={tone === 'error' ? 'alert' : 'status'}>
+    // data-haptic-event: HapticsBridge vibriert, wenn die Meldung neu erscheint
+    <p className={cls} role={tone === 'error' ? 'alert' : 'status'} data-haptic-event={tone === 'info' ? undefined : tone}>
       <span className={styles.messageTitle}>{title}</span>
       {children}
     </p>

@@ -493,6 +493,11 @@
     animation: fade 150ms ease-out both;
   }
 
+  /* Noch nicht im Bild: Einblendung wartet (useIntro) */
+  .waiting * {
+    animation-play-state: paused;
+  }
+
   .barsIntro > * {
     transform-box: fill-box;
     transform-origin: 50% 100%;

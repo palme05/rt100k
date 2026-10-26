@@ -46,6 +46,28 @@ svg {
   white-space: nowrap;
 }
 
+/* Abschnitte (`data-reveal`) gleiten beim Scrollen ins Bild – rein per CSS
+   an die Scrollposition gekoppelt (kein Skript, kein Aufblitzen). Was beim
+   Laden schon im Bild ist, steht sofort; Browser ohne Scroll-Timeline und
+   „Bewegung reduzieren“ zeigen alles ohne Animation. */
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    [data-reveal] {
+      animation: reveal linear both;
+      animation-timeline: view();
+      animation-range: entry 0 entry 12rem;
+    }
+  }
+}
+
+@keyframes reveal {
+  from {
+    opacity: 0;
+    translate: 0 var(--space-8);
+    scale: 0.985;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

@@ -14,6 +14,9 @@ const BELOW_Y = LINE_Y + 27
 /** Breite vor dem ersten Messen (Server, erster Render): lieber zu wenig Beschriftung als Überlappung */
 const ASSUMED_WIDTH = 360
 
+/** Verzögerung je Zehntel der Strecke: Stationen ploppen auf, wenn die Linie sie erreicht */
+const POP_DELAY = [undefined, styles.at1, styles.at2, styles.at3, styles.at4, styles.at5, styles.at6, styles.at7, styles.at8, styles.at9, styles.at10]
+
 type Anchor = 'start' | 'middle' | 'end'
 
 interface Candidate {
@@ -129,7 +132,7 @@ export function RouteLine({ total, milestones }: { total: number; milestones: re
             return (
               <circle
                 key={m.value}
-                className={goal ? (done ? styles.stationGoalDone : styles.stationGoal) : done ? styles.stationDone : styles.stationAhead}
+                className={`${goal ? (done ? styles.stationGoalDone : styles.stationGoal) : done ? styles.stationDone : styles.stationAhead} ${styles.pop} ${POP_DELAY[Math.round(at(m.value) * 10)] ?? ''}`}
                 cx={pct(m.value)}
                 cy={LINE_Y}
                 r={goal ? 6 : done ? 4 : 4.5}
@@ -137,6 +140,7 @@ export function RouteLine({ total, milestones }: { total: number; milestones: re
             )
           })}
 
+          <circle className={styles.herePulse} cx={pct(total)} cy={LINE_Y} r={16} />
           <circle className={styles.hereHalo} cx={pct(total)} cy={LINE_Y} r={12} />
           <circle className={styles.here} cx={pct(total)} cy={LINE_Y} r={6.5} />
 

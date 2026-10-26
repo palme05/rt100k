@@ -1,0 +1,97 @@
+/* Zählwerk: Ziffernrollen über unsichtbaren echten Ziffern (Breite, Grundlinie) */
+.odometer {
+  font-variant-numeric: tabular-nums;
+}
+
+.col {
+  position: relative;
+  display: inline-block;
+  line-height: 1;
+  /* schneidet nur oben/unten – seitlich bleiben Glyphenränder sichtbar;
+     die weiche Kante lässt Nachbarziffern beim Rollen nur andeuten */
+  clip-path: inset(0 -0.2em);
+  mask-image: linear-gradient(to bottom, transparent, currentColor 10%, currentColor 90%, transparent);
+}
+
+.ghost {
+  color: transparent;
+}
+
+.strip {
+  position: absolute;
+  inset: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  text-align: center;
+  transition: transform var(--dur-slow) var(--ease-spring);
+  animation: odo-roll var(--dur-roll) var(--ease-spring) backwards;
+}
+
+.strip > span {
+  height: 1em;
+}
+
+/* Ziel je Ziffer: zehn gleich hohe Felder, jedes 10 % der Rolle */
+.d0 {
+  transform: translateY(0);
+}
+.d1 {
+  transform: translateY(-10%);
+}
+.d2 {
+  transform: translateY(-20%);
+}
+.d3 {
+  transform: translateY(-30%);
+}
+.d4 {
+  transform: translateY(-40%);
+}
+.d5 {
+  transform: translateY(-50%);
+}
+.d6 {
+  transform: translateY(-60%);
+}
+.d7 {
+  transform: translateY(-70%);
+}
+.d8 {
+  transform: translateY(-80%);
+}
+.d9 {
+  transform: translateY(-90%);
+}
+
+/* Von links nach rechts versetzt – wie ein Zählwerk, das anläuft */
+.col:nth-child(2) .strip {
+  animation-delay: 30ms;
+}
+.col:nth-child(3) .strip {
+  animation-delay: 60ms;
+}
+.col:nth-child(4) .strip {
+  animation-delay: 90ms;
+}
+.col:nth-child(5) .strip {
+  animation-delay: 120ms;
+}
+.col:nth-child(6) .strip {
+  animation-delay: 150ms;
+}
+.col:nth-child(7) .strip {
+  animation-delay: 180ms;
+}
+.col:nth-child(8) .strip {
+  animation-delay: 210ms;
+}
+.col:nth-child(n + 9) .strip {
+  animation-delay: 240ms;
+}
+
+/* Ohne „to“: endet auf der Ziel-Lage der Ziffernklasse */
+@keyframes odo-roll {
+  from {
+    transform: translateY(10%);
+  }
+}

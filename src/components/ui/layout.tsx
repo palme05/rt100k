@@ -38,7 +38,7 @@ export function Section({
 }) {
   const className = [styles.section, span === 'full' ? '' : styles[span], dimmed ? styles.dimmed : ''].filter(Boolean).join(' ')
   return (
-    <section className={className} aria-labelledby={title && id ? id : undefined} aria-label={title ? undefined : label}>
+    <section className={className} aria-labelledby={title && id ? id : undefined} aria-label={title ? undefined : label} data-reveal>
       {title ? <SectionHead id={id} title={title} meta={meta} actions={actions} /> : null}
       {children}
     </section>

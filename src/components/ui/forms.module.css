@@ -286,6 +286,32 @@ input[type='date'].control {
   border: 1px solid var(--rule);
   border-left-width: 3px;
   background: var(--surface);
+  animation: message-in var(--dur-base) var(--ease-out) both;
+}
+
+/* Meldungen gleiten herein; ein Fehler schüttelt kurz den Kopf */
+@keyframes message-in {
+  from {
+    opacity: 0;
+    translate: 0 calc(-1 * var(--space-2));
+  }
+}
+
+@keyframes message-shake {
+  0%,
+  100% {
+    translate: 0;
+  }
+
+  20%,
+  60% {
+    translate: -4px 0;
+  }
+
+  40%,
+  80% {
+    translate: 4px 0;
+  }
 }
 
 .messageError {
@@ -293,6 +319,9 @@ input[type='date'].control {
   border-color: var(--rule);
   border-left-color: var(--neg);
   color: var(--ink);
+  animation:
+    message-in var(--dur-base) var(--ease-out) both,
+    message-shake 360ms ease-in-out var(--dur-base);
 }
 
 .messageSuccess {

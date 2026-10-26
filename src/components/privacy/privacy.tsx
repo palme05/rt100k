@@ -3,6 +3,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 import { eur, eurWhole } from '@/lib/display'
 import { IconButton } from '../ui/IconButton'
+import { Odometer } from '../ui/Odometer'
 
 /**
  * Privatsphäre-Modus: blendet Beträge aus, Prozente bleiben sichtbar.
@@ -108,15 +109,17 @@ export function PrivacyToggle() {
 }
 
 /** Großer Betrag mit abgesetzten Cent: `61.459` `,19 €` */
-export function AmountSplit({ value, centsClassName }: { value: number; centsClassName?: string | undefined }) {
+export function AmountSplit({ value, centsClassName, roll = false }: { value: number; centsClassName?: string | undefined; roll?: boolean }) {
   const { hidden } = usePrivacy()
   if (hidden) return <span data-private>{`${MASK}\u00a0€`}</span>
   const text = eur(value)
   const comma = text.lastIndexOf(',')
+  // `roll`: Ziffern laufen wie ein Zählwerk ein (großer Betrag oben auf der Seite)
+  const part = (t: string) => (roll ? <Odometer text={t} /> : t)
   return (
     <span>
-      {text.slice(0, comma)}
-      <span className={centsClassName}>{text.slice(comma)}</span>
+      {part(text.slice(0, comma))}
+      <span className={centsClassName}>{part(text.slice(comma))}</span>
     </span>
   )
 }

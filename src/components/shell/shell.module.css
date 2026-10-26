@@ -134,7 +134,8 @@
   color: var(--ink);
 }
 
-/* Aktive Seite: Akzent-Strich genau auf der Haarlinie der Kopfzeile */
+/* Aktive Seite: Akzent-Strich genau auf der Haarlinie der Kopfzeile,
+   wächst beim Seitenwechsel aus der Mitte */
 .navLink[aria-current='page']::after {
   content: '';
   position: absolute;
@@ -144,6 +145,13 @@
   height: 2px;
   border-radius: 2px 2px 0 0;
   background: var(--accent);
+  animation: nav-line var(--dur-slow) var(--ease-spring) both;
+}
+
+@keyframes nav-line {
+  from {
+    scale: 0 1;
+  }
 }
 
 .navLink:focus-visible {
@@ -466,13 +474,13 @@ a.addButton:active {
   grid-template-columns: minmax(0, 1fr);
   gap: var(--space-section);
   min-width: 0;
-  animation: enter 180ms ease-out;
+  animation: enter var(--dur-base) var(--ease-out);
 }
 
 @keyframes enter {
   from {
     opacity: 0;
-    translate: 0 var(--space-1);
+    translate: 0 var(--space-3);
   }
 }
 
@@ -927,6 +935,25 @@ a.addButton:active {
 
   .tab[aria-current='page'] .tabIcon {
     background: var(--accent-wash);
+    animation: tab-pill var(--dur-slow) var(--ease-spring) both;
+  }
+
+  /* Neue Seite: die Pille wächst aus der Mitte, das Symbol hüpft kurz */
+  .tab[aria-current='page'] .tabIcon svg {
+    animation: tab-hop var(--dur-slow) var(--ease-spring) both;
+  }
+
+  @keyframes tab-pill {
+    from {
+      background-color: transparent;
+      scale: 0.6 0.9;
+    }
+  }
+
+  @keyframes tab-hop {
+    40% {
+      translate: 0 -3px;
+    }
   }
 
   .tab[aria-current='page'] .tabIcon svg {
