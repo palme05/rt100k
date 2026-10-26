@@ -6,6 +6,7 @@ import { requireUser } from '@/server/auth/session'
 import { recordAudit } from '@/server/dal/audit'
 import { NotFoundError, ValidationError } from '@/server/dal/errors'
 import { parseId } from '@/server/dal/ids'
+import { acceptGoalShare, createGoalShareLink, leaveGoalShare, revokeGoalShare } from '@/server/dal/goal-shares'
 import { acceptShare, createShareLink, leaveShare, revokeShare } from '@/server/dal/shares'
 import { consumeRateLimit } from '@/server/dal/rate-limit'
 
@@ -64,4 +65,54 @@ export async function leaveShareAction(portfolioId: string): Promise<Result> {
   }
   await recordAudit({ userId: user.id, actorId: user.id, type: 'share_left' })
   redirect('/app/depots')
+}
+
+/** Freigabe-Link für ein eigenes Ziel – Recht „view“ oder „edit“ prüft die DAL. */
+export async function createGoalShareLinkAction(goalId: string, role: string): Promise<Result> {
+  const user = await requireUser()
+  try {
+    await consumeRateLimit(user, 'share')
+    const { token } = await createGoalShareLink(user, goalId, role)
+    await recordAudit({ userId: user.id, actorId: user.id, type: 'share_created', detail: { target: 'goal', role: role === 'edit' ? 'edit' : 'view' } })
+    revalidatePath('/app/road')
+    return { ok: true, token }
+  } catch (error) {
+    return fail(error)
+  }
+}
+
+export async function revokeGoalShareAction(shareId: string): Promise<Result> {
+  const user = await requireUser()
+  try {
+    await revokeGoalShare(user, shareId)
+    await recordAudit({ userId: user.id, actorId: user.id, type: 'share_revoked', detail: { target: 'goal' } })
+    revalidatePath('/app/road')
+    return { ok: true }
+  } catch (error) {
+    return fail(error)
+  }
+}
+
+export async function acceptGoalShareAction(token: string): Promise<Result> {
+  const user = await requireUser()
+  try {
+    await consumeRateLimit(user, 'share')
+    await acceptGoalShare(user, token)
+  } catch (error) {
+    return fail(error)
+  }
+  await recordAudit({ userId: user.id, actorId: user.id, type: 'share_accepted', detail: { target: 'goal' } })
+  redirect('/app/road#geteilte-ziele')
+}
+
+export async function leaveGoalShareAction(goalId: string): Promise<Result> {
+  const user = await requireUser()
+  try {
+    await leaveGoalShare(user, goalId)
+  } catch (error) {
+    return fail(error)
+  }
+  await recordAudit({ userId: user.id, actorId: user.id, type: 'share_left', detail: { target: 'goal' } })
+  revalidatePath('/app/road')
+  return { ok: true }
 }

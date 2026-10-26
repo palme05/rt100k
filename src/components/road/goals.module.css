@@ -170,3 +170,31 @@
   color: var(--neg);
   font-size: var(--text-sm);
 }
+
+/* ── Teilen und geteilte Ziele ─────────────────────────────────────────── */
+.eyebrow {
+  margin: 0;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--ink-3);
+}
+
+.share {
+  display: grid;
+  gap: var(--space-stack);
+  min-width: 0;
+}
+
+.hint {
+  margin: 0;
+  color: var(--ink-2);
+  font-size: var(--text-sm);
+  line-height: var(--leading-meta);
+  max-width: var(--measure);
+}
+
+.buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
