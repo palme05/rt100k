@@ -79,6 +79,8 @@ export interface AnalysisDto {
     months: IncomeMonthDto[]
     last12: number
     forecast12: number
+    /** nur Dividenden (ohne Zinsen), erwartet in 12 Monaten – fürs Dividenden-Gehalt */
+    dividends12Cents: number
     yieldOnCost: number | null
     byYear: { year: string; amount: number }[]
     /** erwartete Zahlungen der nächsten 12 Monate je Position */
@@ -289,6 +291,7 @@ export async function loadAnalysis(actor: Actor, options: { benchmarkId: string 
       ].filter((m, i, all) => !(m.forecast && all.some((o, j) => j < i && !o.forecast && o.month === m.month))),
       last12: last12 / 100,
       forecast12: forecast.reduce((s, f) => s + f.cents, 0) / 100,
+      dividends12Cents: dividendForecast,
       yieldOnCost: openCostCents > 0 ? dividendForecast / openCostCents : null,
       byYear: [...byYear.entries()].sort(([a], [b]) => (a < b ? -1 : 1)).map(([year, cents]) => ({ year, amount: cents / 100 })),
       calendar: expectedPayments(series.income, series.quantities, today)
