@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
 import { TR_KAUF_AT } from '../src/lib/import/fixtures'
-import { HOLDINGS_DE, HOLDINGS_XLSX_EN } from '../src/lib/lookthrough-fixtures'
+import { HOLDINGS_DE, HOLDINGS_MARKET, HOLDINGS_XLSX_EN } from '../src/lib/lookthrough-fixtures'
 import { makePdf } from '../src/test/pdf'
 import { makeXlsx } from '../src/test/xlsx'
 import { collectProblems, createPortfolio, expectNoOverflow, register } from './helpers/app'
@@ -145,7 +145,7 @@ test('ETF-Durchschau: Bestandsliste ablegen, Länder/Branchen/Titel sehen, entfe
   await expect(section.getByText('Japan', { exact: true })).toBeVisible()
 })
 
-test('ETF-Durchschau: ganze Liste der Einzeltitel und Länder aufklappen', async ({ page }) => {
+test('ETF-Durchschau: komplette Listen auf eigenen Seiten, mit Suche und Weg zurück', async ({ page }) => {
   await register(page)
   await createPortfolio(page, 'Trade Republic')
   await page.goto('/app/import')
@@ -162,20 +162,72 @@ test('ETF-Durchschau: ganze Liste der Einzeltitel und Länder aufklappen', async
   await section.locator('input[type=file]').setInputFiles({ name: 'positionen.csv', mimeType: 'text/csv', buffer: Buffer.from(csv) })
   await expect(section.getByText(/übernommen: 15 Positionen/)).toBeVisible()
 
-  const titles = section.getByRole('list', { name: 'Größte Einzeltitel' })
-  await expect(titles.getByRole('listitem')).toHaveCount(10)
-  const more = section.getByRole('button', { name: 'Alle 15 anzeigen' })
-  await expect(more).toHaveAttribute('aria-expanded', 'false')
-  await more.click()
+  // auf der Analyse nur die größten, die komplette Liste auf eigener Seite
+  await expect(section.getByRole('list', { name: 'Größte Einzeltitel' }).getByRole('listitem')).toHaveCount(10)
+  await section.getByRole('link', { name: 'Alle 15 Titel →' }).click()
+  await expect(page).toHaveURL(/\/app\/analyse\/durchschau\/titel$/)
+  const titles = page.getByRole('list', { name: 'Alle Einzeltitel' })
   await expect(titles.getByRole('listitem')).toHaveCount(15)
-  await expect(titles).toContainText('Titel 15')
-  await section.getByRole('button', { name: 'Weniger anzeigen' }).first().click()
-  await expect(titles.getByRole('listitem')).toHaveCount(10)
+  await page.getByRole('searchbox', { name: 'In der Liste suchen' }).fill('titel 15')
+  await expect(titles.getByRole('listitem')).toHaveCount(1)
+  await expect(titles).toContainText('6,0 %')
+  await expectNoOverflow(page)
 
-  const countries = section.getByRole('list', { name: 'Durchschau nach Land' })
-  await section.getByRole('button', { name: 'Alle 12 anzeigen' }).click()
+  // zurück zur Analyse, dann alle Länder
+  await page.getByRole('link', { name: 'Analyse' }).first().click()
+  await expect(page).toHaveURL(/\/app\/analyse/)
+  await page.getByRole('region', { name: 'ETF-Durchschau' }).getByRole('link', { name: 'Alle 12 Länder →' }).click()
+  const countries = page.getByRole('list', { name: 'Durchschau nach Land, komplett' })
   await expect(countries.getByRole('listitem')).toHaveCount(12)
   await expect(countries).toContainText('Italien')
   await expectNoOverflow(page)
+})
+
+test('ETF-Durchschau: Börsenplatz-Liste ordnet chinesische Unternehmen China zu', async ({ page }) => {
+  await register(page)
+  await createPortfolio(page, 'Trade Republic')
+  await page.goto('/app/import')
+  await page.locator('input[type=file]').setInputFiles({ name: 'kauf.pdf', mimeType: 'application/pdf', buffer: Buffer.from(makePdf(TR_KAUF_AT)) })
+  await page.getByRole('button', { name: '1 Buchung übernehmen' }).click()
+  await expect(page.getByText(/1 Buchung übernommen/)).toBeVisible()
+
+  await page.goto('/app/analyse')
+  const section = page.getByRole('region', { name: 'ETF-Durchschau' })
+  await section.locator('input[type=file]').setInputFiles({ name: 'holdings.csv', mimeType: 'text/csv', buffer: Buffer.from(HOLDINGS_MARKET) })
+  await expect(section.getByText(/4 chinesische Titel mit Börsenplatz Hongkong\/USA China zugeordnet/)).toBeVisible()
+  await expect(section.getByText(/Länder nach Börsenplatz, 4 chinesische Titel China zugeordnet/)).toBeVisible()
+  await expect(section.getByRole('list', { name: 'Durchschau nach Land' })).toContainText('China')
+})
+
+test('Land und Branche selbst zuordnen – erscheint danach in der Durchschau', async ({ page }) => {
+  await register(page)
+  await createPortfolio(page, 'Trade Republic')
+  await page.goto('/app/import')
+  await page.locator('input[type=file]').setInputFiles({ name: 'kauf.pdf', mimeType: 'application/pdf', buffer: Buffer.from(makePdf(TR_KAUF_AT)) })
+  await page.getByRole('button', { name: '1 Buchung übernehmen' }).click()
+  await expect(page.getByText(/1 Buchung übernommen/)).toBeVisible()
+
+  await page.goto('/app/analyse/durchschau/zuordnen')
+  const funds = page.getByRole('region', { name: 'ETFs und Fonds ohne Bestandsliste' })
+  const form = funds.getByRole('form').first()
+  await form.getByLabel('Land').fill('Irland')
+  await form.getByLabel('Branche').fill('Weltweit gestreut')
+  await form.getByRole('button', { name: 'Speichern' }).click()
+  await expect(funds.getByText('Zugeordnet.')).toBeVisible()
+  await expect(funds.getByText(/✓ zugeordnet/)).toBeVisible()
+  await expectNoOverflow(page)
+
+  await page.goto('/app/analyse')
+  const section = page.getByRole('region', { name: 'ETF-Durchschau' })
+  await expect(section.getByRole('list', { name: 'Durchschau nach Land' })).toContainText('Irland')
+  await expect(section.getByRole('list', { name: 'Durchschau nach Branche' })).toContainText('Weltweit gestreut')
+
+  // Zuordnung leeren entfernt sie wieder
+  await page.goto('/app/analyse/durchschau/zuordnen')
+  const again = page.getByRole('region', { name: 'ETFs und Fonds ohne Bestandsliste' }).getByRole('form').first()
+  await again.getByLabel('Land').fill('')
+  await again.getByLabel('Branche').fill('')
+  await again.getByRole('button', { name: 'Speichern' }).click()
+  await expect(page.getByText('Zuordnung entfernt.')).toBeVisible()
 })
 

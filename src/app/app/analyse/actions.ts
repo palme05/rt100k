@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { requireUser } from '@/server/auth/session'
 import { saveAllocationTargets } from '@/server/dal/allocation'
+import { saveClass } from '@/server/dal/classes'
 import { deleteEtfBreakdown, saveEtfBreakdown } from '@/server/dal/etf'
 import { NotFoundError, ValidationError } from '@/server/dal/errors'
 import { consumeRateLimit } from '@/server/dal/rate-limit'
@@ -31,18 +32,33 @@ export async function saveEtfBreakdownAction(breakdown: unknown): Promise<{ ok: 
     if (error instanceof ValidationError || error instanceof NotFoundError) return { ok: false, error: error.message }
     throw error
   }
-  revalidatePath('/app/analyse')
+  revalidatePath('/app/analyse', 'layout')
   return { ok: true }
 }
 
 export async function deleteEtfBreakdownAction(instrumentId: unknown): Promise<{ ok: true } | { ok: false; error: string }> {
   const user = await requireUser()
   try {
+    await consumeRateLimit(user, 'write')
     await deleteEtfBreakdown(user, instrumentId)
   } catch (error) {
     if (error instanceof NotFoundError) return { ok: false, error: error.message }
     throw error
   }
   revalidatePath('/app/analyse')
+  return { ok: true }
+}
+
+/** Eigene Zuordnung zu Land/Branche speichern; beides leer löscht sie. */
+export async function saveClassAction(instrumentId: unknown, country: unknown, sector: unknown): Promise<{ ok: true } | { ok: false; error: string }> {
+  const user = await requireUser()
+  try {
+    await consumeRateLimit(user, 'write')
+    await saveClass(user, { instrumentId, country, sector })
+  } catch (error) {
+    if (error instanceof ValidationError || error instanceof NotFoundError) return { ok: false, error: error.message }
+    throw error
+  }
+  revalidatePath('/app/analyse', 'layout')
   return { ok: true }
 }

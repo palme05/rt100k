@@ -15,10 +15,11 @@ import {
   type PeriodResult,
 } from '@/lib/performance'
 import { returnGrid, type ReturnYear } from '@/lib/heatmap'
-import { lookThrough, MAX_ENTRIES } from '@/lib/lookthrough'
+import { CLASSIFIABLE, lookThrough } from '@/lib/lookthrough'
 import type { AllocationSlice } from '@/lib/valuation'
 import type { Actor } from './dal/actor'
 import { NotFoundError } from './dal/errors'
+import { listClasses } from './dal/classes'
 import { listEtfBreakdowns } from './dal/etf'
 import { getInstruments, type InstrumentDto } from './dal/instruments'
 import { valuePortfolios, type PortfolioValuation } from './overview'
@@ -90,13 +91,30 @@ export interface AnalysisDto {
     countries: Slice[]
     sectors: Slice[]
     top: Slice[]
+    /** Einträge je kompletter Liste (eigene Seiten) */
+    counts: { countries: number; sectors: number; titles: number }
+    /** Werte ohne Bestandsliste und ohne eigene Zuordnung */
+    unassigned: number
+    /** Werte mit eigener Zuordnung */
+    classified: number
     /** Anteil des Vermögens, der über Bestandslisten aufgeschlüsselt ist (0…1) */
     covered: number
-    etfs: { id: string; name: string; fundName: string | null; asOf: string | null; hasData: boolean }[]
+    etfs: EtfListInfo[]
   }
 }
 
 type Slice = { key: string; label: string; value: number; share: number }
+
+export interface EtfListInfo {
+  id: string
+  name: string
+  fundName: string | null
+  asOf: string | null
+  hasData: boolean
+  countryBasis: 'herkunft' | 'boerse' | null
+  chinaFixes: number
+  hasHoldings: boolean
+}
 
 /** Größte Einträge plus „Andere“; Anteile am Gesamtwert. */
 function topSlices(map: ReadonlyMap<string, number>, totalCents: number, limit: number, rest = true): Slice[] {
@@ -169,7 +187,7 @@ export async function loadAnalysis(actor: Actor, options: { benchmarkId: string 
   const today = viennaDay()
   const first = valuation.bookings.reduce((min, b) => (b.occurredOn < min ? b.occurredOn : min), today)
 
-  const [benchmark, breakdowns] = await Promise.all([resolveBenchmark(actor, options.benchmarkId, valuation), listEtfBreakdowns(actor)])
+  const [benchmark, breakdowns, classes] = await Promise.all([resolveBenchmark(actor, options.benchmarkId, valuation), listEtfBreakdowns(actor), listClasses(actor)])
   const instruments = [...valuation.instruments.values()]
   const quotes = new Map(valuation.quotes)
   if (benchmark && !quotes.has(benchmark.id)) for (const [k, q] of await getQuotes([benchmark])) quotes.set(k, q)
@@ -238,7 +256,14 @@ export async function loadAnalysis(actor: Actor, options: { benchmarkId: string 
   const lt = lookThrough(
     positions.map((p) => ({ instrumentId: p.instrumentId, name: p.name, kind: p.kind, valueCents: p.valueCents })),
     breakdowns,
+    classes,
   )
+  // Werte ohne Bestandsliste und ohne eigene Zuordnung (je Instrument einmal)
+  const open = positions.filter((p) => p.valueCents > 0 && CLASSIFIABLE.has(p.kind) && !((p.kind === 'etf' || p.kind === 'fund') && breakdowns.has(p.instrumentId)))
+  // ETFs ohne Liste zählen hier nicht – für sie ist die Bestandsliste der bessere Weg
+  const unassigned = new Set(open.filter((p) => p.kind !== 'etf' && p.kind !== 'fund' && !classes.has(p.instrumentId)).map((p) => p.instrumentId)).size
+  const classified = new Set(open.filter((p) => classes.has(p.instrumentId)).map((p) => p.instrumentId)).size
+  const count = (map: ReadonlyMap<string, number>) => [...map.values()].filter((v) => v > 0).length
   const heldFunds = [...new Map(positions.filter((p) => p.kind === 'etf' || p.kind === 'fund').map((p) => [p.instrumentId, p])).values()]
 
   const benchmarkOptions = instruments
@@ -278,14 +303,26 @@ export async function loadAnalysis(actor: Actor, options: { benchmarkId: string 
     },
     allocation: { kind: valuation.allocation, currency: shares(currency), portfolio: shares(byPortfolio) },
     lookthrough: {
-      // alle Einträge – die Seite zeigt zuerst die größten und klappt den Rest auf
-      countries: topSlices(lt.countries, lt.totalCents, MAX_ENTRIES),
-      sectors: topSlices(lt.sectors, lt.totalCents, MAX_ENTRIES),
-      top: topSlices(lt.top, lt.totalCents, MAX_ENTRIES, false),
+      // die größten Einträge – die kompletten Listen haben eigene Seiten
+      countries: topSlices(lt.countries, lt.totalCents, 8),
+      sectors: topSlices(lt.sectors, lt.totalCents, 8),
+      top: topSlices(lt.top, lt.totalCents, 10, false),
+      counts: { countries: count(lt.countries), sectors: count(lt.sectors), titles: count(lt.top) },
+      unassigned,
+      classified,
       covered: lt.totalCents > 0 ? lt.coveredCents / lt.totalCents : 0,
       etfs: heldFunds.map((p) => {
         const b = breakdowns.get(p.instrumentId)
-        return { id: p.instrumentId, name: p.name, fundName: b?.fundName ?? null, asOf: b?.asOf ?? null, hasData: Boolean(b) }
+        return {
+          id: p.instrumentId,
+          name: p.name,
+          fundName: b?.fundName ?? null,
+          asOf: b?.asOf ?? null,
+          hasData: Boolean(b),
+          countryBasis: b?.countryBasis ?? null,
+          chinaFixes: b?.chinaFixes ?? 0,
+          hasHoldings: b?.hasHoldings ?? false,
+        }
       }),
     },
   }

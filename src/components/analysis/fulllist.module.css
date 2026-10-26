@@ -1,0 +1,102 @@
+/* Komplette Rangliste: Rang, Name, Anteil, Betrag; Balken darunter */
+.root {
+  display: grid;
+  gap: var(--space-5);
+  min-width: 0;
+  justify-items: start;
+}
+
+.search {
+  display: grid;
+  gap: var(--space-2);
+  width: min(100%, 26rem);
+}
+
+.count,
+.none {
+  margin: 0;
+  color: var(--ink-3);
+  font-size: var(--text-sm);
+}
+
+.list {
+  display: grid;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  min-width: 0;
+}
+
+.item {
+  display: grid;
+  grid-template-columns: 2.5rem minmax(0, 1fr) auto auto;
+  grid-template-areas:
+    'rank label share amount'
+    '. bar bar bar';
+  column-gap: var(--space-3);
+  row-gap: var(--space-1);
+  align-items: baseline;
+  padding-block: var(--space-3);
+  border-top: 1px solid var(--rule);
+  font-variant-numeric: tabular-nums;
+}
+
+.item:first-child {
+  border-top: 0;
+}
+
+.rank {
+  grid-area: rank;
+  color: var(--ink-3);
+  font-size: var(--text-sm);
+}
+
+.label {
+  grid-area: label;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.share {
+  grid-area: share;
+  font-weight: var(--weight-semibold);
+  text-align: right;
+}
+
+.amount {
+  grid-area: amount;
+  min-width: 5.5rem;
+  color: var(--ink-3);
+  font-size: var(--text-sm);
+  text-align: right;
+}
+
+.bar {
+  grid-area: bar;
+  display: block;
+  width: 100%;
+  height: 4px;
+}
+
+.track {
+  fill: var(--chart-track);
+}
+
+.fill {
+  fill: var(--accent);
+}
+
+@media (max-width: 480px) {
+  .item {
+    grid-template-columns: 2rem minmax(0, 1fr) auto;
+    grid-template-areas:
+      'rank label share'
+      '. amount amount'
+      '. bar bar';
+  }
+
+  .amount {
+    text-align: left;
+  }
+}
