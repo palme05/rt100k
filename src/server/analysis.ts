@@ -97,6 +97,8 @@ export interface AnalysisDto {
     unassigned: number
     /** Werte mit eigener Zuordnung */
     classified: number
+    /** Seite „Überschneidung“ hat etwas zu zeigen */
+    overlap: boolean
     /** Anteil des Vermögens, der über Bestandslisten aufgeschlüsselt ist (0…1) */
     covered: number
     etfs: EtfListInfo[]
@@ -310,6 +312,8 @@ export async function loadAnalysis(actor: Actor, options: { benchmarkId: string 
       counts: { countries: count(lt.countries), sectors: count(lt.sectors), titles: count(lt.top) },
       unassigned,
       classified,
+      // Überschneidung lohnt ab zwei Fonds mit Liste oder einem Fonds mit Liste plus Einzelaktien
+      overlap: heldFunds.filter((p) => breakdowns.has(p.instrumentId)).length >= 2 || (heldFunds.some((p) => breakdowns.has(p.instrumentId)) && positions.some((p) => p.kind === 'stock' && p.valueCents > 0)),
       covered: lt.totalCents > 0 ? lt.coveredCents / lt.totalCents : 0,
       etfs: heldFunds.map((p) => {
         const b = breakdowns.get(p.instrumentId)

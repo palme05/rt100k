@@ -1,0 +1,64 @@
+/* Überschneidung: Paare als Zeilen (umbrechend statt gekürzt – beide Namen zählen), Klumpen als Liste mit Quellen */
+.pair {
+  font-weight: var(--weight-medium);
+  overflow-wrap: anywhere;
+}
+
+.and {
+  color: var(--ink-3);
+  font-weight: var(--weight-regular);
+}
+
+.list {
+  display: grid;
+  /* am PC zwei Spalten statt einer langen Liste */
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 26rem), 1fr));
+  column-gap: var(--space-8);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  min-width: 0;
+}
+
+.item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    'name total'
+    'sources sources';
+  gap: var(--space-1) var(--space-4);
+  padding-block: var(--row-y);
+  border-top: 1px solid var(--rule);
+  font-variant-numeric: tabular-nums;
+}
+
+.name {
+  grid-area: name;
+  min-width: 0;
+  font-weight: var(--weight-medium);
+  overflow-wrap: anywhere;
+}
+
+.total {
+  grid-area: total;
+  display: grid;
+  justify-items: end;
+}
+
+.total small {
+  color: var(--ink-3);
+  font-size: var(--text-sm);
+}
+
+.sources {
+  grid-area: sources;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-3);
+  color: var(--ink-3);
+  font-size: var(--text-sm);
+}
+
+.source {
+  white-space: nowrap;
+}
