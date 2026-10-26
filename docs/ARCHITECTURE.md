@@ -89,6 +89,7 @@ GitHub Actions (öffentliches Repo, kostenlos)
 | A52 | **Eigene Ziele mit Auswahl über eine Verknüpfungstabelle** (`goal_portfolio`, zusammengesetzte Fremdschlüssel) statt eines ID-Arrays | Fremde Depots lassen sich auf Datenbank-Ebene nicht eintragen, gelöschte Depots verschwinden per Kaskade aus der Auswahl. Prognose gleichmäßig (Einzahlung am Monatsende) wie die gerade Linie der Road; reine Cash-Auswahl ohne Zinsen gerechnet. |
 | A53 | **Teilen-Ziel nur im Service Worker** | Das Brief-Ziel „PDF vom Handy teilen“ ohne Server-Upload: der Service Worker legt geteilte Dateien im Cache des Geräts ab, die Import-Seite liest sie wie eine gewählte Datei (pdf.js im Browser). Die Rückfall-Route liest den Body nie. Funktioniert, wo der Browser `share_target` kennt (Android, ChromeOS); iOS kennt es nicht. |
 | A54 | **Erste Schritte abgeleitet, Ausblenden per Cookie** (`src/lib/onboarding.ts`) | Wie A39: nichts zu pflegen, jeder Schritt gilt, sobald die Daten ihn zeigen. Ausblenden ist eine Gerätevorliebe wie das Thema (A38) – keine Spalte im Nutzerkonto. |
+| A55 | **Ziele teilen wie Depots, mit Recht „mitbearbeiten“ nur für Planwerte** (`goal_share`, `src/server/dal/goal-shares.ts`) | Brief: Ziele „ansehen“ oder „bearbeiten“ freigeben. Gleicher Einmal-Link wie A32, RLS bestehender Tabellen bleibt unverändert. Mitbearbeiten schreibt im Kontext des Besitzers, aber nur in einer Anweisung, die die Freigabe selbst prüft; Depot-Auswahl und Löschen bleiben beim Besitzer, weil sie über die eigenen Depots verfügen. Depots bleiben nur lesend (Buchen im fremden Depot wäre ein deutlich größerer Angriffsweg – offen für eine eigene Entscheidung des Betreibers). |
 | A15 | **Tests gegen echtes Postgres** (`pnpm test:db`, CI-Service Postgres 18) statt Mocks | RLS, Rollen und Constraints lassen sich nur gegen eine echte Datenbank prüfen. |
 
 ## Free-Tier-Grenzen (geprüft am 19.10.2026)
@@ -149,7 +150,7 @@ Gegenmaßnahmen, falls es knapp wird: Max-CU auf 0,25 senken, Kurshistorie selte
 | ETF-Durchschau | je Nutzer und ETF nur zusammengefasste Gewichte (≈ 60 Einträge), z. B. 10 Nutzer × 10 ETFs | < 1 MB |
 | Hinweise, Kursalarme, Push-Abos | Hinweise 1 Jahr Aufbewahrung, ~300 B, wenige je Nutzer und Woche | < 2 MB |
 | Rückgängig-Kopien | höchstens 30 Minuten je Änderung, wird bei jeder Änderung des Nutzers aufgeräumt | < 1 MB |
-| Watchlist, eigene Ziele | höchstens 100 bzw. 20 je Nutzer | < 1 MB |
+| Watchlist, eigene Ziele, Ziel-Freigaben | höchstens 100 bzw. 20 je Nutzer, 20 Freigaben je Ziel | < 1 MB |
 | Auth, Sessions, Sonstiges | | < 10 MB |
 | **Summe** | | **≈ 175 MB von 1 GB** |
 
