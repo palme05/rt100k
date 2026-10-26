@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { axisMoney, axisPercent, axisPrice, eur, eurWhole, pct } from '@/lib/display'
 import { MASK, usePrivacy } from '../privacy/privacy'
 import styles from './charts.module.css'
@@ -74,16 +74,38 @@ export function useFormatters(kind: ValueKind): Formatters {
 /**
  * Einblenden nur beim ersten Erscheinen: liefert `true`, bis die Animation
  * durch ist. Danach (z. B. beim Zeitraumwechsel) wird nur überblendet.
+ * Bis das Diagramm im Bild ist (`ref` aufs SVG), ist `waiting` gesetzt und
+ * die Animationen stehen (Klasse `waiting` am SVG) – weiter unten auf der
+ * Seite zeichnet es sich beim Hinscrollen, nicht unbemerkt beim Laden.
  * Unter `prefers-reduced-motion: reduce` greifen die Klassen nicht (CSS).
  */
-export function useIntro(active: boolean, duration = 1100): boolean {
+export function useIntro<T extends Element>(duration = 1100) {
   const [intro, setIntro] = useState(true)
+  const [seen, setSeen] = useState(false)
+  // Callback-Ref: neue Knoten (z. B. nach neuer Breite) werden neu beobachtet
+  const ref = useCallback((el: T | null) => {
+    if (!el) return
+    if (typeof IntersectionObserver === 'undefined') {
+      setSeen(true)
+      return
+    }
+    const io = new IntersectionObserver(
+      ([entry]) => {
+        if (!entry?.isIntersecting) return
+        setSeen(true)
+        io.disconnect()
+      },
+      { threshold: 0.15 },
+    )
+    io.observe(el)
+    return () => io.disconnect()
+  }, [])
   useEffect(() => {
-    if (!active) return
+    if (!seen) return
     const timer = window.setTimeout(() => setIntro(false), duration)
     return () => window.clearTimeout(timer)
-  }, [active, duration])
-  return intro
+  }, [seen, duration])
+  return [intro, ref, !seen] as const
 }
 
 /** Schlüssel einer Zeile im Tooltip und in der Legende. */

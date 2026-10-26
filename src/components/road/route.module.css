@@ -59,6 +59,15 @@
   fill-opacity: var(--area-top);
 }
 
+/* Ohne Animation unsichtbar (auch bei „Bewegung reduzieren“) */
+.herePulse {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 1.5;
+  opacity: 0;
+  pointer-events: none;
+}
+
 .label,
 .labelAhead,
 .hereLabel {
@@ -88,28 +97,69 @@
 }
 
 @media (prefers-reduced-motion: no-preference) {
+  /* Fortschritt wächst von links (scaleX statt Strichlänge – die lief bei
+     kurzen Linien praktisch sofort durch) */
   .done {
-    animation: route-grow 900ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+    transform-box: fill-box;
+    transform-origin: 0 50%;
+    animation: route-grow var(--dur-roll) var(--ease-out) both;
   }
+
+  /* Stationen ploppen auf, wenn die Linie sie erreicht (Verzögerung je Lage) */
+  .pop {
+    transform-box: fill-box;
+    transform-origin: center;
+    animation: route-pop 420ms var(--ease-spring) both;
+  }
+
+  .at1 { animation-delay: 80ms; }
+  .at2 { animation-delay: 160ms; }
+  .at3 { animation-delay: 240ms; }
+  .at4 { animation-delay: 320ms; }
+  .at5 { animation-delay: 400ms; }
+  .at6 { animation-delay: 480ms; }
+  .at7 { animation-delay: 560ms; }
+  .at8 { animation-delay: 640ms; }
+  .at9 { animation-delay: 720ms; }
+  .at10 { animation-delay: 800ms; }
 
   .here,
   .hereHalo {
-    animation: route-fade 300ms ease-out 650ms both;
+    transform-box: fill-box;
+    transform-origin: center;
+    animation: route-pop 520ms var(--ease-spring) 700ms both;
+  }
+
+  /* „Du bist hier“: ein Ring läuft ruhig nach außen, wie ein Signal */
+  .herePulse {
+    transform-box: fill-box;
+    transform-origin: center;
+    animation: route-pulse 2.6s var(--ease-out) 1.3s infinite;
   }
 
   @keyframes route-grow {
     from {
-      stroke-dasharray: 0 10000;
-    }
-
-    to {
-      stroke-dasharray: 10000 0;
+      transform: scaleX(0);
     }
   }
 
-  @keyframes route-fade {
+  @keyframes route-pop {
     from {
       opacity: 0;
+      transform: scale(0.2);
+    }
+  }
+
+  @keyframes route-pulse {
+    0% {
+      opacity: 0.55;
+      transform: scale(0.55);
+    }
+
+    70%,
+    100% {
+      opacity: 0;
+      transform: scale(1.5);
     }
   }
 }

@@ -93,7 +93,7 @@ export function ColumnChart(props: ColumnChartProps) {
 function ColumnPlot(props: ColumnChartProps & { width: number; descId: string; onReadout: (text: string | null) => void }) {
   const { title, labels, values, height, width, valueKind = 'money', fontSize = 11, descId, onReadout } = props
   const fmt = useFormatters(valueKind)
-  const intro = useIntro(true, 1000)
+  const [intro, introRef, waiting] = useIntro<SVGSVGElement>(1000)
   const [hover, setHoverState] = useState<number | null>(null)
 
   // Säulen (ggf. zusammengefasst)
@@ -212,7 +212,8 @@ function ColumnPlot(props: ColumnChartProps & { width: number; descId: string; o
     <svg
       // Neue Breite = neue Knoten: alle Teile stammen sicher aus derselben Messung
       key={width}
-      className={styles.svg}
+      ref={introRef}
+      className={waiting ? `${styles.svg} ${styles.waiting}` : styles.svg}
       width={width}
       height={height}
       role="group"

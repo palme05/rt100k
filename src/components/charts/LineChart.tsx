@@ -224,7 +224,7 @@ function LinePlot(props: LineChartProps & { width: number; descId: string; onRea
   const fmt = useFormatters(valueKind)
   const uid = safeId(useId())
   const [hover, setHoverState] = useState<number | null>(null)
-  const intro = useIntro(true)
+  const [intro, introRef, waiting] = useIntro<SVGSVGElement>()
   const n = labels.length
 
   const anyEndDotSet = series.some((s) => s.endDot !== undefined)
@@ -449,7 +449,8 @@ function LinePlot(props: LineChartProps & { width: number; descId: string; onRea
     <svg
       // Neue Breite = neue Knoten: alle Teile stammen sicher aus derselben Messung
       key={width}
-      className={styles.svg}
+      ref={introRef}
+      className={waiting ? `${styles.svg} ${styles.waiting}` : styles.svg}
       width={width}
       height={height}
       role="group"

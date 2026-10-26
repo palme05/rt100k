@@ -37,7 +37,7 @@ export function TaxSummary({ label, value, stats, children }: { label: string; v
         <div className={styles.lead}>
           <p className={styles.leadLabel}>{label}</p>
           <p className={styles.leadValue}>
-            <AmountSplit value={value} centsClassName={styles.leadCents} />
+            <AmountSplit value={value} centsClassName={styles.leadCents} roll />
           </p>
         </div>
         <KeyStats items={stats} />

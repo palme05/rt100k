@@ -48,7 +48,7 @@ export function HeroSummary({
             </h1>
           )}
           <div className={styles.hero}>
-            <AmountSplit value={value} centsClassName={styles.heroCents} />
+            <AmountSplit value={value} centsClassName={styles.heroCents} roll />
           </div>
         </div>
         <KeyStats items={stats} />
