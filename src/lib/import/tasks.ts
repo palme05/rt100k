@@ -1,6 +1,13 @@
 import { dayLabel } from '../display'
 import { IMPORT_KIND_LABEL, type ImportedBooking } from './types'
 
+const UNASSIGNED = 'Wertpapier nicht zugeordnet'
+
+/** Kurzer Titel einer Nacharbeit: nicht zugeordneter Wert oder Kapitalmaßnahme aus der Datei. */
+export function taskTitle(text: string | null): string {
+  return text?.includes(UNASSIGNED) ? 'Wert nicht zugeordnet' : 'Kapitalmaßnahme'
+}
+
 /** Höchstlänge einer Aufgabe (wie in der Datenschicht geprüft). */
 const MAX_TASK = 300
 
@@ -10,7 +17,7 @@ const MAX_TASK = 300
  */
 export function unassignedTask(b: ImportedBooking): string {
   const what = b.asset ? `${b.asset.name}${b.asset.isin ? ` (${b.asset.isin})` : b.asset.symbol ? ` (${b.asset.symbol})` : ''}` : 'Unbekannter Wert'
-  return `${IMPORT_KIND_LABEL[b.kind]} ${what} vom ${dayLabel(b.occurredOn)}: Wertpapier nicht zugeordnet – im Import zuordnen oder von Hand buchen`.slice(0, MAX_TASK)
+  return `${IMPORT_KIND_LABEL[b.kind]} ${what} vom ${dayLabel(b.occurredOn)}: ${UNASSIGNED} – im Import zuordnen oder von Hand buchen`.slice(0, MAX_TASK)
 }
 
 /**
@@ -30,6 +37,6 @@ export function unassignedTasks(bookings: readonly ImportedBooking[]): string[] 
     const what = first.asset ? `${first.asset.name}${first.asset.isin ? ` (${first.asset.isin})` : first.asset.symbol ? ` (${first.asset.symbol})` : ''}` : 'Unbekannter Wert'
     const days = list.map((b) => b.occurredOn).sort()
     const kinds = [...new Set(list.map((b) => IMPORT_KIND_LABEL[b.kind]))].join(', ')
-    return `${what}: ${list.length} Buchungen (${kinds}) vom ${dayLabel(days[0]!)} bis ${dayLabel(days.at(-1)!)} – Wertpapier nicht zugeordnet – im Import zuordnen oder von Hand buchen`.slice(0, MAX_TASK)
+    return `${what}: ${list.length} Buchungen (${kinds}) vom ${dayLabel(days[0]!)} bis ${dayLabel(days.at(-1)!)} – ${UNASSIGNED} – im Import zuordnen oder von Hand buchen`.slice(0, MAX_TASK)
   })
 }

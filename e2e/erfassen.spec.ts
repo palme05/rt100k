@@ -149,18 +149,18 @@ test('Offene Punkte: fehlende Kaufkosten beheben; Nacharbeiten aus dem Import ab
   await page.goto('/app')
   const tasks = page.getByRole('region', { name: 'Offene Punkte' })
   await expect(tasks).toContainText('Kaufkosten fehlen: Vanguard')
-  await expect(tasks).toContainText('Aus einem Import von Hand zu buchen: 1 Punkt')
+  await expect(tasks).toContainText('Von Hand zu buchen: 1 Punkt')
   await expect(tasks).not.toContainText('Muster Holding')
   // die Glocke zählt Nacharbeiten nicht mit
   await expect(page.getByRole('link', { name: /Hinweise, \d+ ungelesen/ })).toHaveCount(0)
-  await tasks.getByRole('link', { name: /^Ansehen: Aus einem Import/ }).click()
+  await tasks.getByRole('link', { name: /^Ansehen: Von Hand zu buchen/ }).click()
   await expect(page).toHaveURL(/\/app\/import#von-hand$/)
   await manual.getByRole('button', { name: 'Alle verwerfen' }).click()
   await manual.getByRole('button', { name: 'Ja, den Punkt verwerfen' }).click()
   await expect(page.getByRole('region', { name: 'Von Hand zu buchen' })).toHaveCount(0)
 
   await page.goto('/app')
-  await expect(tasks).not.toContainText('von Hand zu buchen')
+  await expect(tasks).not.toContainText('Von Hand zu buchen')
 
   await tasks.getByRole('link', { name: /^Beheben: Kaufkosten fehlen/ }).click()
   await expect(page.getByRole('heading', { name: 'Buchung bearbeiten', level: 1 })).toBeVisible()

@@ -123,7 +123,7 @@ export function LookthroughPanel({
             </div>
             <div>
               <SectionHead title="Größte Einzeltitel" level={3} />
-              {top.length > 0 ? <ExpandableBarList title="Größte Einzeltitel" items={top} initial={10} remainderLabel="Alle anderen Werte" /> : <p className={styles.empty}>Erscheinen mit der ersten Bestandsliste.</p>}
+              {top.length > 0 ? <ExpandableBarList title="Größte Einzeltitel" items={top} initial={10} restLabel="Alle anderen Werte" remainderLabel="Alle anderen Werte" /> : <p className={styles.empty}>Erscheinen mit der ersten Bestandsliste.</p>}
             </div>
           </div>
         </>

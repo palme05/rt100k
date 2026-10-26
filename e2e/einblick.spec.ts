@@ -75,8 +75,11 @@ test('Road: Vergleich mit höherer Sparrate als zweite Kurve, Ankunft früher', 
   await page.goto('/app/road')
   const slider = page.getByLabel('Vergleich: mehr sparen pro Monat')
   await expect(slider).toHaveValue('0')
-  await slider.fill('500')
-  await expect(page.getByText(/Mit \+500\s€ im Monat: Ankunft .* \(Median\) – .* früher\./)).toBeVisible()
+  // vor der Hydrierung ändert der Regler nur das HTML, nicht den Zustand – bis die Ausgabe folgt
+  await expect(async () => {
+    await slider.fill('500')
+    await expect(page.getByText(/Mit \+500\s€ im Monat: Ankunft .* \(Median\) – .* früher\./)).toBeVisible({ timeout: 1_000 })
+  }).toPass({ timeout: 15_000 })
   // Legende nennt die zweite Kurve
   await expect(page.getByRole('listitem').filter({ hasText: /^\s*Mit \+500\s€ im Monat$/ })).toBeVisible()
   await page.getByRole('button', { name: 'Zurücksetzen' }).click()
