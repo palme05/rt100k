@@ -1,8 +1,8 @@
 import 'server-only'
 import { providerFetch } from './fetch'
 import { parseCoinGeckoChart, parseEcbHistoryCsv, parseYahooHistory } from './history-parsers'
-import { parseHicpJsonStat } from '@/lib/inflation'
-import { HICP_SOURCES } from '../inflation'
+import { averageInflation } from '@/lib/inflation'
+import { fetchHicpRates } from '../inflation'
 import { parseCoinGeckoPrices, parseEcbXml, parseYahooChart } from './parsers'
 
 /**
@@ -32,8 +32,8 @@ export async function providerStatus() {
       return typeof xml === 'string' && parseEcbXml(xml) !== null
     }),
     check('Yahoo Gold', async () => parseYahooChart(await providerFetch('Yahoo', 'https://query1.finance.yahoo.com/v8/finance/chart/GC=F?range=1d&interval=1d&status=1', { revalidate: TTL }))?.currency === 'USD'),
-    // Inflation (Road in heutiger Kaufkraft): aktuelle Eurostat-Reihe, mindestens zehn Jahre
-    check('Eurostat', async () => (parseHicpJsonStat(await providerFetch('Eurostat', `${HICP_SOURCES[0]}&status=1`, { revalidate: TTL }))?.size ?? 0) >= 10),
+    // Inflation (Road in heutiger Kaufkraft): dieselben Abrufe wie im Betrieb, ein Zehnjahresschnitt muss sich ergeben
+    check('Eurostat', async () => (await fetchHicpRates(TTL)).some((rates) => rates !== null && averageInflation(rates, new Date().getUTCFullYear()) !== null)),
   ])
   return { yahoo, coingecko, ecb, edelmetalle, eurostat }
 }
