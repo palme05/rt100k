@@ -4,10 +4,17 @@
  * - Seitenaufrufe gehen immer ins Netz; nur wenn es fehlt, kommt die Offline-Seite
  * - den „letzten Stand“ schreibt die App in einen eigenen Cache und löscht ihn beim Abmelden
  * - Push kommt ohne Inhalt; die Mitteilung zeigt nur „Neue Hinweise“, nie Beträge
+ * - Teilen-Ziel: geteilte Abrechnungen (PDF/CSV) landen nur in einem eigenen
+ *   Cache auf dem Gerät, nie beim Server; die Import-Seite holt sie ab und löscht sie
  * Namen passend zu src/lib/offline.ts.
  */
 const STATIC_CACHE = 'rt100k-static-v1'
 const SNAPSHOT_CACHE = 'rt100k-letzter-stand'
+const SHARE_CACHE = 'rt100k-geteilt'
+const SHARE_PREFIX = '/__geteilt/'
+const SHARE_ACTION = '/app/import/teilen'
+const SHARE_MAX_FILES = 20
+const SHARE_MAX_BYTES = 10 * 1024 * 1024
 const ASSETS = ['/offline.js', '/offline.css', '/icons/icon-192.png']
 
 // Eigene, strenge CSP für die Offline-Seite (ohne Inline-Skripte)
@@ -67,15 +74,37 @@ self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches
       .keys()
-      .then((keys) => Promise.all(keys.filter((k) => k.startsWith('rt100k-') && k !== STATIC_CACHE && k !== SNAPSHOT_CACHE).map((k) => caches.delete(k))))
+      .then((keys) => Promise.all(keys.filter((k) => k.startsWith('rt100k-') && k !== STATIC_CACHE && k !== SNAPSHOT_CACHE && k !== SHARE_CACHE).map((k) => caches.delete(k))))
       .then(() => self.clients.claim()),
   )
 })
 
+/** Geteilte Dateien ablegen (nur PDF/CSV-Größe prüfen – den Inhalt prüft der Import wie jede andere Datei). */
+async function receiveShare(request) {
+  try {
+    const form = await request.formData()
+    const files = form
+      .getAll('dateien')
+      .filter((f) => typeof f === 'object' && f !== null && 'size' in f && f.size > 0 && f.size <= SHARE_MAX_BYTES)
+      .slice(0, SHARE_MAX_FILES)
+    await caches.delete(SHARE_CACHE)
+    const cache = await caches.open(SHARE_CACHE)
+    await Promise.all(
+      files.map((f, i) => cache.put(new Request(`${SHARE_PREFIX}${i}`), new Response(f, { headers: { 'Content-Type': f.type || 'application/octet-stream', 'X-Name': encodeURIComponent(f.name || `datei-${i + 1}`) } }))),
+    )
+    return Response.redirect(files.length > 0 ? '/app/import?geteilt=1' : '/app/import?geteilt=leer', 303)
+  } catch {
+    return Response.redirect('/app/import?geteilt=fehlt', 303)
+  }
+}
+
 self.addEventListener('fetch', (event) => {
   const request = event.request
-  if (request.method !== 'GET') return
   const url = new URL(request.url)
+  if (request.method === 'POST' && url.origin === self.location.origin && url.pathname === SHARE_ACTION) {
+    event.respondWith(receiveShare(request))
+    return
+  }
   if (url.origin !== self.location.origin) return
   if (request.mode === 'navigate') {
     event.respondWith(fetch(request).catch(() => offlineResponse()))

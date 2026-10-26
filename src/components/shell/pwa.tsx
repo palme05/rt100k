@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect } from 'react'
-import { SNAPSHOT_CACHE, SNAPSHOT_URL, type OfflineSnapshot } from '@/lib/offline'
+import { SHARE_CACHE, SNAPSHOT_CACHE, SNAPSHOT_URL, type OfflineSnapshot } from '@/lib/offline'
 
 /** Service Worker registrieren (Installierbarkeit, Offline-Seite). Fehler sind nicht kritisch. */
 export function PwaRegister() {
@@ -25,10 +25,39 @@ export function SaveOfflineSnapshot({ snapshot }: { snapshot: OfflineSnapshot })
   return null
 }
 
-/** Gespeicherten Stand vom Gerät entfernen (Abmelden, Anmeldeseite). */
+/** Gespeicherten Stand und nicht abgeholte geteilte Dateien vom Gerät entfernen (Abmelden, Anmeldeseite). */
 export async function clearOfflineSnapshot(): Promise<void> {
   if (typeof window === 'undefined' || !('caches' in window)) return
-  await caches.delete(SNAPSHOT_CACHE).catch(() => false)
+  await Promise.all([caches.delete(SNAPSHOT_CACHE).catch(() => false), caches.delete(SHARE_CACHE).catch(() => false)])
+}
+
+/**
+ * Vom Service Worker abgelegte, geteilte Dateien abholen und sofort löschen
+ * (Teilen-Ziel, public/sw.js). Ohne Cache-API oder ohne Dateien: leer.
+ */
+export async function takeSharedFiles(): Promise<File[]> {
+  if (typeof window === 'undefined' || !('caches' in window)) return []
+  try {
+    const cache = await caches.open(SHARE_CACHE)
+    const files: File[] = []
+    for (const request of await cache.keys()) {
+      const response = await cache.match(request)
+      await cache.delete(request)
+      if (!response) continue
+      const blob = await response.blob()
+      let name = 'geteilte-datei'
+      try {
+        name = decodeURIComponent(response.headers.get('x-name') ?? name)
+      } catch {
+        // ungültig kodierter Name – Standardname behalten
+      }
+      files.push(new File([blob], name.slice(0, 120), { type: blob.type }))
+    }
+    await caches.delete(SHARE_CACHE)
+    return files
+  } catch {
+    return []
+  }
 }
 
 /** Push-Abo dieses Geräts beenden (beim Abmelden – das Gerät soll nicht mehr für dieses Konto klingeln). */

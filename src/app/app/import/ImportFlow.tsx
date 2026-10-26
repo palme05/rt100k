@@ -1,8 +1,9 @@
 'use client'
 
 import Link from 'next/link'
-import { useState, useTransition } from 'react'
+import { useEffect, useState, useTransition } from 'react'
 import { ImportSources, ImportSteps } from '@/components/import/ImportGuide'
+import { takeSharedFiles } from '@/components/shell/pwa'
 import { FileDrop } from '@/components/ui/FileDrop'
 import { Actions, Button, Field, Message, Select } from '@/components/ui/forms'
 import { Grid, Note, Section } from '@/components/ui/layout'
@@ -181,6 +182,23 @@ export function ImportFlow({ portfolios, mappings: initialMappings }: { portfoli
     setRows((rs) => [...rs.filter((r) => r.fileId !== entry.id), ...prepared])
     setFiles((fs) => fs.map((f) => (f.id === entry.id ? { ...f, status: 'fertig', document: 'CSV mit eigener Zuordnung', notices: result.notices } : f)))
   }
+
+  // Teilen-Ziel: aus einer anderen App geteilte Abrechnungen übernehmen (der Service Worker hat sie nur auf dem Gerät abgelegt)
+  useEffect(() => {
+    const url = new URL(window.location.href)
+    const shared = url.searchParams.get('geteilt')
+    if (!shared) return
+    url.searchParams.delete('geteilt')
+    window.history.replaceState(window.history.state, '', `${url.pathname}${url.search}${url.hash}`)
+    if (portfolios.length === 0) return
+    const missing = 'Die geteilte Datei ist nicht angekommen. Bitte hier auswählen – Teilen klappt in der installierten App (Android).'
+    void takeSharedFiles().then((list) => {
+      if (list.length > 0) void addFiles(list)
+      else setNotice({ tone: 'info', text: shared === 'leer' ? 'Es wurde keine PDF- oder CSV-Datei geteilt (höchstens 10 MB je Datei).' : missing })
+    })
+    // nur beim ersten Anzeigen – addFiles liest den Zustand selbst
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const update = (key: string, patch: (r: ReviewRow) => ReviewRow) => setRows((rs) => rs.map((r) => (r.key === key ? patch(r) : r)))
 

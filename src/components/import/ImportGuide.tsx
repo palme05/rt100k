@@ -7,7 +7,7 @@ export function ImportSteps() {
     <ol className={styles.steps}>
       <li className={styles.step}>
         <p className={styles.stepTitle}>Datei wählen</p>
-        <p className={styles.stepText}>PDF-Abrechnungen oder ein CSV-Export. Gelesen wird nur in deinem Browser.</p>
+        <p className={styles.stepText}>PDF-Abrechnungen oder ein CSV-Export. Gelesen wird nur in deinem Browser. Am Handy mit installierter App auch direkt aus der Broker-App: Abrechnung teilen → rt100k.</p>
       </li>
       <li className={styles.step}>
         <p className={styles.stepTitle}>Prüfen</p>
