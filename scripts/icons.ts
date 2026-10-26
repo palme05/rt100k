@@ -1,5 +1,5 @@
 /**
- * Erzeugt die App-Icons (PWA, Apple, Favicon) aus einer Vorlage: die
+ * Erzeugt die App-Icons (PWA, Apple, Favicon inkl. `favicon.ico`) aus einer Vorlage: die
  * „Strecke“ aus dem Logo – Spur, zurückgelegter Weg in Orange, Position als
  * Punkt – auf dunklem Grund. Farben wie in src/styles/tokens.css
  * (--ink, --accent, --ink-2).
@@ -40,19 +40,53 @@ const targets = [
   { file: 'src/app/apple-icon.png', size: 180, rounded: false },
 ] as const
 
+/** Größen in `public/favicon.ico` – Browser fragen /favicon.ico auch ohne Link-Tag ab */
+const ICO_SIZES = [16, 32, 48] as const
+
+/** ICO-Datei mit eingebetteten PNGs (seit Windows Vista und in allen Browsern lesbar). */
+function ico(images: readonly { size: number; png: Buffer }[]): Buffer {
+  const header = Buffer.alloc(6)
+  header.writeUInt16LE(0, 0) // reserviert
+  header.writeUInt16LE(1, 2) // Typ: Icon
+  header.writeUInt16LE(images.length, 4)
+  let offset = 6 + 16 * images.length
+  const entries = images.map(({ size, png }) => {
+    const entry = Buffer.alloc(16)
+    entry.writeUInt8(size >= 256 ? 0 : size, 0) // Breite
+    entry.writeUInt8(size >= 256 ? 0 : size, 1) // Höhe
+    entry.writeUInt8(0, 2) // keine Palette
+    entry.writeUInt8(0, 3) // reserviert
+    entry.writeUInt16LE(1, 4) // Farbebenen
+    entry.writeUInt16LE(32, 6) // Bit je Pixel
+    entry.writeUInt32LE(png.length, 8)
+    entry.writeUInt32LE(offset, 12)
+    offset += png.length
+    return entry
+  })
+  return Buffer.concat([header, ...entries, ...images.map((i) => i.png)])
+}
+
 await mkdir('public/icons', { recursive: true })
 await writeFile('src/app/icon.svg', svg({ rounded: true }))
 
 const browser = await chromium.launch(process.env.PW_CHROMIUM_PATH ? { executablePath: process.env.PW_CHROMIUM_PATH } : {})
+const render = async (size: number, rounded: boolean, inset = 0): Promise<Buffer> => {
+  const page = await browser.newPage({ viewport: { width: size, height: size } })
+  const image = svg({ rounded, inset }).replace('<svg ', `<svg width="${size}" height="${size}" `)
+  await page.setContent(`<html><body style="margin:0;background:transparent">${image}</body></html>`)
+  const png = await page.screenshot({ omitBackground: true, clip: { x: 0, y: 0, width: size, height: size } })
+  await page.close()
+  return png
+}
 try {
   for (const t of targets) {
-    const page = await browser.newPage({ viewport: { width: t.size, height: t.size } })
-    const image = svg({ rounded: t.rounded, inset: 'inset' in t ? t.inset : 0 }).replace('<svg ', `<svg width="${t.size}" height="${t.size}" `)
-    await page.setContent(`<html><body style="margin:0;background:transparent">${image}</body></html>`)
-    await page.screenshot({ path: t.file, omitBackground: true, clip: { x: 0, y: 0, width: t.size, height: t.size } })
-    await page.close()
+    await writeFile(t.file, await render(t.size, t.rounded, 'inset' in t ? t.inset : 0))
     process.stdout.write(`${t.file}\n`)
   }
+  const icons = []
+  for (const size of ICO_SIZES) icons.push({ size, png: await render(size, true) })
+  await writeFile('public/favicon.ico', ico(icons))
+  process.stdout.write('public/favicon.ico\n')
 } finally {
   await browser.close()
 }
