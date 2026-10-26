@@ -10,6 +10,10 @@ import { createNormal, createRng } from './random'
  * Modell: Einzahlung jeweils am Monatsende, Monatsrenditen lognormal mit
  * E[1 + r] = (1 + Jahresrendite)^(1/12). Der Median liegt daher unter dem
  * deterministischen Pfad – das ist gewollt und ehrlicher.
+ *
+ * Mit `annualInflation` sind alle Werte in heutiger Kaufkraft: der nominale
+ * Wert in Monat m geteilt durch (1 + Inflation)^(m/12). Die Sparrate bleibt
+ * nominal gleich – sie verliert also mit der Zeit an Kaufkraft.
  */
 
 export interface ForecastInput {
@@ -25,19 +29,32 @@ export interface ForecastInput {
   lumpSum?: number
   /** Prognosehorizont in Monaten */
   months: number
+  /** Inflation p. a. (z. B. 0.02): Werte in heutiger Kaufkraft; 0/fehlt = nominal */
+  annualInflation?: number
 }
 
 export function monthlyRate(annualReturn: number): number {
   return (1 + annualReturn) ** (1 / 12) - 1
 }
 
-/** Werte für Monat 0…months (Länge months + 1). */
+/** Faktor je Monat 0…months: nominal → heutige Kaufkraft (ohne Inflation überall 1) */
+export function deflators(months: number, annualInflation = 0): Float64Array {
+  const factors = new Float64Array(months + 1).fill(1)
+  if (annualInflation === 0) return factors
+  const monthly = 1 / (1 + monthlyRate(annualInflation))
+  for (let m = 1; m <= months; m++) factors[m] = factors[m - 1]! * monthly
+  return factors
+}
+
+/** Werte für Monat 0…months (Länge months + 1), mit Inflation in heutiger Kaufkraft. */
 export function projectDeterministic(input: ForecastInput): number[] {
   const rate = monthlyRate(input.annualReturn)
-  const values = [input.startValue + (input.lumpSum ?? 0)]
+  const deflate = deflators(input.months, input.annualInflation)
+  let nominal = input.startValue + (input.lumpSum ?? 0)
+  const values = [nominal]
   for (let m = 1; m <= input.months; m++) {
-    const previous = values[m - 1] ?? 0
-    values.push(previous * (1 + rate) + input.monthlyContribution)
+    nominal = nominal * (1 + rate) + input.monthlyContribution
+    values.push(nominal * deflate[m]!)
   }
   return values
 }
@@ -83,6 +100,7 @@ export function monteCarlo(input: ForecastInput, options: MonteCarloOptions): Mo
   const goals = [...firstHit.keys()].sort((a, b) => a - b)
   const hitsOf = goals.map((g) => firstHit.get(g)!)
   const contribution = input.monthlyContribution
+  const deflate = deflators(months, input.annualInflation)
 
   const start = input.startValue + (input.lumpSum ?? 0)
   for (let p = 0; p < paths; p++) {
@@ -93,9 +111,11 @@ export function monteCarlo(input: ForecastInput, options: MonteCarloOptions): Mo
     let goal = next < goals.length ? goals[next]! : Number.POSITIVE_INFINITY
     for (let m = 1; m <= months; m++) {
       value = value * Math.exp(mu + sigma * normal()) + contribution
-      values[m * paths + p] = value
-      if (value >= goal) {
-        while (next < goals.length && value >= goals[next]!) hitsOf[next++]![p] = m
+      // Ziele und Perzentile in Kaufkraft (ohne Inflation: Faktor 1)
+      const real = value * deflate[m]!
+      values[m * paths + p] = real
+      if (real >= goal) {
+        while (next < goals.length && real >= goals[next]!) hitsOf[next++]![p] = m
         goal = next < goals.length ? goals[next]! : Number.POSITIVE_INFINITY
       }
     }
@@ -150,13 +170,15 @@ export function probabilityByMonth(hits: Int32Array, month: number): number {
 /**
  * Zinseszins-Kipppunkt: ab welchem Vermögen die erwarteten monatlichen Erträge
  * die monatliche Sparrate übersteigen, und in welchem Monat das laut
- * deterministischer Prognose passiert.
+ * deterministischer Prognose passiert. Beides nominal verglichen; mit
+ * Inflation ist der Betrag in Kaufkraft des Kipp-Monats angegeben.
  */
 export function compoundingTippingPoint(input: ForecastInput): { threshold: number; month: number | null } {
   const rate = monthlyRate(input.annualReturn)
   if (rate <= 0) return { threshold: Number.POSITIVE_INFINITY, month: null }
   const threshold = input.monthlyContribution / rate
-  return { threshold, month: monthsToTarget(projectDeterministic(input), threshold) }
+  const month = monthsToTarget(projectDeterministic({ ...input, annualInflation: 0 }), threshold)
+  return { threshold: month === null ? threshold : threshold * deflators(month, input.annualInflation)[month]!, month }
 }
 
 /** Aufteilung eines deterministischen Pfads in Einzahlungen und Erträge je Monat. */

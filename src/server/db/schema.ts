@@ -675,10 +675,13 @@ export const roadSettings = pgTable(
     expectedReturnBp: integer('expected_return_bp').notNull().default(650),
     volatilityBp: integer('volatility_bp').notNull().default(1500),
     includeTangibles: boolean('include_tangibles').notNull().default(true),
+    /** Inflation p. a. in Basispunkten: Road in heutiger Kaufkraft; null = nominal */
+    inflationBp: integer('inflation_bp'),
     updatedAt: updatedAt(),
   },
   (t) => [
     check('road_settings_ranges', sql`${t.targetCents} > 0 and ${t.monthlyContributionCents} >= 0 and ${t.expectedReturnBp} between -2000 and 3000 and ${t.volatilityBp} between 0 and 10000`),
+    check('road_settings_inflation', sql`${t.inflationBp} is null or ${t.inflationBp} between 0 and 1000`),
     pgPolicy('road_settings_owner', { for: 'all', to: appRole, using: ownRows, withCheck: ownRows }),
   ],
 ).enableRLS()

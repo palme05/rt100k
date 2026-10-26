@@ -8,6 +8,7 @@ import { listGoalShares } from '@/server/dal/goal-shares'
 import { listGoals } from '@/server/dal/goals'
 import { goalViews, loadSharedGoals, type GoalView } from '@/server/goals'
 import { valuePortfolios } from '@/server/overview'
+import { loadInflation } from '@/server/inflation'
 import { loadRoad } from '@/server/road'
 import { createGoalShareLinkAction, leaveGoalShareAction, revokeGoalShareAction } from '../freigabe/actions'
 import { deleteGoalAction, saveGoalAction, saveRoadSettingsAction, saveSharedGoalAction } from './actions'
@@ -58,7 +59,7 @@ export default async function RoadPage() {
       <PageHead id="road-titel" title="Road to 100k">
         Heute <Amount value={counted} /> · {Math.min(100, Math.round((counted / 100_000) * 100))} % der Strecke
       </PageHead>
-      <RoadPlanner data={road.planner} fromMonth={road.history[0]?.month ?? road.planner.history.at(-1)?.month ?? ''} onSave={saveRoadSettingsAction} />
+      <RoadPlanner data={road.planner} fromMonth={road.history[0]?.month ?? road.planner.history.at(-1)?.month ?? ''} onSave={saveRoadSettingsAction} inflationInfo={loadInflation()} />
 
       <Grid>
         <Section id="ziele" title="Eigene Ziele" meta={items.length > 0 ? `${items.filter((i) => i.reached).length} von ${items.length} erreicht` : 'Notgroschen, Kinderdepot, Anschaffung'} span="twoThirds">

@@ -76,6 +76,23 @@ test('Road to 100k: Annahmen speichern', async ({ page }) => {
   await expect(page.getByRole('status').filter({ hasText: 'Gespeichert' })).toBeVisible()
   await page.reload()
   await expect(page.getByLabel('Sparrate pro Monat')).toHaveValue('1500')
+
+  // In heutiger Kaufkraft: Vorschlag aus Eurostat (Testwert 2,4 %), gespeichert auch für die Übersicht
+  const arrival = page.getByRole('region', { name: 'Ankunft und Strecke' })
+  await expect(arrival).not.toContainText('heutiger Kaufkraft')
+  await expect(async () => {
+    await page.getByLabel(/In heutiger Kaufkraft/).check()
+    await expect(page.getByLabel('Inflation p. a.')).toBeVisible({ timeout: 1_000 })
+  }).toPass({ timeout: 15_000 })
+  await expect(page.locator('output').filter({ hasText: /^2,4\s%$/ })).toBeVisible()
+  await expect(page.getByText(/✓ Ø 2016–2025 in Österreich/)).toBeVisible()
+  await expect(arrival).toContainText('Ankunft bei 100.000 € heutiger Kaufkraft')
+  await page.getByRole('button', { name: 'Als Standard speichern' }).click()
+  await expect(page.getByRole('status').filter({ hasText: 'Gespeichert' })).toBeVisible()
+  await page.goto('/app')
+  await expect(page.getByText(/in heutiger Kaufkraft, bei 2,4\s% Inflation/)).toBeVisible()
+  await page.goto('/app/road')
+  await expect(page.getByLabel(/In heutiger Kaufkraft/)).toBeChecked()
 })
 
 test('alle App-Seiten laden ohne Fehler, CSP-Verletzungen und seitliches Scrollen', async ({ page }) => {

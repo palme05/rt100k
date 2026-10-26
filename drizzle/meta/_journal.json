@@ -176,6 +176,13 @@
       "when": 1793031740191,
       "tag": "0024_durchschau_zuordnung_grants",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1793046355703,
+      "tag": "0025_road_kaufkraft",
+      "breakpoints": true
     }
   ]
 }

@@ -18,6 +18,7 @@ export async function saveRoadSettingsAction(settings: RoadSettings): Promise<vo
     expectedReturnBp: Math.round(Number(settings.annualReturn) * 10_000),
     volatilityBp: Math.round(Number(settings.annualVolatility) * 10_000),
     includeTangibles: Boolean(settings.includeTangibles),
+    inflationBp: settings.inflation === null ? null : Math.round(Number(settings.inflation) * 10_000),
   })
   revalidatePath('/app', 'layout')
 }

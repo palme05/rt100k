@@ -77,3 +77,17 @@ describe('milestoneInfo', () => {
     expect(open?.eta?.median).toMatch(/^\d{4}-\d{2}$/)
   })
 })
+
+describe('Road in heutiger Kaufkraft', () => {
+  it('Ankunft später, Einzahlungen nominal bis zur Ankunft in Kaufkraft', () => {
+    const nominal = simulateRoad(61_000, '2026-10', assumptions, [])
+    const real = simulateRoad(61_000, '2026-10', { ...assumptions, annualInflation: 0.025 }, [])
+    expect(real.eta(100_000).deterministic! > nominal.eta(100_000).deterministic!).toBe(true)
+    expect(real.eta(100_000).median! >= nominal.eta(100_000).median!).toBe(true)
+    const a = nominal.toGoal()!
+    const b = real.toGoal()!
+    expect(b.contributed).toBeGreaterThan(a.contributed)
+    // nominal mehr als 100.000 € angespart, real genau das Ziel
+    expect(61_000 + b.contributed + b.gains).toBeGreaterThan(100_000)
+  })
+})

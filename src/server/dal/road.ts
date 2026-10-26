@@ -12,6 +12,8 @@ export interface RoadSettingsDto {
   expectedReturnBp: number
   volatilityBp: number
   includeTangibles: boolean
+  /** Road in heutiger Kaufkraft mit dieser Inflation p. a.; null = nominal */
+  inflationBp: number | null
 }
 
 export const DEFAULT_ROAD_SETTINGS: RoadSettingsDto = {
@@ -20,6 +22,7 @@ export const DEFAULT_ROAD_SETTINGS: RoadSettingsDto = {
   expectedReturnBp: 650,
   volatilityBp: 1500,
   includeTangibles: true,
+  inflationBp: null,
 }
 
 const input = z.object({
@@ -27,6 +30,7 @@ const input = z.object({
   expectedReturnBp: z.number().int().min(-2000).max(3000),
   volatilityBp: z.number().int().min(0).max(10000),
   includeTangibles: z.boolean(),
+  inflationBp: z.number().int().min(0).max(1000).nullable().default(null),
 })
 
 export async function getRoadSettings(actor: Actor): Promise<RoadSettingsDto> {
@@ -38,6 +42,7 @@ export async function getRoadSettings(actor: Actor): Promise<RoadSettingsDto> {
         expectedReturnBp: roadSettings.expectedReturnBp,
         volatilityBp: roadSettings.volatilityBp,
         includeTangibles: roadSettings.includeTangibles,
+        inflationBp: roadSettings.inflationBp,
       })
       .from(roadSettings)
       .where(eq(roadSettings.ownerId, actor.id))

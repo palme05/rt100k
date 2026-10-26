@@ -31,7 +31,7 @@ export interface DataStatus {
   fx: { day: string; rates: { currency: string; rate: string }[] } | null
   lastSnapshotDay: string | null
   /** Erreichbarkeit der Quellen (10 Minuten gecacht); null im Testbetrieb */
-  providers: { yahoo: boolean; coingecko: boolean; ecb: boolean; edelmetalle: boolean } | null
+  providers: { yahoo: boolean; coingecko: boolean; ecb: boolean; edelmetalle: boolean; eurostat: boolean } | null
 }
 
 export async function loadDataStatus(actor: Actor, valuation: PortfolioValuation, watched: readonly InstrumentDto[] = []): Promise<DataStatus> {

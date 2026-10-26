@@ -32,8 +32,9 @@ export async function loadRoad(actor: Actor, valuation: PortfolioValuation): Pro
     annualReturn: settings.expectedReturnBp / 10_000,
     annualVolatility: settings.volatilityBp / 10_000,
   }
+  const inflation = settings.inflationBp === null ? null : settings.inflationBp / 10_000
   const nowMonth = viennaDay().slice(0, 7)
-  const simulation = simulateRoad(countedCents / 100, nowMonth, assumptions, [...MILESTONES, ...NEXT_GOALS])
+  const simulation = simulateRoad(countedCents / 100, nowMonth, { ...assumptions, annualInflation: inflation ?? 0 }, [...MILESTONES, ...NEXT_GOALS])
   const monthValues = history.map((p) => ({ month: p.month, value: p.value }))
   return {
     history,
@@ -49,6 +50,7 @@ export async function loadRoad(actor: Actor, valuation: PortfolioValuation): Pro
       milestones: MILESTONES,
       goals: NEXT_GOALS,
       includeTangibles: settings.includeTangibles,
+      inflation,
       savingsPlans: savingsPlansOf(valuation),
     },
   }

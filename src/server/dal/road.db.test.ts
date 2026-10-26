@@ -14,4 +14,18 @@ describe('Annahmen für Road to 100k', () => {
     expect(await roadSettingsSaved(bob)).toBe(false)
     expect(await getRoadSettings(bob)).toEqual(DEFAULT_ROAD_SETTINGS)
   })
+
+  it('Kaufkraft: Inflation speichern, abschalten und nur in erlaubten Grenzen', async () => {
+    const alice = await createUser('Alice')
+    const bob = await createUser('Bob')
+    const base = { monthlyContributionCents: 70_000, expectedReturnBp: 600, volatilityBp: 1400, includeTangibles: true }
+    expect((await saveRoadSettings(alice, { ...base, inflationBp: 240 })).inflationBp).toBe(240)
+    // ältere Clients ohne Feld: nominal
+    expect((await saveRoadSettings(alice, base)).inflationBp).toBeNull()
+    for (const inflationBp of [-1, 1001, 2.5, '240']) {
+      await expect(saveRoadSettings(alice, { ...base, inflationBp })).rejects.toThrow('Ungültige Annahmen.')
+    }
+    // fremde Einstellungen bleiben unberührt
+    expect((await getRoadSettings(bob)).inflationBp).toBeNull()
+  })
 })

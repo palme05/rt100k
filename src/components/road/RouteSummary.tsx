@@ -1,4 +1,4 @@
-import { monthLabel } from '@/lib/display'
+import { monthLabel, share } from '@/lib/display'
 import { GOAL, type MilestoneInfo } from '@/lib/road'
 import { Amount } from '../privacy/privacy'
 import { TextLink } from '../ui/layout'
@@ -13,12 +13,15 @@ export function RouteSummary({
   monthlyContribution,
   etaMedian,
   href,
+  inflation = null,
 }: {
   total: number
   milestones: readonly MilestoneInfo[]
   monthlyContribution: number
   etaMedian: string | null
   href: string
+  /** Prognose in heutiger Kaufkraft mit dieser Inflation p. a. (null = nominal) */
+  inflation?: number | null
 }) {
   return (
     <>
@@ -36,7 +39,8 @@ export function RouteSummary({
               <Amount value={GOAL - total} whole />
             </strong>{' '}
             bis 100.000 €. Bei <Amount value={monthlyContribution} whole /> im Monat voraussichtlich im{' '}
-            <strong>{etaMedian ? monthLabel(etaMedian, 'long') : '–'}</strong>.
+            <strong>{etaMedian ? monthLabel(etaMedian, 'long') : '–'}</strong>
+            {inflation !== null ? ` – in heutiger Kaufkraft, bei ${share(inflation)} Inflation` : ''}.
           </span>
         )}
         <TextLink href={href}>Prognose und Szenarien</TextLink>
