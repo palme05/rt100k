@@ -133,6 +133,15 @@
   --chart-grid: var(--rule);
   --chart-band: rgb(226 98 11 / 10%);
   --chart-track: var(--rule);
+  /* Rendite-Heatmap: Gewinn-/Verlustton in drei Stufen über der Fläche,
+     aus --pos/--neg gemischt (gilt so auch dunkel). Die Zahl mit Vorzeichen
+     steht immer in der Zelle; Tinte bleibt auf allen Stufen ≥ 6 : 1. */
+  --heat-pos-1: color-mix(in srgb, var(--pos) 12%, var(--surface));
+  --heat-pos-2: color-mix(in srgb, var(--pos) 24%, var(--surface));
+  --heat-pos-3: color-mix(in srgb, var(--pos) 38%, var(--surface));
+  --heat-neg-1: color-mix(in srgb, var(--neg) 12%, var(--surface));
+  --heat-neg-2: color-mix(in srgb, var(--neg) 24%, var(--surface));
+  --heat-neg-3: color-mix(in srgb, var(--neg) 38%, var(--surface));
   /* App-Rahmen (Shell): Leiste unten und „+“ am Handy. Dunkel ist das „+“
      keine helle Scheibe, sondern eine erhabene Fläche mit Rand. */
   --tabbar-h: 3.5rem;
