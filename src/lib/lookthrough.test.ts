@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { CASH_LABEL, HoldingsFileError, lookThrough, MAX_TOP, parseHoldingsCsv, titleKey } from './lookthrough'
-import { HOLDINGS_DE, HOLDINGS_EN } from './lookthrough-fixtures'
+import { CASH_LABEL, HoldingsFileError, isChineseIssuer, KIND_BUCKET, lookThrough, MAX_TOP, parseHoldingsCsv, titleKey } from './lookthrough'
+import { HOLDINGS_DE, HOLDINGS_EN, HOLDINGS_MARKET } from './lookthrough-fixtures'
 
 describe('Bestandsliste lesen', () => {
   it('deutsche Datei: Spalten über die Kopfzeile, Länder und Branchen vereinheitlicht, Cash eigener Block', () => {
@@ -101,5 +101,81 @@ describe('Durchschau über das Vermögen', () => {
     expect(titleKey('Apple Inc.')).toBe(titleKey('APPLE INC'))
     expect(titleKey('Nestlé S.A. Reg')).toBe('NESTLE')
     expect(titleKey('Novo Nordisk A/S Class B')).toBe(titleKey('NOVO NORDISK A/S'))
+  })
+})
+
+describe('Länder nach Börsenplatz (China-Korrektur)', () => {
+  const b = parseHoldingsCsv(HOLDINGS_MARKET)
+  const bp = (label: string) => b.countries.find((c) => c.label === label)?.bp ?? 0
+
+  it('erkennt die Börsenplatz-Spalte und ordnet chinesische Unternehmen China zu', () => {
+    expect(b.countryBasis).toBe('boerse')
+    expect(b.chinaFixes).toBe(4)
+    // Moutai (schon China) + Tencent, Alibaba, CCB (Hongkong) + PDD (USA)
+    expect(bp('China')).toBe(20 + 120 + 80 + 30 + 40)
+  })
+
+  it('lässt echte Hongkonger und taiwanische Werte, wo sie sind', () => {
+    expect(bp('Hongkong')).toBe(50 + 10 + 10)
+    expect(bp('Taiwan')).toBe(140 + 10)
+    expect(bp('USA')).toBe(6_000 + 3_490)
+  })
+
+  it('Herkunfts-Listen (Spalte „Standort“/„Location“) bleiben unverändert', () => {
+    const own = parseHoldingsCsv(HOLDINGS_MARKET.replace('Region', 'Location'))
+    expect(own.countryBasis).toBe('herkunft')
+    expect(own.chinaFixes).toBe(0)
+    expect(own.countries.find((c) => c.label === 'China')?.bp).toBe(20)
+  })
+
+  it.each([
+    ['TENCENT HOLDINGS LTD', true],
+    ['Meituan Class B', true],
+    ['JD.com Inc. Class A', true],
+    ['Yum China Holdings Inc.', true],
+    ['BOC Hong Kong (Holdings) Ltd.', false],
+    ['Hong Kong Exchanges & Clearing Ltd.', false],
+    ['Sands China Ltd.', false],
+    ['CLP Holdings Ltd.', false],
+    ['Apple Inc.', false],
+    ['Santander', false],
+  ])('%s → China: %s', (name, expected) => {
+    expect(isChineseIssuer(name)).toBe(expected)
+  })
+
+  it('liefert alle Titel fein (ppm) und ohne Cash', () => {
+    expect(b.holdings[0]).toEqual(['Alpha Computer Inc.', 600_000])
+    expect(b.holdings).toContainEqual(['Sands China Ltd.', 1_000])
+    expect(b.holdings).toHaveLength(12)
+  })
+})
+
+describe('Eigene Zuordnung und komplette Titelliste in der Durchschau', () => {
+  it('ordnet Einzelaktien nach eigener Zuordnung, Rest bleibt im Block', () => {
+    const lt = lookThrough(
+      [
+        { instrumentId: 's1', name: 'Beispiel Werke AG', kind: 'stock', valueCents: 10_000 },
+        { instrumentId: 's2', name: 'Ohne Land AG', kind: 'stock', valueCents: 5_000 },
+        { instrumentId: 'c1', name: 'Testcoin', kind: 'crypto', valueCents: 1_000 },
+      ],
+      new Map(),
+      new Map([
+        ['s1', { country: 'Deutschland', sector: null }],
+        ['c1', { country: 'Krypto-Land', sector: 'Krypto-Branche' }],
+      ]),
+    )
+    expect(lt.countries.get('Deutschland')).toBe(10_000)
+    expect(lt.sectors.get(KIND_BUCKET.stock)).toBe(15_000)
+    expect(lt.countries.get(KIND_BUCKET.stock)).toBe(5_000)
+    // Krypto lässt sich nicht zuordnen
+    expect(lt.countries.get('Krypto')).toBe(1_000)
+    expect(lt.countries.has('Krypto-Land')).toBe(false)
+  })
+
+  it('nimmt für die Einzeltitel die komplette Liste, wenn vorhanden', () => {
+    const b = parseHoldingsCsv(HOLDINGS_MARKET)
+    const lt = lookThrough([{ instrumentId: 'e1', name: 'Welt-ETF', kind: 'etf', valueCents: 1_000_000 }], new Map([['e1', { ...b, top: b.top.slice(0, 2) }]]))
+    expect(lt.top.size).toBe(12)
+    expect(lt.top.get('Sands China Ltd.')).toBe(1_000)
   })
 })
