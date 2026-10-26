@@ -63,9 +63,8 @@ function depotSub(p: { name: string; kind: keyof typeof KIND_LABEL; value: { pos
 
 export default async function OverviewPage() {
   const user = await requireUser()
-  const [valuation, newDevice] = await Promise.all([valuePortfolios(user), recentNewDeviceLogin(user)])
+  const [valuation, newDevice, passkeys] = await Promise.all([valuePortfolios(user), recentNewDeviceLogin(user), listPasskeys(user)])
 
-  const passkeys = await listPasskeys(user)
   const secured = Boolean(user.twoFactorEnabled) || passkeys.length > 0
 
   if (valuation.portfolios.length === 0) {
@@ -91,16 +90,17 @@ export default async function OverviewPage() {
     )
   }
 
-  const [road, openTasks, moves, series, tax, goals] = await Promise.all([
+  const [road, openTasks, moves, series, tax, goals, planned] = await Promise.all([
     loadRoad(user, valuation),
     loadOpenTasks(user, valuation),
     loadDayMoves(valuation),
     listPortfolioSeries(user, addDays(viennaDay(), -90)),
     loadTax(user, null),
     listGoals(user),
+    roadSettingsSaved(user),
   ])
   const goalRows = goalViews(goals, valuation, road.settings)
-  const steps = startSteps({ portfolios: valuation.portfolios.length, bookings: valuation.bookings.length, planned: goals.length > 0 || (await roadSettingsSaved(user)), secured })
+  const steps = startSteps({ portfolios: valuation.portfolios.length, bookings: valuation.bookings.length, planned: goals.length > 0 || planned, secured })
   const showStart = nextStep(steps) !== null && (await cookies()).get(START_COOKIE)?.value !== 'aus'
   // Die ersten Schritte nennen das Absichern schon – nicht doppelt unter „Offene Punkte“
   const tasks: TaskItem[] = secured || showStart ? openTasks : [TWO_FACTOR_TASK, ...openTasks]
