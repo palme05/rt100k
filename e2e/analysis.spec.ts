@@ -1,9 +1,9 @@
 import { expect, test } from '@playwright/test'
-import { TR_BUY_EN, TR_KAUF_AT, TR_SPARPLAN_2026 } from '../src/lib/import/fixtures'
+import { TR_KAUF_AT, TR_SPARPLAN_2026 } from '../src/lib/import/fixtures'
 import { HOLDINGS_DE, HOLDINGS_MARKET, HOLDINGS_XLSX_EN } from '../src/lib/lookthrough-fixtures'
 import { makePdf } from '../src/test/pdf'
 import { makeXlsx } from '../src/test/xlsx'
-import { collectProblems, createPortfolio, expectNoOverflow, register } from './helpers/app'
+import { amountMode, collectProblems, createPortfolio, expectNoOverflow, register } from './helpers/app'
 
 test('Analyse ohne Buchungen zeigt den Einstieg', async ({ page }) => {
   await register(page)
@@ -248,14 +248,23 @@ test('Land und Branche selbst zuordnen – erscheint danach in der Durchschau', 
 test('Überschneidung: ETFs untereinander, Klumpenrisiko und Titel aus mehreren Quellen', async ({ page }) => {
   const problems = collectProblems(page)
   await register(page)
-  await createPortfolio(page, 'Trade Republic')
-  // zwei ETFs (Vanguard All-World, iShares MSCI World) und Apple direkt
-  for (const doc of [TR_KAUF_AT, TR_SPARPLAN_2026, TR_BUY_EN]) {
+  const id = await createPortfolio(page, 'Trade Republic')
+  // zwei ETFs (Vanguard All-World, iShares MSCI World) aus Abrechnungen …
+  for (const doc of [TR_KAUF_AT, TR_SPARPLAN_2026]) {
     await page.goto('/app/import')
     await page.locator('input[type=file]').setInputFiles({ name: 'abrechnung.pdf', mimeType: 'application/pdf', buffer: Buffer.from(makePdf(doc)) })
     await page.getByRole('button', { name: '1 Buchung übernehmen' }).click()
     await expect(page.getByText(/1 Buchung übernommen/)).toBeVisible()
   }
+  // … und Apple direkt, von Hand gebucht
+  await page.goto(`/app/depots/${id}`)
+  await page.getByRole('searchbox', { name: 'Wertpapier' }).fill('Apple')
+  await page.getByRole('button', { name: /Apple Inc\./ }).click()
+  await amountMode(page, 'Gesamtbetrag')
+  await page.getByLabel('Stück', { exact: true }).fill('2')
+  await page.getByLabel(/Kurswert/).fill('400,00')
+  await page.getByRole('button', { name: 'Buchung speichern' }).click()
+  await expect(page.getByText('Buchung gespeichert.')).toBeVisible()
 
   // synthetische Listen: gleiche Unternehmen in anderer Schreibweise, dazu eine Sammelzeile
   const list = (rows: [string, string][]) => ['Name,Gewichtung (%),Standort,Sektor', ...rows.map(([n, w]) => `"${n}","${w}","USA","IT"`)].join('\n')
