@@ -11,6 +11,10 @@ test('Installierbar: Manifest, Icons, Apple-Icon, Themenfarbe', async ({ page, r
     const png = await request.get(icon.src)
     expect(png.headers()['content-type']).toBe('image/png')
   }
+  // Browser fragen /favicon.ico auch ohne Link-Tag ab – kein 404 in der Konsole
+  const favicon = await request.get('/favicon.ico')
+  expect(favicon.ok()).toBe(true)
+  expect(favicon.headers()['content-type']).toMatch(/^image\//)
   const sw = await request.get('/sw.js')
   expect(sw.headers()['cache-control']).toBe('no-cache')
 
