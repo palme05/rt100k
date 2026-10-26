@@ -40,3 +40,26 @@ export function quoteFreshness(quote: { source: QuoteSourceKey; asOf: Date; dela
   const today = viennaDay(quote.asOf) === viennaDay(now)
   return { state: 'boerse', label: today ? 'verzögert' : 'letzter Schluss', detail: today ? `${when(quote.asOf, now)} · bis ca. 15 Min. verzögert` : `${when(quote.asOf, now)} · Börse geschlossen`, attention: false }
 }
+
+/**
+ * Beschriftung „Kurse von …“ für eine Liste von Kursen (Übersicht, Depot).
+ * Die Uhrzeit gilt für die Kurse von heute; ältere Kurse (z. B. ein Wert ohne
+ * Handel seit dem letzten Börsentag) werden mit Datum genannt statt die
+ * Uhrzeit von gestern als heutige auszugeben.
+ */
+export function quotesLabel(quotes: readonly { asOf: Date; delayed: boolean }[], now: Date = new Date()): string | null {
+  if (quotes.length === 0) return null
+  const today = viennaDay(now)
+  const fresh = quotes.filter((q) => viennaDay(q.asOf) === today)
+  const older = quotes.filter((q) => viennaDay(q.asOf) !== today)
+  const suffix = quotes.some((q) => q.delayed) ? ', teils verzögert' : ''
+  const oldestOf = (list: readonly { asOf: Date }[]) => new Date(Math.min(...list.map((q) => q.asOf.getTime())))
+  const newestOf = (list: readonly { asOf: Date }[]) => new Date(Math.max(...list.map((q) => q.asOf.getTime())))
+  if (fresh.length === 0) {
+    const newest = newestOf(older)
+    return `Letzte Kurse vom ${formatDate(newest)}, ${formatTime(newest)} Uhr${suffix}`
+  }
+  const base = `Kurse von ${formatTime(oldestOf(fresh))} Uhr`
+  if (older.length === 0) return `${base}${suffix}`
+  return `${base} · ${older.length} ${older.length === 1 ? 'Kurs' : 'Kurse'} vom ${formatDate(oldestOf(older))}${suffix}`
+}

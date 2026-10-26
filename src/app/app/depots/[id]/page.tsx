@@ -17,8 +17,8 @@ import { HeroSummary, type KeyStat } from '@/components/ui/Summary'
 import { Trend } from '@/components/ui/Trend'
 import { bookingTypeLabel, listAmount, unitPriceText } from '@/lib/booking-display'
 import { dayLabel, share } from '@/lib/display'
-import { SOURCE_LABEL } from '@/lib/freshness'
-import { formatDate, formatTime, viennaDay } from '@/lib/format'
+import { quotesLabel, SOURCE_LABEL } from '@/lib/freshness'
+import { viennaDay } from '@/lib/format'
 import { displayName } from '@/lib/names'
 import { displayUnitPrice, formatQuantity, quantityFromDb, unitPriceFromAmount } from '@/lib/quantity'
 import { detectSavingsPlans } from '@/lib/savings'
@@ -76,8 +76,6 @@ export default async function PortfolioPage({ params }: { params: Promise<{ id: 
   }))
   const positions = value?.positions ?? []
   const quotes = positions.map((p) => valuation.quotes.get(p.instrumentId)).filter((q) => q !== undefined)
-  const oldest = quotes.length ? new Date(Math.min(...quotes.map((q) => q.asOf.getTime()))) : null
-  const delayed = quotes.some((q) => q.delayed)
   const sources = [...new Set(quotes.map((q) => SOURCE_LABEL[q.source] ?? q.source))].join(', ')
   const hasCrypto = positions.some((p) => p.kind === 'crypto')
   const plans = detectSavingsPlans(
@@ -180,11 +178,9 @@ export default async function PortfolioPage({ params }: { params: Promise<{ id: 
             id="positionen"
             title="Positionen"
             meta={
-              oldest
-                ? `Kurse von ${viennaDay(oldest) === viennaDay() ? '' : `${formatDate(oldest)}, `}${formatTime(oldest)} Uhr${delayed ? ', teils verzögert' : ''}`
-                : 'Einstand nach gleitendem Durchschnitt'
+              quotesLabel(quotes) ?? 'Einstand nach gleitendem Durchschnitt'
             }
-            actions={oldest ? <RefreshButton label="Kurse aktualisieren" /> : undefined}
+            actions={quotes.length > 0 ? <RefreshButton label="Kurse aktualisieren" /> : undefined}
           >
             {value && positions.length > 0 ? (
               <DataTable
