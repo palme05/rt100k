@@ -272,7 +272,7 @@ test('Überschneidung: ETFs untereinander, Klumpenrisiko und Titel aus mehreren 
   const allWorld = list([['Apple Inc.', '4,00'], ['Microsoft Corp.', '3,00'], ['Samsung Electronics', '2,00'], ['Weitere Titel', '91,00']])
   await page.goto('/app/analyse')
   const section = page.getByRole('region', { name: 'ETF-Durchschau' })
-  const select = section.getByLabel('Bestandsliste für')
+  const select = section.getByRole('combobox', { name: 'Bestandsliste für', exact: true })
   for (const [pattern, data] of [[/MSCI World/, world], [/All-World/, allWorld]] as const) {
     const value = await select.locator('option', { hasText: pattern }).getAttribute('value')
     await select.selectOption(value!)
