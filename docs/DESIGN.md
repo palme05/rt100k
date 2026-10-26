@@ -138,10 +138,17 @@ Alle unter `src/components/`. Seiten setzen sich nur daraus zusammen, eigene CSS
 | `Masthead`, `Highlights`, `IssueList` | `review/ReviewParts.tsx` | Monatsrückblick als Ausgabe: Kopf mit Schlagzeile, Highlights mit Zeichen, Archiv der Ausgaben |
 | `AcceptShare`, `LeaveShare` | `share/` | Freigabe annehmen bzw. verlassen (Bestätigung im Formular) |
 | `PriceAlerts`, `PushSettings`, `MarkRead` | `notify/` | Kursalarme anlegen/löschen, Mitteilungen auf diesem Gerät ein/aus (Zustand als Text), Hinweise beim Ansehen als gelesen markieren |
+| `UndoNotice`, `UndoFromUrl` | `bookings/UndoNotice.tsx` | Hinweis nach Löschen/Ändern mit „Rückgängig“ (Haken, Text, Pill-Knopf); `UndoFromUrl` übernimmt die ID aus der Adresse und nimmt sie gleich wieder heraus |
+| `FreshnessText` | `markets/Freshness.tsx` | Stand eines Kurses als Zeichen + Wort („✓ verzögert“, „! Schlusskurs“), darunter Zeit und Erklärung |
+| `ReturnHeatmap` | `analysis/ReturnHeatmap.tsx` | Rendite je Monat (Jahr × Monat) als Tabelle mit Vorzeichen in jeder Zelle, Farbe in drei Stufen je Richtung (`--heat-*`), Legende, am Handy waagrecht scrollbar mit stehender Jahresspalte |
+| `GoalList`, `GoalForm` | `road/Goals.tsx` | Eigene Ziele: Name mit Zielsymbol, Prozent groß, Balken über die Breite (SVG), Stand und „noch …“, Status mit Zeichen (✓ erreicht, ! zu spät); Formular mit Depot-Auswahl |
+| `StartGuide`, `DismissStart` | `tasks/` | Erste Schritte: nummerierte Schritte, erledigte mit Haken, der nächste offene hervorgehoben mit Knopf, Fortschritt in Segmenten, „Ausblenden“ |
+| `WatchToggle`, `UnwatchButton` | `watchlist/WatchControls.tsx` | Beobachten als gedrückter Pill-Knopf (`aria-pressed`), Entfernen als Symbol-Knopf |
+| `Prose`, `Formula` | `ui/Prose.tsx` | Erklärender Fließtext (Methodik) in `--measure`, Formeln abgesetzt in Zahlen-Schrift |
 
 Reine Logik liegt in `src/lib/` (Prognose, Kennzahlen, Monate, Road, Import-Parser) und ist unit-getestet.
 
-**Import-Review:** Jede erkannte Buchung zeigt ihre Konfidenz als Zeichen **und** Wort (`✓ sicher erkannt`, `! bitte prüfen`, `? unsicher`), Duplikate als `⟲ schon importiert`. Am Handy bleiben drei Spalten (Auswahl, Buchung mit Datum und Prüfung, Betrag).
+**Import-Review:** Jede erkannte Buchung zeigt ihre Konfidenz als Zeichen **und** Wort (`✓ sicher erkannt`, `! bitte prüfen`, `? unsicher`), Duplikate als `⟲ schon importiert`, fast gleiche Buchungen im Zieldepot als `≈ fast gleich schon im Depot (von Hand erfasst, Datum)` – beide abgewählt. Am Handy bleiben drei Spalten (Auswahl, Buchung mit Datum und Prüfung, Betrag).
 
 ## Diagramme
 
@@ -162,6 +169,7 @@ Grundlage sind die Dataviz-Regeln: Form nach Aufgabe wählen, Farbe zuletzt („
 - **Sparkline** 64 × 20 px in eigener Tabellenspalte, Endpunkt, Mindestspanne ±1,5 %, damit ruhige Konten ruhig aussehen.
 - **Bewegung** nur beim ersten Erscheinen (Linie zeichnet sich, Flächen blenden ein, Säulen wachsen) und nur ohne „Bewegung reduzieren“; Zeitraumwechsel blendet über.
 - **Keine Inline-Styles** (CSP): Positionen nur über SVG-Attribute, Farben über Klassen. Texte und Zahlen stehen in Tinte, nie in der Segmentfarbe.
+- **Heatmap** (Rendite je Monat): divergierend um 0 mit neutraler Mitte (`--wash`), drei Stufen je Richtung ab 0,5 / 2 / 5 %, aus `--pos`/`--neg` über `--surface` gemischt (hell und dunkel ohne eigene Werte); jede Zelle trägt die Zahl mit Vorzeichen, Legende mit Grenzen darunter.
 
 ## Barrierefreiheit
 
@@ -203,7 +211,9 @@ Jede Geste hat eine sichtbare Entsprechung für Maus und Tastatur – nichts ist
 
 **Buchen:** Stück + **Kurs je Stück** (Standard; Metall: Gesamtbetrag). Der Umschalter „Betrag eingeben als“ rechnet die Werte um, die Wahl bleibt je Gerät. Unter dem Kursfeld „= 1.461,15 € Kurswert (ohne Gebühren)“ (über `Amount`, dieselbe Rechnung wie am Server), über der Schaltfläche „Belastung/Gutschrift gesamt“. Gewählter Wert als Chip mit Haken und Tintenrand. Bestätigung neben der Schaltfläche (`role="status"`), Rückfrage bei unplausiblem Kurs als Hinweis mit Checkbox „Kurs stimmt – trotzdem speichern“, Fokus springt dorthin.
 
-**Schieberegler und Fortschritt:** eigene Spur, Griff in Tinte, 44 px hoch; der Akzent bleibt der Route vorbehalten.
+**Schieberegler und Fortschritt:** eigene Spur, Griff in Tinte, 44 px hoch; der Akzent bleibt der Route vorbehalten – Zielbalken der eigenen Ziele und die Segmente der ersten Schritte sind Teil des Wegs und dürfen ihn tragen.
+
+**Rückfragen und Rückgängig:** Unplausibles fragt mit Hinweis und Häkchen nach („Kurs stimmt – trotzdem speichern“, „Keine Doppelbuchung – trotzdem speichern“), der Fokus springt aufs Häkchen. Nach Löschen oder Ändern steht ein Hinweis mit „Rückgängig“ – keine zusätzliche Bestätigung danach.
 
 | Do | Don't |
 |---|---|

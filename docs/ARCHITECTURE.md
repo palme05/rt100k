@@ -83,6 +83,12 @@ GitHub Actions (öffentliches Repo, kostenlos)
 | A46 | **OpenFIGI nur als Rückfall für unbekannte ISINs**, Ergebnis über Yahoo bestätigt | Yahoo kennt manche europäische ETF-ISIN nicht; OpenFIGI liefert den Ticker je Börse (MIT-Lizenz, kostenlos). Daten bleiben einheitlich von Yahoo (siehe `docs/DATA_SOURCES.md`). |
 | A47 | **Monatliche Import-Erinnerung** nur für aktive Importierer (Import in den letzten 90 Tagen, diesen Monat noch keiner, ab dem 3.) | Erinnert an die Monatsroutine, ohne Nutzer zu stören, die nie oder nur einmal importiert haben. |
 | A48 | **Ladebalken je Link statt Ladeansichten überall** (`useLinkStatus` in `LinkPending`) | Rückmeldung bei jedem Seitenwechsel ohne Suspense-Grenzen – damit bleiben 404-Antworten korrekt und Eingaben gehen nicht vor der Hydrierung verloren (A35, A41). |
+| A49 | **Doppelbuchungen als Warnung, nicht als Sperre** (`src/lib/duplicates.ts`): gleiche Art, Wert, Stück, ±3 Tage, Betrag ±0,2 % | Zwei gleiche Käufe am selben Tag gibt es wirklich; der häufige Fehler ist „erst von Hand erfasst, dann importiert“. Im Formular eine Rückfrage mit Häkchen, im Import abgewählt und markiert. Kein Schema nötig – Vergleich mit den Buchungen im Fenster. |
+| A50 | **Rückgängig über eine Kopie statt weichem Löschen** (`booking_undo`, 30 Minuten) | Weiches Löschen hätte jede Abfrage auf Buchungen (Bestand, Rendite, Steuer, Export) um einen Filter erweitert – ein vergessener Filter wäre ein falscher Bestand. Die Kopie lebt außerhalb, wird beim Wiederherstellen wie eine Buchung geprüft und gilt nur, solange die Buchung seitdem unverändert ist (`updated_at` = `changed_at`). |
+| A51 | **Watchlist ohne eigene Kursspeicherung** | Der Tageslauf speichert Schlusskurse ohnehin für alle allgemeinen Instrumente; die Watchlist nutzt Live-Kurs, `previousCloses` und die Kurshistorie wie die Wertpapier-Seite. Nur sichtbare Instrumente, höchstens 100 je Nutzer. |
+| A52 | **Eigene Ziele mit Auswahl über eine Verknüpfungstabelle** (`goal_portfolio`, zusammengesetzte Fremdschlüssel) statt eines ID-Arrays | Fremde Depots lassen sich auf Datenbank-Ebene nicht eintragen, gelöschte Depots verschwinden per Kaskade aus der Auswahl. Prognose gleichmäßig (Einzahlung am Monatsende) wie die gerade Linie der Road; reine Cash-Auswahl ohne Zinsen gerechnet. |
+| A53 | **Teilen-Ziel nur im Service Worker** | Das Brief-Ziel „PDF vom Handy teilen“ ohne Server-Upload: der Service Worker legt geteilte Dateien im Cache des Geräts ab, die Import-Seite liest sie wie eine gewählte Datei (pdf.js im Browser). Die Rückfall-Route liest den Body nie. Funktioniert, wo der Browser `share_target` kennt (Android, ChromeOS); iOS kennt es nicht. |
+| A54 | **Erste Schritte abgeleitet, Ausblenden per Cookie** (`src/lib/onboarding.ts`) | Wie A39: nichts zu pflegen, jeder Schritt gilt, sobald die Daten ihn zeigen. Ausblenden ist eine Gerätevorliebe wie das Thema (A38) – keine Spalte im Nutzerkonto. |
 | A15 | **Tests gegen echtes Postgres** (`pnpm test:db`, CI-Service Postgres 18) statt Mocks | RLS, Rollen und Constraints lassen sich nur gegen eine echte Datenbank prüfen. |
 
 ## Free-Tier-Grenzen (geprüft am 19.10.2026)
@@ -142,7 +148,9 @@ Gegenmaßnahmen, falls es knapp wird: Max-CU auf 0,25 senken, Kurshistorie selte
 | Audit-Log | 10 Nutzer × 30 Ereignisse/Tag, 2 Jahre Aufbewahrung, ~200 B | ≈ 45 MB |
 | ETF-Durchschau | je Nutzer und ETF nur zusammengefasste Gewichte (≈ 60 Einträge), z. B. 10 Nutzer × 10 ETFs | < 1 MB |
 | Hinweise, Kursalarme, Push-Abos | Hinweise 1 Jahr Aufbewahrung, ~300 B, wenige je Nutzer und Woche | < 2 MB |
-| Auth, Sessions, Ziele, Sonstiges | | < 10 MB |
+| Rückgängig-Kopien | höchstens 30 Minuten je Änderung, wird bei jeder Änderung des Nutzers aufgeräumt | < 1 MB |
+| Watchlist, eigene Ziele | höchstens 100 bzw. 20 je Nutzer | < 1 MB |
+| Auth, Sessions, Sonstiges | | < 10 MB |
 | **Summe** | | **≈ 175 MB von 1 GB** |
 
 Regeln: Live-Kurse nie in der DB · Schlusskurse nur für gehaltene/beobachtete Instrumente · hochgeladene PDFs nie speichern (nur Transaktionen + SHA-256 des Dokuments) · Audit-Log mit Aufbewahrungsfrist.

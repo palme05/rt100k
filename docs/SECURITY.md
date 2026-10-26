@@ -392,6 +392,22 @@ Unabhängiges Review (eigener Prüfdurchlauf, nur lesend) aller Route-Handler, S
 | Privatsphäre-Modus: Ø-Einstand-Linie im Kursverlauf entfällt (Bestand ist sichtbar, Ø Einstand × Bestand ergäbe den verborgenen Einstand) | ✅ (Befund aus dem Abschluss-Review behoben) |
 | „Kurs bestätigt“ gilt nur für die Werte der Warnung: jede Änderung an Stück, Kurs, Betrag, Art, Wertpapier oder Datum hebt das Häkchen auf; bleibt beim Speichern alles kursrelevante gleich (z. B. nur Notiz), bleibt die Bestätigung. Backup und Wiederherstellen übernehmen das Feld | ✅ (DB-Tests) |
 
+## Nachtrag: Doppelbuchungen, Rückgängig, Watchlist, eigene Ziele, Datenstand, Teilen-Ziel (26.10.2026)
+
+| Prüfung | Ergebnis |
+|---|---|
+| Neue Tabellen `booking_undo`, `watchlist_item`, `goal`, `goal_portfolio` (Migration 0019): je `owner_id` mit RLS-Policy `owner_id = app_user_id()`; Rechte der App-Rolle in 0020 (Rückgängig ohne `UPDATE`). `booking_undo` und `goal_portfolio` hängen über zusammengesetzte Fremdschlüssel `(portfolio_id, owner_id)` bzw. `(goal_id, owner_id)` am eigenen Depot/Ziel – fremde Depots lassen sich nicht eintragen, gelöschte verschwinden mit (Kaskade) | ✅ (DB-Tests) |
+| Jede neue Abfrage mit `withUser` **und** `ownerId`-Filter, fremde oder ungültige IDs → `NotFoundError`: `findSimilarImports`, `undoBookingChange`, Watchlist (Liste, hinzufügen, Notiz, entfernen, `isWatched`), Ziele (Liste, anlegen, ändern, löschen), `lastSnapshotDay`, `roadSettingsSaved` | ✅ (Negativ-Tests `imports.db.test.ts`, `booking-undo.db.test.ts`, `watchlist.db.test.ts`, `goals.db.test.ts`, `snapshots.db.test.ts`, `road.db.test.ts`, `instrument.db.test.ts`) |
+| Doppelbuchung: nur eine Rückfrage (`ConfirmationRequired`, Art `duplicate`), Häkchen `confirmDuplicate` zod-geprüft; Vergleich nur mit Buchungen desselben eigenen Depots. Die Import-Prüfung bekommt nur Kennzahlen (Art, Datum, Wert-ID, Stück, Betrag), keine Dateien | ✅ |
+| Rückgängig: Kopie der Buchung vor dem Löschen/Ändern, 30 Minuten gültig, wirkt genau einmal; beim Wiederherstellen wird die Kopie erneut per zod geprüft, Eigentum, Bestand (`assertConsistent`), Obergrenze, erneuter Import und spätere Änderungen (`updated_at` = `changed_at`) geprüft. Abgelaufene Einträge räumt jede neue Änderung des Nutzers weg; nicht im Backup | ✅ (DB-Tests: fremd, abgelaufen, doppelt, Bestand, neu importiert, Depot gelöscht) |
+| Die Rückgängig-ID steht nach dem Bearbeiten kurz in der Adresse (`?geaendert=…`); der Client nimmt sie sofort heraus, der Server prüft sie beim Klick gegen den Nutzer – eine fremde ID bewirkt nichts | ✅ |
+| Watchlist: nur sichtbare Instrumente (allgemein oder eigen, `getInstrument`), höchstens 100, Notiz ≤ 200 Zeichen; die Wertpapier-Seite ohne Bestand gibt es nur für eigene Watchlist-Einträge. Kursalarme für beobachtete Werte über die bestehende, geprüfte Action | ✅ |
+| Ziele: Beträge über `parseEuroToCents`, Rendite als Basispunkte (−20 … +30 %), Zieldatum in der Zukunft, Auswahl nur eigener Depots (`assertOwnPortfolios` + Fremdschlüssel), höchstens 20 Ziele; Ziele und Watchlist reisen im Backup mit und werden beim Wiederherstellen nur an die neu angelegten Depots/gefundenen Instrumente gehängt | ✅ (DB-Tests, Backup-Test) |
+| Datenstand: zeigt nur, was die Bewertung ohnehin nutzt; die Erreichbarkeit der Quellen kommt aus dem bestehenden, 10 Minuten gecachten Status (nur ja/nein), im Testbetrieb gar nicht | ✅ |
+| Teilen-Ziel (Manifest `share_target`): der Service Worker fängt den POST ab, legt höchstens 20 Dateien je ≤ 10 MB in einem eigenen Cache **auf dem Gerät** ab und leitet zur Import-Seite, die sie sofort abholt und löscht; Inhalt prüft der Import wie jede gewählte Datei (Magic Bytes, Größe, Seiten). Die Rückfall-Route `/app/import/teilen` liest den Request-Body nicht und leitet mit 303 um; ohne Session leitet der Proxy mit 303 statt 307 (kein erneutes Senden). Abmelden löscht auch nicht abgeholte Dateien | ✅ (E2E: Rückfall ohne Service Worker, Manifest) |
+| Erste Schritte: abgeleitet aus vorhandenen Daten; „Ausblenden“ ist ein `httpOnly`-Cookie (`path=/app`, `SameSite=Lax`) über eine Server Action mit `requireUser` und Rate-Limit | ✅ |
+| Neue Seiten und Komponenten ohne Inline-Styles: Balken als SVG-Attribute, Heatmap-Farben über `data-level` und Tokens (`--heat-*`), Methodik als statischer Text | ✅ |
+
 ## Notfallplan
 
 **Bei Verdacht auf Secret-Leak** (Commit, Log, Screenshot):
