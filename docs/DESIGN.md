@@ -141,7 +141,8 @@ Alle unter `src/components/`. Seiten setzen sich nur daraus zusammen, eigene CSS
 | `UndoNotice`, `UndoFromUrl` | `bookings/UndoNotice.tsx` | Hinweis nach Löschen/Ändern mit „Rückgängig“ (Haken, Text, Pill-Knopf); `UndoFromUrl` übernimmt die ID aus der Adresse und nimmt sie gleich wieder heraus |
 | `FreshnessText` | `markets/Freshness.tsx` | Stand eines Kurses als Zeichen + Wort („✓ verzögert“, „! Schlusskurs“), darunter Zeit und Erklärung |
 | `ReturnHeatmap` | `analysis/ReturnHeatmap.tsx` | Rendite je Monat (Jahr × Monat) als Tabelle mit Vorzeichen in jeder Zelle, Farbe in drei Stufen je Richtung (`--heat-*`), Legende, am Handy waagrecht scrollbar mit stehender Jahresspalte |
-| `GoalList`, `GoalForm` | `road/Goals.tsx` | Eigene Ziele: Name mit Zielsymbol, Prozent groß, Balken über die Breite (SVG), Stand und „noch …“, Status mit Zeichen (✓ erreicht, ! zu spät); Formular mit Depot-Auswahl |
+| `GoalList`, `SharedGoalList`, `GoalForm` | `road/Goals.tsx` | Eigene Ziele: Name mit Zielsymbol, Prozent groß, Balken über die Breite (SVG), Stand und „noch …“, Status mit Zeichen (✓ erreicht, ! zu spät); Formular mit Depot-Auswahl. Geteilte Ziele mit Zeile darüber („Von … geteilt · ansehen/mitbearbeiten“), Formular dann nur mit Planwerten (`planOnly`) |
+| `GoalShareSettings` | `road/GoalShare.tsx` | Ziel teilen: Recht als Auswahl („Nur ansehen“/„Ansehen und mitbearbeiten“), Einmal-Link, Freigaben mit Recht und Widerrufen – gleiche Anordnung wie das Teilen eines Depots |
 | `StartGuide`, `DismissStart` | `tasks/` | Erste Schritte: nummerierte Schritte, erledigte mit Haken, der nächste offene hervorgehoben mit Knopf, Fortschritt in Segmenten, „Ausblenden“ |
 | `WatchToggle`, `UnwatchButton` | `watchlist/WatchControls.tsx` | Beobachten als gedrückter Pill-Knopf (`aria-pressed`), Entfernen als Symbol-Knopf |
 | `Prose`, `Formula` | `ui/Prose.tsx` | Erklärender Fließtext (Methodik) in `--measure`, Formeln abgesetzt in Zahlen-Schrift |
