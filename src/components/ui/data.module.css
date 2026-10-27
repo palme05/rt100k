@@ -21,6 +21,73 @@
   gap: var(--space-6) var(--space-12);
 }
 
+/* Mit Verlauf: Betrag, Chart, Kennzahlen untereinander (Handy); breiter Kennzahlen
+   neben dem Betrag und der Chart über die ganze Zeile. Am Handy enger, damit
+   Kopf, Kennzahlen und Strecke ohne Scrollen sichtbar bleiben. */
+.summaryTopChart {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas: 'heading' 'chart' 'stats';
+  gap: var(--space-3);
+}
+
+.summaryTopChart > .heading {
+  grid-area: heading;
+}
+
+.summaryChart {
+  grid-area: chart;
+  min-width: 0;
+}
+
+.summaryTopChart > .keyStats {
+  grid-area: stats;
+  margin-top: var(--space-2);
+  row-gap: var(--space-4);
+}
+
+/* Handy: Kennzahlen als eine kompakte Zeile (bis vier nebeneinander) */
+@media (max-width: 819px) {
+  .summaryTopChart > .keyStats {
+    grid-template-columns: none;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(0, 1fr);
+    column-gap: var(--space-3);
+  }
+
+  .summaryTopChart > .keyStats > :last-child:nth-child(odd) {
+    grid-column: auto;
+  }
+
+  .summaryTopChart .keyStat dt,
+  .summaryTopChart .keyStatNote {
+    font-size: var(--text-xs);
+  }
+
+  .summaryTopChart .keyStat dd {
+    font-size: var(--text-base);
+  }
+
+  /* Kopf und Strecke enger zusammen, damit alles ohne Scrollen sichtbar bleibt */
+  .summary:has(> .summaryTopChart) {
+    gap: var(--space-6);
+  }
+}
+
+@media (min-width: 820px) {
+  .summaryTopChart {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas: 'heading stats' 'chart chart';
+    align-items: end;
+    gap: var(--space-6) var(--space-12);
+  }
+
+  .summaryTopChart > .keyStats {
+    margin-top: 0;
+  }
+}
+
 .heading {
   display: grid;
   gap: var(--space-tight);
