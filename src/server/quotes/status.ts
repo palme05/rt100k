@@ -1,6 +1,7 @@
 import 'server-only'
 import { providerFetch } from './fetch'
 import { parseCoinGeckoChart, parseEcbHistoryCsv, parseYahooHistory } from './history-parsers'
+import { parseCoinGeckoIntraday, parseYahooIntraday } from './intraday-parsers'
 import { averageInflation } from '@/lib/inflation'
 import { fetchHicpRates } from '../inflation'
 import { parseCoinGeckoPrices, parseEcbXml, parseYahooChart } from './parsers'
@@ -54,4 +55,20 @@ export async function historyStatus() {
     }),
   ])
   return { yahoo, coingecko, ezb }
+}
+
+/**
+ * Kurse im Tagesverlauf für die Tageskurve der Übersicht – dieselben
+ * Abfrageformen wie im Betrieb (Yahoo 5-Minuten-Punkte der letzten Sitzung
+ * mit Schluss davor, CoinGecko 24 h), ebenfalls 10 Minuten gecacht.
+ */
+export async function intradayStatus() {
+  const [yahoo, coingecko] = await Promise.all([
+    check('Yahoo-Tagesverlauf', async () => {
+      const r = parseYahooIntraday(await providerFetch('Yahoo', 'https://query1.finance.yahoo.com/v8/finance/chart/VWCE.DE?range=1d&interval=5m&status=1', { revalidate: TTL }))
+      return r !== null && r.points.length > 1 && r.previousMicros !== null
+    }),
+    check('CoinGecko-Tagesverlauf', async () => (parseCoinGeckoIntraday(await providerFetch('CoinGecko', 'https://api.coingecko.com/api/v3/coins/bitcoin/market_chart?vs_currency=eur&days=1&status=1', { revalidate: TTL }))?.points.length ?? 0) >= 100),
+  ])
+  return { yahoo, coingecko }
 }
