@@ -47,6 +47,10 @@ export default async function MethodPage() {
               <strong>Geldgewichtet (IZF):</strong> der interne Zinsfuß über alle Zahlungen und den heutigen Wert – „was hat mein Geld verdient“. Unter einem Jahr wird er nicht auf ein Jahr hochgerechnet.
             </p>
             <p>Fehlen für den Anfang eines Zeitraums Kurse, beginnt die Rechnung beim ersten vollständig bewerteten Tag (die Analyse sagt das dazu).</p>
+            <p>
+              <strong>Chart in der Übersicht:</strong> der Wert aller Depots je Tag aus deinen Buchungen und den Schlusskursen (ältere Zeiträume ein Punkt je Woche), der letzte Punkt ist der aktuelle Wert. Darunter der Gewinn im
+              Zeitraum: Wertänderung ohne das eingezahlte Geld – Dividenden und Zinsen zählen dazu.
+            </p>
           </Prose>
         </Section>
 

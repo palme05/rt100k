@@ -460,6 +460,16 @@ Unabhängiges Review (eigener Prüfdurchlauf, nur lesend) aller Route-Handler, S
 | Navigation: Rückblick-Tab ist ein normaler Link auf eine bestehende Seite; keine neuen Routen außer `/app/analyse/durchschau/ueberschneidung` (hinter `requireUser`) | ✅ |
 | Keine Inline-Styles in den neuen Komponenten (Balken über `WeightCell`/SVG, Layout über Klassen) | ✅ (keine CSP-Meldungen im Produktions-Build, `collectProblems` in E2E) |
 
+## Nachtrag: Vermögens-Chart in der Übersicht (27.10.2026)
+
+| Prüfung | Ergebnis |
+|---|---|
+| Datenquelle: eigene Bewertung (`valuePortfolios`, `withUser` + `owner_id`) und allgemeine Schlusskurse (`price_daily`, keine Nutzerdaten) über `getPriceHistory` wie in der Analyse – keine neue Abfrage, keine neue Tabelle, keine neue Server Action | ✅ |
+| An den Browser gehen nur Tag, Wert und kumulierter Zufluss je Punkt (ausgedünnt, höchstens rund 600 Punkte) – keine Buchungen, keine Kennungen | ✅ |
+| Privatsphäre-Modus: große Zahl, Hoch/Tief, Gewinn im Zeitraum und die vorgelesene Ansage verdeckt; das Datum beim Wischen bleibt sichtbar | ✅ (lokal geprüft) |
+| Keine Inline-Styles (Geometrie über SVG-Attribute, Farben über Klassen und Tokens); `touch-action: pan-y`, damit Scrollen am Handy nicht blockiert wird | ✅ (E2E `collectProblems`) |
+| Nachladen per `Suspense`: ein Fehler beim Kursverlauf wird im Lader abgefangen (nur Fehlermeldung ins Server-Log, ohne Nutzerdaten) – dann fehlt nur der Chart, die Übersicht bleibt; ohne Verlauf (weniger als zwei Tage) entfällt er ebenso | ✅ |
+
 ## Notfallplan
 
 **Bei Verdacht auf Secret-Leak** (Commit, Log, Screenshot):
