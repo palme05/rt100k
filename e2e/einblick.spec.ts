@@ -22,6 +22,8 @@ test('Übersicht: heute, je Depot und „Heute bewegt“ gegen den letzten Schlu
   await expect(hero).toContainText('Heute')
   await expect(hero).toContainText(/\+7,0\s%/)
   await expect(hero).toContainText(/\+85\s€/)
+  // Tageskurve mit demselben Bezug wie die Kennzahl
+  await expect(hero).toContainText(/\+85\s€\s*heute/)
   await expect(page.getByRole('table', { name: /Depots und Konten/ })).toContainText(/heute\s*▲\s*\+7,0\s%/)
   const moved = page.getByRole('region', { name: 'Heute bewegt' })
   await expect(moved).toContainText('Vanguard')
@@ -35,7 +37,7 @@ test('Übersicht: heute, je Depot und „Heute bewegt“ gegen den letzten Schlu
   expect(problems).toEqual([])
 })
 
-test('Übersicht: Vermögens-Chart mit Zeiträumen und Wischen – am Handy alles ohne Scrollen', async ({ page, isMobile }) => {
+test('Übersicht: Vermögens-Chart mit Tageskurve als Standard, Zeiträumen und Wischen – am Handy alles ohne Scrollen', async ({ page, isMobile }) => {
   const problems = collectProblems(page)
   await register(page)
   await createPortfolio(page, 'Depot')
@@ -44,27 +46,39 @@ test('Übersicht: Vermögens-Chart mit Zeiträumen und Wischen – am Handy alle
 
   await page.goto('/app')
   const hero = page.getByRole('region', { name: 'Gesamtvermögen' })
-  const chart = hero.getByRole('img', { name: /^Vermögensverlauf seit Beginn: von .* auf .*€$/ })
-  await expect(chart).toBeVisible()
+  // Standard ist die Tageskurve (Testkurse: acht Stunden bis jetzt, Bezug letzter Schluss)
+  await expect(hero.getByRole('img', { name: /^Vermögensverlauf heute: von .* auf .*€$/ })).toBeVisible()
   const ranges = hero.getByRole('group', { name: 'Zeitraum' })
-  for (const name of ['1 M', '6 M', '1 J', 'Max']) await expect(ranges.getByRole('button', { name })).toBeVisible()
-  await expect(ranges.getByRole('button', { name: 'Max' })).toHaveAttribute('aria-pressed', 'true')
+  for (const name of ['1 T', '1 M', '6 M', '1 J', 'Max']) await expect(ranges.getByRole('button', { name })).toBeVisible()
+  await expect(ranges.getByRole('button', { name: '1 T' })).toHaveAttribute('aria-pressed', 'true')
+  await expect(hero).toContainText(/€\s*heute/)
+
+  // Wischen per Tastatur: die große Zahl zeigt den Wert zur gewählten Uhrzeit, Esc zurück auf jetzt
+  const amount = hero.locator('h1 + div .sr-only').first()
+  const now = await amount.innerText()
+  const chart = () => hero.getByRole('img', { name: /^Vermögensverlauf/ })
+  await chart().focus()
+  await page.keyboard.press('Home')
+  await expect(amount).not.toHaveText(now)
+  await expect(hero).toContainText(/bis (\d{2}\.\d{2}\. )?\d{2}:\d{2}/)
+  await page.keyboard.press('Escape')
+  await expect(amount).toHaveText(now)
+
+  // Seit Beginn: Tagesreihe aus Buchungen und Schlusskursen
+  await ranges.getByRole('button', { name: 'Max' }).click()
+  await expect(hero.getByRole('img', { name: /^Vermögensverlauf seit Beginn: von .* auf .*€$/ })).toBeVisible()
   await expect(hero).toContainText(/seit \D+ \d{4}/)
 
-  // Zeitraum wechseln: Kurve und Gewinn beziehen sich auf den letzten Monat
+  // Zeitraum wechseln: Kurve und Gewinn beziehen sich auf den letzten Monat, Wischen zeigt Tage
   await ranges.getByRole('button', { name: '1 M' }).click()
   await expect(hero.getByRole('img', { name: /^Vermögensverlauf im letzten Monat/ })).toBeVisible()
   await expect(hero).toContainText('im letzten Monat')
-
-  // Wischen per Tastatur: die große Zahl zeigt den Wert am gewählten Tag, Esc zurück auf heute
-  const amount = hero.locator('h1 + div .sr-only').first()
-  const today = await amount.innerText()
-  await hero.getByRole('img', { name: /^Vermögensverlauf/ }).focus()
+  await chart().focus()
   await page.keyboard.press('Home')
-  await expect(amount).not.toHaveText(today)
+  await expect(amount).not.toHaveText(now)
   await expect(hero).toContainText(/bis \d{2}\.\d{2}\.\d{4}/)
   await page.keyboard.press('Escape')
-  await expect(amount).toHaveText(today)
+  await expect(amount).toHaveText(now)
 
   if (isMobile) {
     // Wunsch des Betreibers: Kopf, Kennzahlen, Strecke und der Link zur Prognose ohne Scrollen

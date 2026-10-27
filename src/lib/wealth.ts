@@ -39,6 +39,8 @@ export function thinSeries(
 }
 
 export const RANGES = [
+  // Tageskurve aus Kursen im Tagesverlauf (src/lib/intraday.ts), nicht aus der Tagesreihe
+  { id: '1d', label: '1 T', days: 1, phrase: 'heute' },
   { id: '1m', label: '1 M', days: 31, phrase: 'im letzten Monat' },
   { id: '6m', label: '6 M', days: 183, phrase: 'in 6 Monaten' },
   { id: '1j', label: '1 J', days: 366, phrase: 'im letzten Jahr' },
@@ -47,12 +49,12 @@ export const RANGES = [
 
 export type RangeId = (typeof RANGES)[number]['id']
 
-/** Zeiträume, für die es genug Verlauf gibt (kürzere als der Verlauf; „Max“ immer) */
+/** Zeiträume der Tagesreihe, für die es genug Verlauf gibt (kürzere als der Verlauf; „Max“ immer, „1 T“ nie) */
 export function availableRanges(days: readonly string[]): RangeId[] {
   const first = days[0]
   const last = days.at(-1)
   if (!first || !last) return ['max']
-  return RANGES.filter((r) => r.id === 'max' || addDays(last, -r.days) > first).map((r) => r.id)
+  return RANGES.filter((r) => r.id !== '1d' && (r.id === 'max' || addDays(last, -r.days) > first)).map((r) => r.id)
 }
 
 /** Index des ersten Punkts im Zeitraum (letzter Punkt am oder vor dem Stichtag, damit der Zeitraum voll ist) */

@@ -1,9 +1,11 @@
 import 'server-only'
 import { viennaDay } from '@/lib/format'
+import { alignBaseline, combineIntraday, type IntradayItem, type IntradaySeries } from '@/lib/intraday'
 import { dailySeries } from '@/lib/performance'
 import { thinSeries, type WealthSeries } from '@/lib/wealth'
 import type { PortfolioValuation } from './overview'
 import { getPriceHistory } from './quotes/history'
+import { intradayFor } from './quotes/intraday'
 
 /**
  * Vermögensverlauf für den Chart der Übersicht: Tageswerte aller Depots seit
@@ -28,4 +30,22 @@ export async function loadWealthSeries(valuation: PortfolioValuation): Promise<W
   if (thin.days.length < 2) return null
   if (thin.days.at(-1) === today) thin.values[thin.values.length - 1] = valuation.totalCents
   return thin
+}
+
+/**
+ * Tageskurve: Kurse im Tagesverlauf auf den heutigen Bestand (je Wert über
+ * alle Depots zusammengefasst). Null ohne Tagesverlauf (z. B. nur Cash).
+ * `dayChangeCents` ist die Tagesveränderung der Kennzahl „Heute“ – derselbe Bezug.
+ */
+export async function loadIntradaySeries(valuation: PortfolioValuation, dayChangeCents: number | null): Promise<IntradaySeries | null> {
+  const values = new Map<string, number>()
+  for (const p of valuation.portfolios.flatMap((x) => x.value.positions)) {
+    if (p.priced && p.quantity > 0n && p.valueCents > 0) values.set(p.instrumentId, (values.get(p.instrumentId) ?? 0) + p.valueCents)
+  }
+  const instruments = [...values.keys()].map((id) => valuation.instruments.get(id)).filter((i) => i !== undefined)
+  const intraday = await intradayFor(instruments, valuation.quotes)
+  const items: IntradayItem[] = []
+  for (const [id, series] of intraday) items.push({ valueCents: values.get(id) ?? 0, points: series.points, previousMicros: series.previousMicros })
+  const series = combineIntraday(items, valuation.totalCents)
+  return series && alignBaseline(series, valuation.totalCents, dayChangeCents, viennaDay())
 }
