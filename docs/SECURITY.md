@@ -470,6 +470,17 @@ Unabhängiges Review (eigener Prüfdurchlauf, nur lesend) aller Route-Handler, S
 | Keine Inline-Styles (Geometrie über SVG-Attribute, Farben über Klassen und Tokens); `touch-action: pan-y`, damit Scrollen am Handy nicht blockiert wird | ✅ (E2E `collectProblems`) |
 | Nachladen per `Suspense`: ein Fehler beim Kursverlauf wird im Lader abgefangen (nur Fehlermeldung ins Server-Log, ohne Nutzerdaten) – dann fehlt nur der Chart, die Übersicht bleibt; ohne Verlauf (weniger als zwei Tage) entfällt er ebenso | ✅ |
 
+## Nachtrag: Tageskurve „1 T“ im Vermögens-Chart (27.10.2026)
+
+| Prüfung | Ergebnis |
+|---|---|
+| Keine neue Abfrage, keine neue Tabelle, keine neue Server Action: Bestand und Werte aus der eigenen Bewertung (`withUser` + `owner_id`), gespeicherte Schlusskurse wie bei der Kennzahl „Heute“ | ✅ |
+| Anbieter-URLs enthalten nur Symbol bzw. Coin-ID, keine Nutzerdaten; eigene (private) Werte werden nie abgefragt; Antworten im Data Cache für alle Nutzer gemeinsam (Yahoo 5 Min, CoinGecko 15 Min) | ✅ |
+| Anbieter-Daten mit zod geprüft, Zahlen exakt als Ganzzahlen, Größe begrenzt (höchstens 1.500 Punkte je Antwort, 25 Werte je Aufruf, Zeitbudget 3 s) | ✅ (Unit-Tests mit kaputten Antworten) |
+| An den Browser gehen nur Zeitpunkt, Gesamtwert und Bezug je Punkt (höchstens 300) – keine Stückzahlen, keine Kennungen | ✅ |
+| Privatsphäre-Modus: große Zahl, Gewinn und Ansage verdeckt, die Uhrzeit beim Wischen bleibt sichtbar | ✅ (lokal geprüft) |
+| `/api/status` zeigt für den Tagesverlauf nur ja/nein (`tagesverlauf`), feste Testwerte, 10 Minuten gecacht | ✅ |
+
 ## Notfallplan
 
 **Bei Verdacht auf Secret-Leak** (Commit, Log, Screenshot):
