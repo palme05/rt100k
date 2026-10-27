@@ -51,6 +51,10 @@ export default async function MethodPage() {
               <strong>Chart in der Übersicht:</strong> der Wert aller Depots je Tag aus deinen Buchungen und den Schlusskursen (ältere Zeiträume ein Punkt je Woche), der letzte Punkt ist der aktuelle Wert. Darunter der Gewinn im
               Zeitraum: Wertänderung ohne das eingezahlte Geld – Dividenden und Zinsen zählen dazu.
             </p>
+            <p>
+              <strong>Tageskurve (1 T):</strong> dein heutiger Bestand mit den Kursen im Tagesverlauf (5-Minuten-Werte, Krypto die letzten 24 Stunden). Die gestrichelte Linie ist der Wert beim letzten Schluss – derselbe Bezug wie
+              bei „Heute“. Fonds ohne Börsenkurs, eigene Werte und Cash zählen konstant; heute Gekauftes zählt schon ab dem Morgen mit.
+            </p>
           </Prose>
         </Section>
 

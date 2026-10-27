@@ -112,6 +112,7 @@ export default async function DataStatusPage() {
           <Rows>
             <Row label="Live-Kurse" sub="beim Öffnen einer Seite; 1 Minute zwischengespeichert, außerhalb der Börsenzeiten länger" value="laufend" />
             <Row label="Tageswerte und Schlusskurse" sub="speichert der tägliche Lauf nach US-Börsenschluss – Grundlage für Verlauf, Rendite und Rückblick" value="täglich" />
+            <Row label="Tagesverlauf" sub="Kurse alle 5 Minuten für die Tageskurve der Übersicht; Börsenwerte 5 Minuten, Krypto 15 Minuten zwischengespeichert" value="5 Min" />
             <Row label="Kurshistorie" sub="für Analyse und Wertpapier-Seite, beim ersten Aufruf geladen und 12 Stunden zwischengespeichert" value="12 h" />
             <Row label="Wechselkurse" sub="EZB-Referenzkurse, 1 Stunde zwischengespeichert" value="werktags" />
           </Rows>

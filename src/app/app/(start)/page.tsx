@@ -41,7 +41,7 @@ import { loadRoad } from '@/server/road'
 import { loadOpenTasks } from '@/server/tasks'
 import { loadTax } from '@/server/tax'
 import { loadDayMoves } from '@/server/today'
-import { loadWealthSeries } from '@/server/wealth'
+import { loadIntradaySeries, loadWealthSeries } from '@/server/wealth'
 import { completeTaskAction } from '../hinweise/actions'
 import { confirmNewDeviceAction, dismissStartAction } from './actions'
 
@@ -66,13 +66,14 @@ function depotSub(p: { name: string; kind: keyof typeof KIND_LABEL; value: { pos
   return [kind, broker, count].filter(Boolean).join(' · ')
 }
 
-/** Vermögensverlauf: lädt nach (Kurshistorie), Kopf und Kennzahlen stehen sofort. Ein Fehler kostet nur den Chart, nicht die Übersicht. */
-async function WealthChartLoader({ valuation }: { valuation: PortfolioValuation }) {
-  const series = await loadWealthSeries(valuation).catch((error: unknown) => {
+/** Vermögensverlauf (Tagesreihe und Tageskurve): lädt nach, Kopf und Kennzahlen stehen sofort. Ein Fehler kostet nur den Chart, nicht die Übersicht. */
+async function WealthChartLoader({ valuation, dayChangeCents }: { valuation: PortfolioValuation; dayChangeCents: number | null }) {
+  const failed = (error: unknown) => {
     console.error('Vermögensverlauf nicht verfügbar:', error instanceof Error ? error.message : 'unbekannt')
     return null
-  })
-  return series ? <WealthChart series={series} /> : null
+  }
+  const [series, intraday] = await Promise.all([loadWealthSeries(valuation).catch(failed), loadIntradaySeries(valuation, dayChangeCents).catch(failed)])
+  return series || intraday ? <WealthChart series={series} intraday={intraday} today={viennaDay()} /> : null
 }
 
 export default async function OverviewPage() {
@@ -163,7 +164,7 @@ export default async function OverviewPage() {
           valueNode={<HeroValue value={total} centsClassName={HERO_CENTS} />}
           chart={
             <Suspense fallback={<WealthChartSkeleton />}>
-              <WealthChartLoader valuation={valuation} />
+              <WealthChartLoader valuation={valuation} dayChangeCents={moves.total?.changeCents ?? null} />
             </Suspense>
           }
           stats={stats}
