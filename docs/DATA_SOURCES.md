@@ -76,6 +76,18 @@ In der DB landen nur **Tagesschlusskurse** gehaltener oder beobachteter Instrume
 
 Rückfall bei Ausfall: gespeicherte Tagesschlusskurse (`price_daily`) und Wechselkurse (`fx_daily`) des Crons. Live-Prüfung aller drei Historien-Quellen über `/api/status` → `historie` (am 20.10.2026 auf der Preview: alle erreichbar und im erwarteten Format).
 
+## Tageskurve der Übersicht (27.10.2026)
+
+| Daten | Quelle | Abruf | Grenzen |
+|---|---|---|---|
+| Aktien, ETFs, Edelmetall-Futures | Yahoo `v8/finance/chart/{symbol}?range=1d&interval=5m` | je Instrument, 5 Min Data Cache, für alle Nutzer gemeinsam | Punkte der letzten Handelssitzung, Bezug `chartPreviousClose`; Einheit egal (nur Verhältnisse innerhalb der Reihe) |
+| Krypto | CoinGecko `coins/{id}/market_chart?vs_currency=eur&days=1` (Demo-Key optional) | je Coin, **15 Min** (Monatskontingent: höchstens 96 Abrufe je Coin und Tag, auch wenn die Übersicht dauernd offen ist) | 5-Minuten-Punkte der letzten 24 h, Bezug = Kurs vor 24 h |
+
+- **Sparsam:** nur beim Öffnen der Übersicht, höchstens 25 Werte je Aufruf, Zeitbudget 3 s; nichts wird gespeichert. Fonds ohne Börsenkurs, eigene Werte und Cash zählen konstant.
+- **Bezug:** Läuft die Kurve bis heute, gilt derselbe Schluss wie bei der Kennzahl „Heute“ (gespeicherte Schlusskurse) – Chart und Kennzahl zeigen denselben Betrag. Für eine frühere Sitzung (Wochenende) gilt der Schluss davor laut Anbieter.
+- **Ausfall:** ohne Tagesverlauf entfällt „1 T“, der Chart zeigt die Tagesreihe (Max).
+- **Prüfung:** Aus der Entwicklungsumgebung nicht erreichbar – gebaut nach dem Format der bestehenden Yahoo-/CoinGecko-Abrufe mit synthetischen Tests (`intraday-parsers.test.ts`); live über `/api/status` → `tagesverlauf`.
+
 ## ETF-Durchschau: Nutzungsbedingungen der Emittenten (geprüft 20.10.2026)
 
 Auftrag des Betreibers: prüfen, ob die Bestandslisten der ETF-Anbieter genutzt werden dürfen.
