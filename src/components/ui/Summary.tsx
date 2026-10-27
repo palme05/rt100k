@@ -8,6 +8,9 @@ export interface KeyStat {
   note?: React.ReactNode
 }
 
+/** Klasse für die abgesetzten Cent des großen Betrags (für eigene `valueNode`) */
+export const HERO_CENTS = styles.heroCents
+
 /**
  * Kopf einer Seite: Gesamtbetrag groß, daneben wenige Kennzahlen.
  * Ohne `title` ist die Zeile über dem Betrag die Seitenüberschrift.
@@ -18,6 +21,8 @@ export function HeroSummary({
   title,
   back,
   value,
+  valueNode,
+  chart,
   stats,
   children,
 }: {
@@ -26,6 +31,10 @@ export function HeroSummary({
   title?: string
   back?: BackTarget
   value: number
+  /** Eigene Darstellung des Betrags (z. B. folgt er dem Wischen durch den Chart) */
+  valueNode?: React.ReactNode
+  /** Verlauf unter dem Betrag: am Handy zwischen Betrag und Kennzahlen, breiter über die ganze Zeile */
+  chart?: React.ReactNode
   stats: readonly KeyStat[]
   /** Weiterer Inhalt unter der Zeile, z. B. die Routenlinie */
   children?: React.ReactNode
@@ -33,7 +42,7 @@ export function HeroSummary({
   return (
     <section className={styles.summary} aria-labelledby={id}>
       {back ? <BackLink href={back.href}>{back.label}</BackLink> : null}
-      <div className={styles.summaryTop}>
+      <div className={chart ? styles.summaryTopChart : styles.summaryTop}>
         <div className={styles.heading}>
           {title ? (
             <>
@@ -47,10 +56,9 @@ export function HeroSummary({
               {eyebrow}
             </h1>
           )}
-          <div className={styles.hero}>
-            <AmountSplit value={value} centsClassName={styles.heroCents} roll />
-          </div>
+          <div className={styles.hero}>{valueNode ?? <AmountSplit value={value} centsClassName={styles.heroCents} roll />}</div>
         </div>
+        {chart ? <div className={styles.summaryChart}>{chart}</div> : null}
         <KeyStats items={stats} />
       </div>
       {children}

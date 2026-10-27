@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { addPriceClose, buyEtf, collectProblems, createPortfolio, expectNoOverflow, register } from './helpers/app'
+import { addPriceClose, buyEtf, collectProblems, createPortfolio, daysAgo, expectNoOverflow, register } from './helpers/app'
 
 /** Gestern in Wiener Zeit (YYYY-MM-DD). */
 function yesterday(): string {
@@ -31,6 +31,48 @@ test('Übersicht: heute, je Depot und „Heute bewegt“ gegen den letzten Schlu
   await expect(tax).toContainText('≈ Steuer gesamt')
   await tax.getByRole('link', { name: 'Steuer-Cockpit öffnen' }).click()
   await expect(page).toHaveURL(/\/app\/steuer$/)
+  await expectNoOverflow(page)
+  expect(problems).toEqual([])
+})
+
+test('Übersicht: Vermögens-Chart mit Zeiträumen und Wischen – am Handy alles ohne Scrollen', async ({ page, isMobile }) => {
+  const problems = collectProblems(page)
+  await register(page)
+  await createPortfolio(page, 'Depot')
+  await buyEtf(page, '5', '500,00', { date: daysAgo(400) })
+  await buyEtf(page, '5', '600,00', { date: daysAgo(40) })
+
+  await page.goto('/app')
+  const hero = page.getByRole('region', { name: 'Gesamtvermögen' })
+  const chart = hero.getByRole('img', { name: /^Vermögensverlauf seit Beginn: von .* auf .*€$/ })
+  await expect(chart).toBeVisible()
+  const ranges = hero.getByRole('group', { name: 'Zeitraum' })
+  for (const name of ['1 M', '6 M', '1 J', 'Max']) await expect(ranges.getByRole('button', { name })).toBeVisible()
+  await expect(ranges.getByRole('button', { name: 'Max' })).toHaveAttribute('aria-pressed', 'true')
+  await expect(hero).toContainText(/seit \D+ \d{4}/)
+
+  // Zeitraum wechseln: Kurve und Gewinn beziehen sich auf den letzten Monat
+  await ranges.getByRole('button', { name: '1 M' }).click()
+  await expect(hero.getByRole('img', { name: /^Vermögensverlauf im letzten Monat/ })).toBeVisible()
+  await expect(hero).toContainText('im letzten Monat')
+
+  // Wischen per Tastatur: die große Zahl zeigt den Wert am gewählten Tag, Esc zurück auf heute
+  const amount = hero.locator('h1 + div .sr-only').first()
+  const today = await amount.innerText()
+  await hero.getByRole('img', { name: /^Vermögensverlauf/ }).focus()
+  await page.keyboard.press('Home')
+  await expect(amount).not.toHaveText(today)
+  await expect(hero).toContainText(/bis \d{2}\.\d{2}\.\d{4}/)
+  await page.keyboard.press('Escape')
+  await expect(amount).toHaveText(today)
+
+  if (isMobile) {
+    // Wunsch des Betreibers: Kopf, Kennzahlen, Strecke und der Link zur Prognose ohne Scrollen
+    const link = page.getByRole('link', { name: 'Prognose und Szenarien' })
+    const box = await link.boundingBox()
+    const nav = await page.getByRole('navigation', { name: 'Hauptnavigation' }).boundingBox()
+    expect(box!.y + box!.height).toBeLessThan(nav!.y)
+  }
   await expectNoOverflow(page)
   expect(problems).toEqual([])
 })

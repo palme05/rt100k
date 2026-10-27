@@ -1,8 +1,10 @@
 import { cookies } from 'next/headers'
 import Link from 'next/link'
+import { Suspense } from 'react'
 import { Sparkline } from '@/components/charts/charts'
 import { ASSET_KIND_SLOT, DonutChart } from '@/components/charts/DonutChart'
-import { HistoryChart } from '@/components/charts/HistoryChart'
+import { HeroValue, ScrubProvider } from '@/components/charts/scrub'
+import { WealthChart, WealthChartSkeleton } from '@/components/charts/WealthChart'
 import { Markets } from '@/components/markets/Markets'
 import { Amount } from '@/components/privacy/privacy'
 import { RouteSummary } from '@/components/road/RouteSummary'
@@ -17,7 +19,7 @@ import { DismissibleMessage } from '@/components/ui/DismissibleMessage'
 import { Message } from '@/components/ui/forms'
 import { Grid, MoreLink, Note, PageHead, Section, TextLink } from '@/components/ui/layout'
 import { Row, Rows } from '@/components/ui/Rows'
-import { HeroSummary, type KeyStat } from '@/components/ui/Summary'
+import { HERO_CENTS, HeroSummary, type KeyStat } from '@/components/ui/Summary'
 import { Trend } from '@/components/ui/Trend'
 import { bookingTypeLabel, listAmount } from '@/lib/booking-display'
 import { dayLabel, monthLabel, share } from '@/lib/display'
@@ -34,11 +36,12 @@ import { listGoals } from '@/server/dal/goals'
 import { roadSettingsSaved } from '@/server/dal/road'
 import { listPortfolioSeries } from '@/server/dal/snapshots'
 import { goalViews } from '@/server/goals'
-import { valuePortfolios } from '@/server/overview'
+import { valuePortfolios, type PortfolioValuation } from '@/server/overview'
 import { loadRoad } from '@/server/road'
 import { loadOpenTasks } from '@/server/tasks'
 import { loadTax } from '@/server/tax'
 import { loadDayMoves } from '@/server/today'
+import { loadWealthSeries } from '@/server/wealth'
 import { completeTaskAction } from '../hinweise/actions'
 import { confirmNewDeviceAction, dismissStartAction } from './actions'
 
@@ -61,6 +64,15 @@ function depotSub(p: { name: string; kind: keyof typeof KIND_LABEL; value: { pos
   const kind = KIND_LABEL[p.kind].toLocaleLowerCase('de') === p.name.toLocaleLowerCase('de') ? null : KIND_LABEL[p.kind]
   const count = p.kind === 'cash' ? null : p.value.positions.length === 1 ? '1 Position' : `${p.value.positions.length} Positionen`
   return [kind, broker, count].filter(Boolean).join(' · ')
+}
+
+/** Vermögensverlauf: lädt nach (Kurshistorie), Kopf und Kennzahlen stehen sofort. Ein Fehler kostet nur den Chart, nicht die Übersicht. */
+async function WealthChartLoader({ valuation }: { valuation: PortfolioValuation }) {
+  const series = await loadWealthSeries(valuation).catch((error: unknown) => {
+    console.error('Vermögensverlauf nicht verfügbar:', error instanceof Error ? error.message : 'unbekannt')
+    return null
+  })
+  return series ? <WealthChart series={series} /> : null
 }
 
 export default async function OverviewPage() {
@@ -116,12 +128,6 @@ export default async function OverviewPage() {
   const hasCrypto = valuation.allocation.some((a) => a.key === 'crypto')
   const hasMoves = moves.byPortfolio.size > 0
 
-  const hasHistory = road.history.length >= 2
-  const allocation = (
-    <Section id="aufteilung" title="Aufteilung" meta="nach Anlageklasse" span={hasHistory ? 'third' : 'twoThirds'}>
-      {valuation.allocation.length > 0 ? <DonutChart title="Aufteilung nach Anlageklasse" items={valuation.allocation} slots={ASSET_KIND_SLOT} /> : <Note>Noch keine Werte.</Note>}
-    </Section>
-  )
 
   const stats: KeyStat[] = [
     ...(moves.total ? [{ label: 'Heute', value: <Trend value={moves.total.ratio} />, note: <Amount value={moves.total.changeCents / 100} signed whole /> }] : []),
@@ -149,9 +155,22 @@ export default async function OverviewPage() {
           allocation: valuation.allocation,
         })}
       />
-      <HeroSummary id="vermoegen" eyebrow="Gesamtvermögen" value={total} stats={stats}>
-        <RouteSummary total={road.countedCents / 100} milestones={road.milestones} monthlyContribution={road.settings.monthlyContributionCents / 100} etaMedian={road.etaMedian} href="/app/road" inflation={road.planner.inflation ?? null} />
-      </HeroSummary>
+      <ScrubProvider>
+        <HeroSummary
+          id="vermoegen"
+          eyebrow="Gesamtvermögen"
+          value={total}
+          valueNode={<HeroValue value={total} centsClassName={HERO_CENTS} />}
+          chart={
+            <Suspense fallback={<WealthChartSkeleton />}>
+              <WealthChartLoader valuation={valuation} />
+            </Suspense>
+          }
+          stats={stats}
+        >
+          <RouteSummary total={road.countedCents / 100} milestones={road.milestones} monthlyContribution={road.settings.monthlyContributionCents / 100} etaMedian={road.etaMedian} href="/app/road" inflation={road.planner.inflation ?? null} />
+        </HeroSummary>
+      </ScrubProvider>
 
       {valuation.ledgerError ? <Message tone="error">{valuation.ledgerError}</Message> : null}
 
@@ -168,22 +187,10 @@ export default async function OverviewPage() {
           </Section>
         ) : null}
 
-        {hasHistory ? (
-          <>
-            <Section label="Verlauf" span="twoThirds">
-              <HistoryChart history={road.history} title="Vermögensverlauf mit eingesetztem Kapital" />
-            </Section>
-            {allocation}
-          </>
-        ) : (
-          // Noch kein Verlauf: die Aufteilung bekommt die breite Spalte, der Hinweis bleibt klein daneben
-          <>
-            {allocation}
-            <Section id="verlauf" title="Verlauf" meta="ab dem ersten Monatswechsel" span="third">
-              <Note>Jeden Abend nach US-Börsenschluss speichert rt100k den Tageswert. Nach dem ersten Monatswechsel erscheint hier die Kurve deines Vermögens.</Note>
-            </Section>
-          </>
-        )}
+        {/* Der Verlauf steht jetzt im Kopf; die Aufteilung bleibt am Handy gleich nach dem Kopf, breiter neben den Depots */}
+        <Section id="aufteilung" title="Aufteilung" meta="nach Anlageklasse" span="third">
+          {valuation.allocation.length > 0 ? <DonutChart title="Aufteilung nach Anlageklasse" items={valuation.allocation} slots={ASSET_KIND_SLOT} /> : <Note>Noch keine Werte.</Note>}
+        </Section>
 
         <Section
           id="depots"
